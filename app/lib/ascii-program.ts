@@ -42,16 +42,16 @@ export async function createImageAsciiProgram(
 }
 
 export async function createCodeAsciiProgram(
-  width = 80,
-  height = 40,
-  programModuleLoader?: { load: () => Promise<any> },
+  width: number,
+  height: number,
+  frameRate: number,
+  programModuleLoader: { load: () => Promise<any> },
 ): Promise<Program> {
   width = Math.max(1, width)
   height = Math.max(1, height)
 
-  // Load the module if provided
   let programModule = null
-  if (programModuleLoader && typeof programModuleLoader.load === 'function') {
+  if (typeof programModuleLoader.load === 'function') {
     try {
       programModule = await programModuleLoader.load()
     } catch (error) {
@@ -70,7 +70,7 @@ export async function createCodeAsciiProgram(
   // Default program
   const program: Program = {
     settings: {
-      fps: 30,
+      fps: frameRate,
       cols: width,
       rows: height,
       color: '#000000',

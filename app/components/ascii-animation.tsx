@@ -6,10 +6,14 @@ export default function AsciiAnimation({
   program,
   frame = 0,
   onFrameUpdate = undefined,
+  playing = false,
+  maxFrames,
 }: {
   program: Program
   frame?: number
   onFrameUpdate?: (frame: number) => void
+  playing?: boolean
+  maxFrames?: number
 }) {
   const asciiEl = useRef<HTMLPreElement>(null)
   const [animationController, setAnimationController] = useState<ReturnType<
@@ -31,6 +35,8 @@ export default function AsciiAnimation({
         allowSelect: true,
         element: asciiEl.current,
         once: true,
+        onFrameUpdate: onFrameUpdate ? onFrameUpdate : undefined,
+        maxFrames,
       })
 
       setAnimationController(animController)
@@ -43,7 +49,7 @@ export default function AsciiAnimation({
         animationController.cleanup()
       }
     }
-  }, [program])
+  }, [program, maxFrames, onFrameUpdate])
 
   useEffect(() => {
     if (animationController && frame !== undefined) {
@@ -51,16 +57,13 @@ export default function AsciiAnimation({
     }
   }, [frame, animationController])
 
-  // useEffect(() => {
-  //   if (animationController && onFrameUpdate) {
-  //     animationController.onFrameChange = onFrameUpdate;
-  //     return () => {
-  //       if (animationController) {
-  //         animationController.onFrameChange = undefined;
-  //       }
-  //     };
-  //   }
-  // }, [animationController, onFrameUpdate]);
+  useEffect(() => {
+    if (animationController && playing) {
+      animationController.togglePlay(true)
+    } else {
+      animationController?.togglePlay(false)
+    }
+  }, [animationController, playing])
 
   return (
     <div

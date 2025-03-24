@@ -1,4 +1,4 @@
-import { Copy, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
+import { Copy, Pause, Play, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { Button } from '~/components/ui/button'
@@ -18,13 +18,11 @@ interface AsciiPreviewProps {
   showUnderlyingImage: boolean
   underlyingImageUrl: string | null
   settings: {
-    frame: number
+    format: string
+    animationLength: number
+    frameRate: number
+    loop: 'once' | 'infinite'
   }
-  updateSettings: (
-    settings: Partial<{
-      frame: number
-    }>,
-  ) => void
 }
 
 export function AsciiPreview({
@@ -35,11 +33,12 @@ export function AsciiPreview({
   showUnderlyingImage,
   underlyingImageUrl,
   settings,
-  updateSettings,
 }: AsciiPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const [zoomLevel, setZoomLevel] = useState(1)
+  const [frame, setFrame] = useState(0)
+  const [playing, setPlaying] = useState(false)
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.25, 5))
@@ -56,8 +55,6 @@ export function AsciiPreview({
   const handleZoomChange = (value: number[]) => {
     setZoomLevel(value[0])
   }
-
-  console.log(program)
 
   // Convert ASCII data to text with line breaks and copy to clipboard
   // Adds line breaks based on column width
@@ -206,8 +203,10 @@ export function AsciiPreview({
           <div className="relative z-20 [font-size:0px]">
             <AsciiAnimation
               program={program}
-              frame={settings.frame}
-              onFrameUpdate={(frame) => updateSettings({ frame })}
+              frame={frame}
+              onFrameUpdate={setFrame}
+              playing={playing}
+              maxFrames={settings.animationLength}
             />
 
             {gridType !== 'none' && program && (
@@ -218,9 +217,11 @@ export function AsciiPreview({
       </div>
 
       <FrameSlider
-        frame={settings.frame}
-        totalFrames={100}
-        onChange={(frame) => updateSettings({ frame })}
+        frame={frame}
+        totalFrames={settings.animationLength}
+        onChange={setFrame}
+        playing={playing}
+        setPlaying={setPlaying}
       />
     </div>
   )
@@ -230,16 +231,35 @@ function FrameSlider({
   frame,
   totalFrames,
   onChange,
+  playing,
+  setPlaying,
 }: {
   frame: number
   totalFrames: number
   onChange: (frame: number) => void
+  playing: boolean
+  setPlaying: (playing: boolean) => void
 }) {
+  const togglePlay = () => {
+    setPlaying(!playing)
+  }
+
   return (
-    <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col items-end gap-2 rounded-md bg-white/80 p-2 shadow-sm backdrop-blur-sm">
+    <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md bg-white/80 p-2 shadow-sm backdrop-blur-sm">
       <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={togglePlay}
+            title={playing ? 'Pause' : 'Play'}
+          >
+            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </Button>
+        </div>
+
         <span className="text-xs text-muted-foreground">
-          {frame} / {totalFrames}
+          {frame} / {totalFrames - 1}
         </span>
       </div>
       <Slider

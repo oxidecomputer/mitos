@@ -28,6 +28,8 @@ export interface Settings {
   color?: string
   backgroundColor?: string
   fontWeight?: string
+  onFrameUpdate?: (frame: number) => void
+  maxFrames?: number
 }
 
 interface State {
@@ -263,7 +265,12 @@ export function createAnimation(
     // Timing update
     timeSample = t - (delta % interval) // adjust timeSample
     state.time = t + timeOffset // increment time + initial offs
-    state.frame++ // increment frame counter
+    if (!settings.maxFrames || state.frame < settings.maxFrames) {
+      state.frame++ // increment frame counter
+    } else {
+      state.frame = 0
+    }
+    settings.onFrameUpdate && settings.onFrameUpdate(state.frame)
 
     // Cursor update
     const cursor = {
@@ -378,9 +385,8 @@ export function createAnimation(
   }
 
   function setFrame(frame: number) {
-    if (stopped) return
-
     state.frame = frame
+    requestAnimationFrame(loop)
   }
 
   function cleanup() {
