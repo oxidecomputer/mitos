@@ -400,30 +400,27 @@ export async function processImage(
 }
 
 export function processCodeModule(code: string) {
-  // Try to evaluate the code to extract exported functions
-  let programModule = null
   try {
-    // Create module from code using dynamic import
-    const blob = new Blob([code], { type: 'application/javascript' })
-    const url = URL.createObjectURL(blob)
+    const wrappedCode = `
+      ${code}
+      return {
+        main: typeof main === 'function' ? main : undefined,
+        boot: typeof boot === 'function' ? boot : undefined,
+        pre: typeof pre === 'function' ? pre : undefined,
+        post: typeof post === 'function' ? post : undefined
+      };
+    `
 
-    // Use import() to load the module (wrapped in a try/catch)
-    programModule = {
+    const moduleFn = new Function(wrappedCode)
+    const moduleExports = moduleFn()
+
+    return {
       async load() {
-        try {
-          const module = await import(/* @vite-ignore */ url)
-          URL.revokeObjectURL(url)
-          return module
-        } catch (err) {
-          console.error('Error importing module:', err)
-          URL.revokeObjectURL(url)
-          return null
-        }
+        return moduleExports
       },
     }
   } catch (error) {
     console.error('Error preparing user code module:', error)
+    return null
   }
-
-  return programModule
 }

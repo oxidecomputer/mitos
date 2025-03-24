@@ -54,7 +54,7 @@ export interface AsciiSettings {
 const defaultCode = `const density = 'Ñ@#W$9876543210?!abc;:+=-,._ ';
 
 // Renders each cell
-export function main(coord, context, cursor, buffer) {
+function main(coord, context, cursor, buffer) {
   // To generate output, return a single character
   // or an object with a "char" field, for example {char: 'x'}
   const {cols, frame} = context;
@@ -68,13 +68,13 @@ export function main(coord, context, cursor, buffer) {
 }
 
 // Optional: Runs once at startup
-export function boot(context, buffer, userData) {}
+function boot(context, buffer, userData) {}
 
 //Optional: Runs at the start of each frame
-export function pre(context, cursor, buffer, userData) {}
+function pre(context, cursor, buffer, userData) {}
 
 // Optional: Runs after each frame is complete
-export function post(context, cursor, buffer, userData) {}`
+function post(context, cursor, buffer, userData) {}`
 
 const defaultSettings: AsciiSettings = {
   source: {
@@ -299,9 +299,9 @@ export function AsciiArtGenerator() {
                   </div>
                 </>
               )}
-              
+
               <Separator className="my-6" />
-              
+
               {/* Export Options */}
               <div className="space-y-4">
                 {program && (
