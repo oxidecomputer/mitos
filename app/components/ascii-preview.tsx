@@ -21,6 +21,9 @@ interface AsciiPreviewProps {
     animationLength: number
     frameRate: number
   }
+  animationController: AnimationController
+  setAnimationController: (controller: AnimationController) => void
+  isExporting: boolean
 }
 
 export type AnimationController = ReturnType<typeof createAnimation> | null
@@ -33,13 +36,14 @@ export function AsciiPreview({
   showUnderlyingImage,
   underlyingImageUrl,
   settings,
+  animationController,
+  setAnimationController,
+  isExporting
 }: AsciiPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const [zoomLevel, setZoomLevel] = useState(1)
   const [frame, setFrame] = useState(0)
-
-  const [animationController, setAnimationController] = useState<AnimationController>(null)
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.25, 5))
@@ -59,7 +63,6 @@ export function AsciiPreview({
 
   // Convert ASCII data to text with line breaks and copy to clipboard
   // Adds line breaks based on column width
-
   const copyToClipboard = () => {
     if (!program) return
 
@@ -174,6 +177,7 @@ export function AsciiPreview({
           >
             <Copy className="h-4 w-4" />
           </Button>
+
         </div>
       )}
 
@@ -182,6 +186,16 @@ export function AsciiPreview({
         ref={containerRef}
         className="relative flex flex-1 items-center justify-center overflow-auto"
       >
+        {isExporting && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+            <div className="rounded-md bg-white p-4 text-center shadow-xl">
+              <div className="mb-2 text-lg font-semibold">Exporting Frames</div>
+              <div className="text-sm text-muted-foreground">
+                Please wait, this may take a moment...
+              </div>
+            </div>
+          </div>
+        )}
         <div
           className="relative transform-gpu transition-transform duration-200 ease-out"
           style={{
@@ -217,11 +231,13 @@ export function AsciiPreview({
         </div>
       </div>
 
-      <FrameSlider
-        frame={frame}
-        totalFrames={settings.animationLength}
-        animationController={animationController}
-      />
+      {sourceType === 'code' && (
+        <FrameSlider
+          frame={frame}
+          totalFrames={settings.animationLength}
+          animationController={animationController}
+        />
+      )}
     </div>
   )
 }

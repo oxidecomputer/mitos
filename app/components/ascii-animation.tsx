@@ -33,7 +33,6 @@ export default function AsciiAnimation({
       const animController = createAnimation(program, {
         allowSelect: true,
         element: asciiEl.current,
-        once: true,
         onFrameUpdate: onFrameUpdate ? onFrameUpdate : undefined,
         maxFrames,
       })
@@ -52,7 +51,7 @@ export default function AsciiAnimation({
 
   return (
     <div
-      className="ascii-animation relative flex items-center justify-center"
+      className="ascii-animation relative flex items-center justify-center [font-size:0px]"
       aria-hidden
       role="img"
     >

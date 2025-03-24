@@ -91,6 +91,9 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  img {
+    @apply inline-block;
+  }
   pre {
     font-family: 'GT America Mono', monospace;
   }

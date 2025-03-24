@@ -8,7 +8,7 @@ const defaultSettings: Settings = {
   element: null,
   cols: 0,
   rows: 0,
-  once: false,
+  once: true,
   reducedMotion: false,
   fps: 30,
   allowSelect: false,

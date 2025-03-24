@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
-import { AsciiPreview } from '~/components/ascii-preview'
+import { AsciiPreview, type AnimationController } from '~/components/ascii-preview'
+import { ExportOptions } from '~/components/export-options'
 import {
   OutputConfiguration,
   predefinedCharacterSets,
@@ -107,6 +108,8 @@ export function AsciiArtGenerator() {
   const [settings, setSettings] = useState<AsciiSettings>(defaultSettings)
   const [program, setProgram] = useState<Program | null>(null)
   const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null)
+  const [animationController, setAnimationController] = useState<AnimationController>(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   const { toast } = useToast()
 
@@ -296,6 +299,22 @@ export function AsciiArtGenerator() {
                   </div>
                 </>
               )}
+              
+              <Separator className="my-6" />
+              
+              {/* Export Options */}
+              <div className="space-y-4">
+                {program && (
+                  <ExportOptions
+                    program={program}
+                    sourceType={settings.source.type}
+                    animationController={animationController}
+                    animationLength={settings.animation.animationLength}
+                    isExporting={isExporting}
+                    setIsExporting={setIsExporting}
+                  />
+                )}
+              </div>
             </div>
           </ScrollArea>
         </div>
@@ -316,6 +335,9 @@ export function AsciiArtGenerator() {
               showUnderlyingImage={settings.output.showUnderlyingImage}
               underlyingImageUrl={processedImageUrl || settings.source.data}
               settings={settings.animation}
+              animationController={animationController}
+              setAnimationController={setAnimationController}
+              isExporting={isExporting}
             />
           </div>
 
