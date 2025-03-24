@@ -185,7 +185,7 @@ export function ExportOptions({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="mb-2 text-sm font-medium">Export Options</h3>
+        <h3 className="mb-4 text-lg font-medium">Export Options</h3>
         <div className="space-y-3">
           {sourceType === 'code' && (
             <div className="space-y-2">
@@ -223,9 +223,6 @@ export function ExportOptions({
                 <SelectItem value="4x">4x</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Higher values create larger files with better quality
-            </p>
           </div>
 
           <Button className="mt-2 w-full" onClick={exportContent} disabled={isExporting}>
