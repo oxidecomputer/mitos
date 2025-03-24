@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { Button } from '~/components/ui/button'
 import { Slider } from '~/components/ui/slider'
 import { useToast } from '~/components/ui/use-toast'
-import type { Program } from '~/lib/animation'
+import type { createAnimation, Program } from '~/lib/animation'
 
 import AsciiAnimation from './ascii-animation'
 import type { SourceType } from './ascii-art-generator'
@@ -18,12 +18,13 @@ interface AsciiPreviewProps {
   showUnderlyingImage: boolean
   underlyingImageUrl: string | null
   settings: {
-    format: string
     animationLength: number
     frameRate: number
     loop: 'once' | 'infinite'
   }
 }
+
+export type AnimationController = ReturnType<typeof createAnimation> | null
 
 export function AsciiPreview({
   program,
@@ -38,7 +39,8 @@ export function AsciiPreview({
   const { toast } = useToast()
   const [zoomLevel, setZoomLevel] = useState(1)
   const [frame, setFrame] = useState(0)
-  const [playing, setPlaying] = useState(false)
+
+  const [animationController, setAnimationController] = useState<AnimationController>(null)
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.25, 5))
@@ -203,10 +205,10 @@ export function AsciiPreview({
           <div className="relative z-20 [font-size:0px]">
             <AsciiAnimation
               program={program}
-              frame={frame}
               onFrameUpdate={setFrame}
-              playing={playing}
               maxFrames={settings.animationLength}
+              animationController={animationController}
+              setAnimationController={setAnimationController}
             />
 
             {gridType !== 'none' && program && (
@@ -219,9 +221,7 @@ export function AsciiPreview({
       <FrameSlider
         frame={frame}
         totalFrames={settings.animationLength}
-        onChange={setFrame}
-        playing={playing}
-        setPlaying={setPlaying}
+        animationController={animationController}
       />
     </div>
   )
@@ -230,18 +230,22 @@ export function AsciiPreview({
 function FrameSlider({
   frame,
   totalFrames,
-  onChange,
-  playing,
-  setPlaying,
+  animationController,
 }: {
   frame: number
   totalFrames: number
-  onChange: (frame: number) => void
-  playing: boolean
-  setPlaying: (playing: boolean) => void
+  animationController: AnimationController
 }) {
+  const [playing, setPlaying] = useState(false)
+
   const togglePlay = () => {
-    setPlaying(!playing)
+    if (animationController && !playing) {
+      setPlaying(true)
+      animationController.togglePlay(true)
+    } else {
+      setPlaying(false)
+      animationController?.togglePlay(false)
+    }
   }
 
   return (
@@ -259,15 +263,17 @@ function FrameSlider({
         </div>
 
         <span className="text-xs text-muted-foreground">
-          {frame} / {totalFrames - 1}
+          {frame} / {totalFrames}
         </span>
       </div>
       <Slider
         value={[frame]}
-        min={0}
-        max={totalFrames - 1}
+        min={1}
+        max={totalFrames}
         step={1}
-        onValueChange={(value) => onChange(value[0])}
+        onValueChange={(value) =>
+          animationController && animationController.setFrame(value[0])
+        }
       />
     </div>
   )

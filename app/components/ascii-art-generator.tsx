@@ -17,7 +17,7 @@ import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-pro
 import { processCodeModule, processImage } from '~/lib/image-processor'
 import type { Data } from '~/lib/types'
 
-import { ExportOptions } from './export-options'
+import { AnimationOptions } from './animation-options'
 
 export type SourceType = 'image' | 'code'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
@@ -44,8 +44,7 @@ export interface AsciiSettings {
     columns: number
     rows: number
   }
-  export: {
-    format: string
+  animation: {
     animationLength: number
     frameRate: number
     loop: 'once' | 'infinite'
@@ -99,8 +98,7 @@ const defaultSettings: AsciiSettings = {
     columns: 80,
     rows: 40,
   },
-  export: {
-    format: 'png',
+  animation: {
     animationLength: 100,
     frameRate: 30,
     loop: 'infinite',
@@ -144,7 +142,7 @@ export function AsciiArtGenerator() {
           const newProgram = await createCodeAsciiProgram(
             columns,
             rows,
-            settings.export.frameRate,
+            settings.animation.frameRate,
             module,
           )
           setProgram(newProgram)
@@ -209,12 +207,14 @@ export function AsciiArtGenerator() {
     }))
   }
 
-  const updateExportSettings = (exportSettings: Partial<typeof settings.export>) => {
+  const updateAnimationSettings = (
+    animationSettings: Partial<typeof settings.animation>,
+  ) => {
     setSettings((prev) => ({
       ...prev,
-      export: {
-        ...prev.export,
-        ...exportSettings,
+      animation: {
+        ...prev.animation,
+        ...animationSettings,
       },
     }))
   }
@@ -286,15 +286,18 @@ export function AsciiArtGenerator() {
                 />
               </div>
 
-              <Separator className="my-6" />
+              {settings.source.type === 'code' && (
+                <>
+                  <Separator className="my-6" />
 
-              <div className="space-y-4">
-                <ExportOptions
-                  settings={settings.export}
-                  updateSettings={updateExportSettings}
-                  sourceType={settings.source.type}
-                />
-              </div>
+                  <div className="space-y-4">
+                    <AnimationOptions
+                      settings={settings.animation}
+                      updateSettings={updateAnimationSettings}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -314,7 +317,7 @@ export function AsciiArtGenerator() {
               gridType={settings.output.grid}
               showUnderlyingImage={settings.output.showUnderlyingImage}
               underlyingImageUrl={processedImageUrl || settings.source.data}
-              settings={settings.export}
+              settings={settings.animation}
             />
           </div>
 

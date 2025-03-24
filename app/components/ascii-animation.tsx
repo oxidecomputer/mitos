@@ -1,24 +1,23 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { createAnimation, type Program } from '~/lib/animation'
 
+import { AnimationController } from './ascii-preview'
+
 export default function AsciiAnimation({
   program,
-  frame = 0,
   onFrameUpdate = undefined,
-  playing = false,
   maxFrames,
+  animationController,
+  setAnimationController,
 }: {
   program: Program
-  frame?: number
   onFrameUpdate?: (frame: number) => void
-  playing?: boolean
   maxFrames?: number
+  animationController?: AnimationController
+  setAnimationController: (controller: AnimationController) => void
 }) {
   const asciiEl = useRef<HTMLPreElement>(null)
-  const [animationController, setAnimationController] = useState<ReturnType<
-    typeof createAnimation
-  > | null>(null)
 
   // Force re-initialization when component mounts or program changes
   useEffect(() => {
@@ -50,20 +49,6 @@ export default function AsciiAnimation({
       }
     }
   }, [program, maxFrames, onFrameUpdate])
-
-  useEffect(() => {
-    if (animationController && frame !== undefined) {
-      animationController.setFrame(frame)
-    }
-  }, [frame, animationController])
-
-  useEffect(() => {
-    if (animationController && playing) {
-      animationController.togglePlay(true)
-    } else {
-      animationController?.togglePlay(false)
-    }
-  }, [animationController, playing])
 
   return (
     <div
