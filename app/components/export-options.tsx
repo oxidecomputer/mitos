@@ -381,11 +381,11 @@ export function ExportOptions({
               </SelectTrigger>
               <SelectContent>
                 {sourceType === 'code' && animationLength > 1 ? (
-                  <SelectItem value="frames">PNG Frames</SelectItem>
+                  <SelectItem value="frames">PNGs</SelectItem>
                 ) : (
                   <>
-                    <SelectItem value="svg">SVG Vector</SelectItem>
-                    <SelectItem value="png">PNG Image</SelectItem>
+                    <SelectItem value="svg">SVG</SelectItem>
+                    <SelectItem value="png">PNG</SelectItem>
                   </>
                 )}
               </SelectContent>
