@@ -1,5 +1,5 @@
 import { Copy, Pause, Play, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '~/components/ui/button'
 import { Slider } from '~/components/ui/slider'
@@ -20,7 +20,6 @@ interface AsciiPreviewProps {
   settings: {
     animationLength: number
     frameRate: number
-    loop: 'once' | 'infinite'
   }
 }
 
@@ -248,6 +247,10 @@ function FrameSlider({
     }
   }
 
+  useEffect(() => {
+    setPlaying((animationController && !animationController?.getState().once) || false)
+  }, [animationController])
+
   return (
     <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md bg-white/80 p-2 shadow-sm backdrop-blur-sm">
       <div className="flex items-center justify-between">
@@ -268,7 +271,7 @@ function FrameSlider({
       </div>
       <Slider
         value={[frame]}
-        min={1}
+        min={0}
         max={totalFrames}
         step={1}
         onValueChange={(value) =>

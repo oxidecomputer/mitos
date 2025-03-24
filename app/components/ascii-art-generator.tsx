@@ -47,7 +47,6 @@ export interface AsciiSettings {
   animation: {
     animationLength: number
     frameRate: number
-    loop: 'once' | 'infinite'
   }
 }
 
@@ -101,7 +100,6 @@ const defaultSettings: AsciiSettings = {
   animation: {
     animationLength: 100,
     frameRate: 30,
-    loop: 'infinite',
   },
 }
 

@@ -6,13 +6,11 @@ interface AnimationOptionsProps {
   settings: {
     animationLength: number
     frameRate: number
-    loop: 'once' | 'infinite'
   }
   updateSettings: (
     settings: Partial<{
       animationLength: number
       frameRate: number
-      loop: 'once' | 'infinite'
     }>,
   ) => void
 }
@@ -55,25 +53,6 @@ export function AnimationOptions({ settings, updateSettings }: AnimationOptionsP
               updateSettings({ frameRate: Number.parseInt(e.target.value) || 1 })
             }
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Loop</Label>
-          <RadioGroup
-            value={settings.loop}
-            onValueChange={(value) =>
-              updateSettings({ loop: value as 'once' | 'infinite' })
-            }
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="once" id="loop-once" />
-              <Label htmlFor="loop-once">Once</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="infinite" id="loop-infinite" />
-              <Label htmlFor="loop-infinite">Infinite</Label>
-            </div>
-          </RadioGroup>
         </div>
       </div>
     </div>
