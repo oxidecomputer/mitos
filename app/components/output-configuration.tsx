@@ -1,4 +1,5 @@
 import type React from 'react'
+import { useState } from 'react'
 
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
@@ -47,7 +48,10 @@ export function OutputConfiguration({
   updateSettings,
   sourceType,
 }: OutputConfigurationProps) {
+  const [selectedCharSet, setSelectedCharSet] = useState('light')
+
   const handleCharacterSetChange = (value: string) => {
+    setSelectedCharSet(value)
     if (value === 'custom') return
     updateSettings({
       characterSet: predefinedCharacterSets[value as keyof typeof predefinedCharacterSets],
@@ -56,6 +60,7 @@ export function OutputConfiguration({
 
   const handleCustomCharacterSetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateSettings({ characterSet: e.target.value })
+    setSelectedCharSet('custom')
   }
 
   return (
@@ -66,7 +71,7 @@ export function OutputConfiguration({
           <>
             <div className="space-y-2">
               <Label htmlFor="characterSet">Character Set</Label>
-              <Select onValueChange={handleCharacterSetChange}>
+              <Select onValueChange={handleCharacterSetChange} value={selectedCharSet}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a character set" />
                 </SelectTrigger>
