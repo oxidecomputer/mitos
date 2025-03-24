@@ -38,7 +38,7 @@ export function AsciiPreview({
   settings,
   animationController,
   setAnimationController,
-  isExporting
+  isExporting,
 }: AsciiPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
@@ -67,32 +67,7 @@ export function AsciiPreview({
     if (!program) return
 
     try {
-      const asciiElement = document.querySelector('.ascii-animation pre')
-      let asciiText = ''
-
-      if (asciiElement) {
-        const content = asciiElement.textContent || ''
-
-        const { width } = dimensions
-        let processed = ''
-
-        for (let i = 0; i < content.length; i++) {
-          processed += content[i]
-
-          if ((i + 1) % width === 0 && i < content.length - 1) {
-            processed += '\n'
-          }
-        }
-
-        asciiText = processed
-          .split('\n')
-          .map((line) => line.trimRight())
-          .join('\n')
-      } else {
-        throw new Error('No ASCII content available')
-      }
-
-      navigator.clipboard.writeText(asciiText).then(() => {
+      navigator.clipboard.writeText(getContent(dimensions) || '').then(() => {
         toast({
           title: 'Copied to clipboard',
           description: 'ASCII art has been copied to your clipboard',
@@ -177,7 +152,6 @@ export function AsciiPreview({
           >
             <Copy className="h-4 w-4" />
           </Button>
-
         </div>
       )}
 
@@ -240,6 +214,34 @@ export function AsciiPreview({
       )}
     </div>
   )
+}
+
+export const getContent = (dimensions: { width: number; height: number }) => {
+  const asciiElement = document.querySelector('.ascii-animation pre')
+
+  if (asciiElement) {
+    const rawContent = asciiElement.textContent || ''
+    const { width, height } = dimensions
+
+    // Process the raw content into properly formatted lines
+    const formattedLines = []
+
+    for (let i = 0; i < height; i++) {
+      // Extract exactly width characters for each line
+      const lineStart = i * width
+      const lineEnd = lineStart + width
+
+      // Ensure we don't go out of bounds
+      if (lineStart < rawContent.length) {
+        const line = rawContent.substring(lineStart, Math.min(lineEnd, rawContent.length))
+        // Add the line without right trimming to preserve spaces
+        formattedLines.push(line)
+      }
+    }
+
+    // Join the lines with newlines
+    return formattedLines.join('\n')
+  }
 }
 
 function FrameSlider({

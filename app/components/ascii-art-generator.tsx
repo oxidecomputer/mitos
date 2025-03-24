@@ -304,16 +304,19 @@ export function AsciiArtGenerator() {
 
               {/* Export Options */}
               <div className="space-y-4">
-                {program && (
-                  <ExportOptions
-                    program={program}
-                    sourceType={settings.source.type}
-                    animationController={animationController}
-                    animationLength={settings.animation.animationLength}
-                    isExporting={isExporting}
-                    setIsExporting={setIsExporting}
-                  />
-                )}
+                <ExportOptions
+                  program={program}
+                  sourceType={settings.source.type}
+                  animationController={animationController}
+                  animationLength={settings.animation.animationLength}
+                  isExporting={isExporting}
+                  setIsExporting={setIsExporting}
+                  dimensions={{
+                    width: settings.output.columns,
+                    height: settings.output.rows,
+                  }}
+                  disabled={!program}
+                />
               </div>
             </div>
           </ScrollArea>

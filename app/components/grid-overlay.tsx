@@ -29,7 +29,11 @@ export function GridOverlay({ grid, cols, rows }: GridOverlayProps) {
   }
 
   return (
-    <div ref={gridRef} className="pointer-events-none absolute inset-0 z-10">
+    <div 
+      ref={gridRef} 
+      className="grid-overlay pointer-events-none absolute inset-0 z-10"
+      data-grid-type={grid}
+    >
       <svg
         width="100%"
         height="100%"
