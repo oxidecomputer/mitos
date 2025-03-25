@@ -41,6 +41,11 @@ export const predefinedCharacterSets = {
   boxes: '█▉▊▋▌▍▎▏',
   binaryBoxes: '▊⎕ ',
   binary: '10 ',
+  binaryDirection: '–| ',
+  steps: ' .–=▂▄▆█',
+  intersect: '└┧─┨┕┪┖┫┘┩┙┪━',
+  standard: '.,-~:;=!*#$@',
+  numbers: '0123456789 ',
 }
 
 export function OutputConfiguration({
@@ -80,6 +85,11 @@ export function OutputConfiguration({
                   <SelectItem value="boxes">Boxes</SelectItem>
                   <SelectItem value="binaryBoxes">Binary Boxes</SelectItem>
                   <SelectItem value="binary">Binary</SelectItem>
+                  <SelectItem value="binaryDirection">Binary Direction</SelectItem>
+                  <SelectItem value="steps">Steps</SelectItem>
+                  <SelectItem value="intersect">Intersect</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="numbers">Numbers</SelectItem>
                   <SelectItem value="custom">Custom</SelectItem>
                 </SelectContent>
               </Select>

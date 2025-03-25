@@ -1,6 +1,7 @@
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '~/components/ui/radio-group'
+
+import type { SourceType } from './ascii-art-generator'
 
 interface AnimationOptionsProps {
   settings: {
@@ -13,9 +14,16 @@ interface AnimationOptionsProps {
       frameRate: number
     }>,
   ) => void
+  sourceType?: SourceType
 }
 
-export function AnimationOptions({ settings, updateSettings }: AnimationOptionsProps) {
+export function AnimationOptions({
+  settings,
+  updateSettings,
+  sourceType = 'code',
+}: AnimationOptionsProps) {
+  const isMediaSource = sourceType === 'gif' || sourceType === 'video'
+
   return (
     <div>
       <h3 className="mb-4 text-lg font-medium">Animation Options</h3>
@@ -35,6 +43,7 @@ export function AnimationOptions({ settings, updateSettings }: AnimationOptionsP
             onChange={(e) =>
               updateSettings({ animationLength: Number.parseInt(e.target.value) || 1 })
             }
+            disabled={isMediaSource}
           />
         </div>
 

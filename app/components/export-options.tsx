@@ -64,7 +64,9 @@ export function ExportOptions({
     try {
       setIsExporting(true)
 
-      const isAnimated = sourceType === 'code' && animationController
+      const isAnimated =
+        (sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') &&
+        animationController
       const totalFrames = isAnimated ? animationLength : 1
 
       // Pause animation during export if animated
@@ -357,7 +359,9 @@ export function ExportOptions({
   }
 
   useEffect(() => {
-    if (sourceType === 'code' && animationLength > 1) {
+    const isAnimated =
+      sourceType === 'code' || sourceType === 'gif' || sourceType === 'video'
+    if (isAnimated && animationLength > 1) {
       setExportFormat('frames')
     } else {
       setExportFormat('svg')
@@ -380,7 +384,7 @@ export function ExportOptions({
                 <SelectValue placeholder="Export as" />
               </SelectTrigger>
               <SelectContent>
-                {sourceType === 'code' && animationLength > 1 ? (
+                {(sourceType === 'code' || sourceType === 'gif') && animationLength > 1 ? (
                   <SelectItem value="frames">PNGs</SelectItem>
                 ) : (
                   <>
@@ -431,7 +435,9 @@ export function ExportOptions({
             disabled={isExporting || disabled}
           >
             <Download className="mr-2 h-4 w-4" />
-            {sourceType === 'code' ? 'Export Animation' : 'Export Image'}
+            {sourceType === 'code' || sourceType === 'gif' || sourceType === 'video'
+              ? `Export ${exportFormat === 'frames' ? 'Frames' : 'Frame'}`
+              : 'Export Image'}
           </Button>
         </div>
       </div>

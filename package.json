@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
     "preview": "vite preview",
-    "fmt": "prettier --cache --write . && npm run lint -- --fix",
     "tsc": "tsc"
   },
   "dependencies": {
@@ -36,6 +34,7 @@
     "eslint-plugin-prettier": "^5.2.3",
     "eslint-plugin-react": "^7.37.4",
     "file-saver": "^2.0.5",
+    "gifuct-js": "^2.1.2",
     "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.454.0",

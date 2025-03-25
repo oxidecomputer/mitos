@@ -24,6 +24,7 @@ interface AsciiPreviewProps {
   animationController: AnimationController
   setAnimationController: (controller: AnimationController) => void
   isExporting: boolean
+  isProcessing?: boolean
 }
 
 export type AnimationController = ReturnType<typeof createAnimation> | null
@@ -39,6 +40,7 @@ export function AsciiPreview({
   animationController,
   setAnimationController,
   isExporting,
+  isProcessing = false,
 }: AsciiPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
@@ -160,10 +162,12 @@ export function AsciiPreview({
         ref={containerRef}
         className="relative flex flex-1 items-center justify-center overflow-auto"
       >
-        {isExporting && (
+        {(isExporting || isProcessing) && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
             <div className="rounded-md bg-white p-4 text-center shadow-xl">
-              <div className="mb-2 text-lg font-semibold">Exporting Frames</div>
+              <div className="mb-2 text-lg font-semibold">
+                {isExporting ? 'Exporting Frames' : 'Processing Media'}
+              </div>
               <div className="text-sm text-muted-foreground">
                 Please wait, this may take a moment...
               </div>
@@ -205,11 +209,12 @@ export function AsciiPreview({
         </div>
       </div>
 
-      {sourceType === 'code' && (
+      {(sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') && (
         <FrameSlider
           frame={frame}
           totalFrames={settings.animationLength}
           animationController={animationController}
+          sourceType={sourceType}
         />
       )}
     </div>
@@ -248,10 +253,12 @@ function FrameSlider({
   frame,
   totalFrames,
   animationController,
+  sourceType,
 }: {
   frame: number
   totalFrames: number
   animationController: AnimationController
+  sourceType?: SourceType
 }) {
   const [playing, setPlaying] = useState(false)
 
@@ -265,9 +272,12 @@ function FrameSlider({
     }
   }
 
+  // Reset frame when source type changes
   useEffect(() => {
-    setPlaying((animationController && !animationController?.getState().once) || false)
-  }, [animationController])
+    if (animationController) {
+      animationController.setFrame(0)
+    }
+  }, [sourceType, animationController])
 
   return (
     <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md bg-white/80 p-2 shadow-sm backdrop-blur-sm">

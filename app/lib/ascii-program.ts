@@ -5,6 +5,8 @@ export async function createImageAsciiProgram(
   asciiData: Data = {},
   width = 80,
   height = 40,
+  frames?: Data[],
+  frameRate: number = 30,
 ): Promise<Program> {
   width = Math.max(1, width)
   height = Math.max(1, height)
@@ -12,7 +14,7 @@ export async function createImageAsciiProgram(
   // Default program
   const program: Program = {
     settings: {
-      fps: 30,
+      fps: frameRate,
       cols: width,
       rows: height,
       color: '#000000',
@@ -21,12 +23,31 @@ export async function createImageAsciiProgram(
 
     boot: (_context, _buffer, userData) => {
       userData.asciiData = asciiData
+
+      // If we have animation frames, store them
+      if (frames && frames.length > 0) {
+        userData.frames = frames
+        userData.isAnimated = true
+        userData.frameCount = frames.length
+      }
     },
 
-    main: (pos, _context, _cursor, _buffer, userData) => {
+    main: (pos, context, _cursor, _buffer, userData) => {
       const { x, y } = pos
 
-      if (userData.asciiData && userData.asciiData[x] && userData.asciiData[x][y]) {
+      // If we have animation frames, use the current frame based on context.frame
+      if (userData.isAnimated && userData.frames) {
+        const frameIndex = context.frame % userData.frameCount
+        const currentFrame = userData.frames[frameIndex]
+
+        if (currentFrame && currentFrame[x] && currentFrame[x][y]) {
+          return {
+            char: currentFrame[x][y].char || ' ',
+          }
+        }
+      }
+      // Otherwise use the static data
+      else if (userData.asciiData && userData.asciiData[x] && userData.asciiData[x][y]) {
         return {
           char: userData.asciiData[x][y].char || ' ',
         }

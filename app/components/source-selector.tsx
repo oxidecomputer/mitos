@@ -1,14 +1,12 @@
 import cn from 'clsx'
 import { Upload } from 'lucide-react'
 import type React from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { Button } from '~/components/ui/button'
-import { Label } from '~/components/ui/label'
 import { useToast } from '~/components/ui/use-toast'
 
 import type { SourceType } from './ascii-art-generator'
-import CodeEditor from './code-editor'
 
 interface SourceSelectorProps {
   type: SourceType
@@ -60,12 +58,35 @@ export function SourceSelector({ type, settings, updateSettings }: SourceSelecto
 
   const handleFiles = (files: FileList) => {
     const file = files[0]
-    const validTypes = ['image/jpeg', 'image/png']
+    const validImageTypes = ['image/jpeg', 'image/png']
+    const validGifTypes = ['image/gif']
+    const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime']
 
-    if (type !== 'code' && !validTypes.includes(file.type)) {
+    // Determine acceptable file types based on source type
+    let acceptableTypes: string[] = []
+    let typeDescription = ''
+
+    switch (type) {
+      case 'image':
+        acceptableTypes = validImageTypes
+        typeDescription = 'JPG or PNG'
+        break
+      case 'gif':
+        acceptableTypes = validGifTypes
+        typeDescription = 'GIF'
+        break
+      case 'video':
+        acceptableTypes = validVideoTypes
+        typeDescription = 'MP4, WebM, or QuickTime'
+        break
+      default:
+        acceptableTypes = []
+    }
+
+    if (type !== 'code' && !acceptableTypes.includes(file.type)) {
       toast({
         title: 'Invalid file type',
-        description: `Please upload a ${type === 'image' ? 'JPG or PNG' : 'MP4'} file.`,
+        description: `Please upload a ${typeDescription} file.`,
         variant: 'destructive',
       })
       return
@@ -74,46 +95,13 @@ export function SourceSelector({ type, settings, updateSettings }: SourceSelecto
     const reader = new FileReader()
     reader.onload = (e) => {
       const result = e.target?.result as string
-      updateSettings({ data: result })
+      updateSettings({ data: result, type })
     }
     reader.readAsDataURL(file)
   }
 
   const handleButtonClick = () => {
     inputRef.current?.click()
-  }
-
-  const [pendingCode, setPendingCode] = useState(settings.code)
-
-  const handleCodeRun = () => {
-    updateSettings({ code: pendingCode })
-  }
-
-  const handleCodeChange = (value: string) => {
-    setPendingCode(value)
-  }
-
-  // Update local state when settings change (e.g. switching tabs)
-  useEffect(() => {
-    setPendingCode(settings.code)
-  }, [settings.code])
-
-  if (type === 'code') {
-    return (
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <Label>Code Input</Label>
-          <Button
-            size="sm"
-            onClick={handleCodeRun}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            Run
-          </Button>
-        </div>
-        <CodeEditor value={pendingCode} onChange={handleCodeChange} />
-      </div>
-    )
   }
 
   return (
@@ -128,7 +116,15 @@ export function SourceSelector({ type, settings, updateSettings }: SourceSelecto
           ref={inputRef}
           type="file"
           className="hidden"
-          accept=".jpg,.jpeg,.png"
+          accept={
+            type === 'image'
+              ? '.jpg,.jpeg,.png'
+              : type === 'gif'
+                ? '.gif'
+                : type === 'video'
+                  ? '.mp4,.webm,.mov,.qt'
+                  : '.jpg,.jpeg,.png,.gif,.mp4,.webm,.mov,.qt'
+          }
           onChange={handleChange}
         />
 
@@ -140,7 +136,14 @@ export function SourceSelector({ type, settings, updateSettings }: SourceSelecto
           )}
         >
           <Upload className="mr-2 h-4 w-4" />
-          {settings.data ? 'Replace' : 'Upload'} Image
+          {settings.data ? 'Replace' : 'Upload'}{' '}
+          {type === 'image'
+            ? 'Image'
+            : type === 'gif'
+              ? 'GIF'
+              : type === 'video'
+                ? 'Video'
+                : 'File'}
         </Button>
       </div>
     </div>
