@@ -76,7 +76,7 @@ function main(coord, context, cursor, buffer) {
 // Optional: Runs once at startup
 function boot(context, buffer, userData) {}
 
-//Optional: Runs at the start of each frame
+// Optional: Runs at the start of each frame
 function pre(context, cursor, buffer, userData) {}
 
 // Optional: Runs after each frame is complete
@@ -167,12 +167,11 @@ export function AsciiArtGenerator() {
         })
       } finally {
         setIsProcessing(false)
-        setProcessingLock(false)
       }
     }
 
     processContent()
-  }, [settings, processingLock])
+  }, [settings])
 
   // Process a static image source
   const processStaticImage = async (imageData: string, columns: number, rows: number) => {
@@ -188,9 +187,7 @@ export function AsciiArtGenerator() {
       const newProgram = await createImageAsciiProgram(result.data, columns, rows)
       setProgram(newProgram)
     } finally {
-      // Release the processing lock
       setIsProcessing(false)
-      setProcessingLock(false)
     }
   }
 
