@@ -1,3 +1,4 @@
+import { useDebounce } from '@uidotdev/usehooks'
 import { decompressFrames, parseGIF } from 'gifuct-js'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -113,6 +114,8 @@ const DEFAULT_SETTINGS: AsciiSettings = {
 export function AsciiArtGenerator() {
   // Core state
   const [settings, setSettings] = useState<AsciiSettings>(DEFAULT_SETTINGS)
+  const debouncedSettings = useDebounce(settings, 300)
+
   const [program, setProgram] = useState<Program | null>(null)
   const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null)
   const [animationController, setAnimationController] = useState<AnimationController>(null)
@@ -171,7 +174,7 @@ export function AsciiArtGenerator() {
     }
 
     processContent()
-  }, [settings])
+  }, [debouncedSettings])
 
   // Process a static image source
   const processStaticImage = async (imageData: string, columns: number, rows: number) => {
