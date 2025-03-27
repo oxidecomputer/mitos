@@ -1,12 +1,10 @@
-# Oxide ASCII Generator Development Guide
+# Mitos Development Guide
 
 ## Build Commands
 - `npm run dev` - Start development server
 - `npm run build` - Build for production (runs TypeScript check)
 - `npm run preview` - Preview production build
 - `npm run tsc` - Run TypeScript type checking
-- `npm run lint` - Run ESLint checks
-- `npm run fmt` - Format code with Prettier and fix ESLint issues
 
 ## Code Style Guidelines
 - **Imports**: Sorted using `@ianvs/prettier-plugin-sort-imports` (third-party → ~/... → relative)
