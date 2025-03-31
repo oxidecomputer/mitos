@@ -1,7 +1,7 @@
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
+import { InputNumber } from '~/lib/ui/src'
 
 import type { SourceType } from './ascii-art-generator'
+import { Container } from './container'
 
 interface AnimationOptionsProps {
   settings: {
@@ -25,45 +25,24 @@ export function AnimationOptions({
   const isMediaSource = sourceType === 'gif' || sourceType === 'video'
 
   return (
-    <div>
-      <h3 className="mb-4 text-lg font-medium">Animation Options</h3>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <Label htmlFor="animationLength">Animation Length (frames)</Label>
-            <span className="text-sm text-muted-foreground">
-              {settings.animationLength}
-            </span>
-          </div>
-          <Input
-            id="animationLength"
-            type="number"
-            min={1}
-            value={settings.animationLength}
-            onChange={(e) =>
-              updateSettings({ animationLength: Number.parseInt(e.target.value) || 1 })
-            }
-            disabled={isMediaSource}
-          />
-        </div>
+    <Container>
+      <InputNumber
+        min={1}
+        value={settings.animationLength}
+        onChange={(val) => updateSettings({ animationLength: val })}
+        disabled={isMediaSource}
+      >
+        Animation Length
+      </InputNumber>
 
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <Label htmlFor="frameRate">Frame Rate (FPS)</Label>
-            <span className="text-sm text-muted-foreground">{settings.frameRate}</span>
-          </div>
-          <Input
-            id="frameRate"
-            type="number"
-            min={1}
-            max={60}
-            value={settings.frameRate}
-            onChange={(e) =>
-              updateSettings({ frameRate: Number.parseInt(e.target.value) || 1 })
-            }
-          />
-        </div>
-      </div>
-    </div>
+      <InputNumber
+        min={1}
+        max={60}
+        value={settings.frameRate}
+        onChange={(val) => updateSettings({ frameRate: val })}
+      >
+        Frame Rate (FPS)
+      </InputNumber>
+    </Container>
   )
 }

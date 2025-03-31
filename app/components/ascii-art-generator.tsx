@@ -1,6 +1,7 @@
 import { useDebounce } from '@uidotdev/usehooks'
 import { decompressFrames, parseGIF } from 'gifuct-js'
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { AsciiPreview, type AnimationController } from '~/components/ascii-preview'
 import { ExportOptions } from '~/components/export-options'
@@ -11,10 +12,6 @@ import {
 import { PreprocessingControls } from '~/components/preprocessing-controls'
 import { ProjectManagement } from '~/components/project-management'
 import { SourceSelector } from '~/components/source-selector'
-import { ScrollArea } from '~/components/ui/scroll-area'
-import { Separator } from '~/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
-import { useToast } from '~/components/ui/use-toast'
 import type { Program } from '~/lib/animation'
 import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-program'
 import {
@@ -51,6 +48,7 @@ export interface AsciiSettings {
     showUnderlyingImage: boolean
     columns: number
     rows: number
+    aspectRatio?: number
   }
   animation: {
     animationLength: number
@@ -104,6 +102,7 @@ const DEFAULT_SETTINGS: AsciiSettings = {
     showUnderlyingImage: false,
     columns: 80,
     rows: 40,
+    aspectRatio: 0.5,
   },
   animation: {
     animationLength: 100,
@@ -125,8 +124,6 @@ export function AsciiArtGenerator() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [cachedMedia, setCachedMedia] = useState<CachedMediaData | null>(null)
   const [showCodeSidebar, setShowCodeSidebar] = useState(false)
-
-  const { toast } = useToast()
 
   // Process ASCII data when settings change
   useEffect(() => {
@@ -163,11 +160,7 @@ export function AsciiArtGenerator() {
         }
       } catch (error) {
         console.error('Error processing:', error)
-        toast({
-          title: 'Error generating ASCII art',
-          description: error instanceof Error ? error.message : 'Unknown error',
-          variant: 'destructive',
-        })
+        toast(error instanceof Error ? error.message : 'Unknown error')
       } finally {
         setIsProcessing(false)
       }
@@ -210,7 +203,7 @@ export function AsciiArtGenerator() {
 
       if (processingSettingsChanged) {
         // Settings have changed, reprocess the cached raw frames
-        await reprocessCachedFrames(cachedMedia, sourceType, columns, rows)
+        await reprocessCachedFrames(cachedMedia, columns, rows)
       } else {
         // Settings haven't changed, use existing processed frames
         await useCachedFrames(cachedMedia, sourceType, columns, rows)
@@ -248,25 +241,16 @@ export function AsciiArtGenerator() {
   // Reprocess cached frames with new settings
   const reprocessCachedFrames = async (
     cache: CachedMediaData,
-    mediaType: 'gif' | 'video',
     columns: number,
     rows: number,
   ) => {
     setIsProcessing(true)
-    showProcessingToast(
-      mediaType,
-      `Reprocessing ${mediaType.toUpperCase()}`,
-      'Applying new visual settings...',
-    )
+    toast('Applying new visual settings...')
 
     try {
       const result = await processAnimatedMedia(cache.rawFrames, settings, (progress) => {
         if (progress % 5 === 0 || progress === cache.rawFrames.length - 1) {
-          showProcessingToast(
-            mediaType,
-            `Reprocessing ${mediaType.toUpperCase()}`,
-            `Processing frame ${progress + 1} of ${cache.rawFrames.length}...`,
-          )
+          toast(`Processing frame ${progress + 1} of ${cache.rawFrames.length}...`)
         }
       })
 
@@ -285,12 +269,9 @@ export function AsciiArtGenerator() {
 
       setProgram(newProgram)
 
-      toast({
-        title: `${mediaType.toUpperCase()} Processing Complete`,
-        description: `Reprocessed ${result.frames.length} frames with new settings`,
-      })
+      toast(`Reprocessed ${result.frames.length} frames with new settings`)
     } catch (error) {
-      handleProcessingError(mediaType, 'reprocessing', error)
+      handleProcessingError('reprocessing', error)
     }
   }
 
@@ -325,10 +306,7 @@ export function AsciiArtGenerator() {
     columns: number,
     rows: number,
   ) => {
-    toast({
-      title: `Using Cached ${mediaType.toUpperCase()}`,
-      description: 'Applying cached frames...',
-    })
+    toast('Applying cached frames...')
 
     try {
       // Use cached frames directly
@@ -350,12 +328,9 @@ export function AsciiArtGenerator() {
 
       setProgram(newProgram)
 
-      toast({
-        title: `${mediaType.toUpperCase()} Loaded`,
-        description: `Loaded ${processedFrames.length} frames from cache`,
-      })
+      toast(`Loaded ${processedFrames.length} frames from cache`)
     } catch (error) {
-      handleProcessingError(mediaType, 'loading cached', error)
+      handleProcessingError('loading cached', error)
 
       // If using cached frames fails, try reprocessing
       if (mediaType === 'gif') {
@@ -368,10 +343,7 @@ export function AsciiArtGenerator() {
 
   // Process GIF source using gifuct-js
   const processGifSource = async (gifData: string, columns: number, rows: number) => {
-    toast({
-      title: 'Analyzing GIF',
-      description: 'Reading GIF structure...',
-    })
+    toast('Reading GIF structure...')
 
     try {
       // Convert data URL to binary data
@@ -381,10 +353,7 @@ export function AsciiArtGenerator() {
       const gif = parseGIF(bytes)
       const frames = decompressFrames(gif, true)
 
-      toast({
-        title: 'Processing GIF',
-        description: `Found ${frames.length} frames. Processing...`,
-      })
+      toast(`Found ${frames.length} frames. Processing...`)
 
       if (frames.length === 0) {
         throw new Error('No frames found in GIF')
@@ -396,10 +365,7 @@ export function AsciiArtGenerator() {
       // Process all extracted frames
       const result = await processAnimatedMedia(rawFrames, settings, (progress) => {
         if (progress % 5 === 0 || progress === rawFrames.length - 1) {
-          toast({
-            title: 'Processing GIF Frames',
-            description: `Processing frame ${progress + 1} of ${rawFrames.length}...`,
-          })
+          toast(`Processing frame ${progress + 1} of ${rawFrames.length}...`)
         }
       })
 
@@ -439,12 +405,9 @@ export function AsciiArtGenerator() {
       setProgram(newProgram)
       updateAnimationLength(result.frames.length)
 
-      toast({
-        title: `Processing Complete`,
-        description: `Processed ${result.frames.length} frames`,
-      })
+      toast(`Processed ${result.frames.length} frames`)
     } catch (error) {
-      handleProcessingError('gif', 'processing', error)
+      handleProcessingError('processing', error)
     }
   }
 
@@ -495,7 +458,7 @@ export function AsciiArtGenerator() {
         updateAnimationLength(result.frames.length)
       }
     } catch (error) {
-      handleProcessingError('video', 'processing', error)
+      handleProcessingError('processing', error)
     }
   }
 
@@ -503,11 +466,7 @@ export function AsciiArtGenerator() {
   const processCodeSource = async (columns: number, rows: number) => {
     const module = processCodeModule(settings.source.code)
     if (!module) {
-      toast({
-        title: 'Error in code',
-        description: 'Could not process your code. Check for syntax errors.',
-        variant: 'destructive',
-      })
+      toast('Could not process your code. Check for syntax errors.')
       return
     }
 
@@ -563,10 +522,7 @@ export function AsciiArtGenerator() {
     for (let i = 0; i < frames.length; i++) {
       // Update progress periodically
       if (i % 5 === 0 || i === frames.length - 1) {
-        toast({
-          title: 'Extracting GIF Frames',
-          description: `Processing frame ${i + 1} of ${frames.length}...`,
-        })
+        toast(`Processing frame ${i + 1} of ${frames.length}...`)
       }
 
       const frame = frames[i]
@@ -628,24 +584,11 @@ export function AsciiArtGenerator() {
     return rawFrames
   }
 
-  // Utility functions for processing
-  const showProcessingToast = (mediaType: string, title: string, description: string) => {
-    toast({
-      title,
-      description,
-    })
-  }
-
-  const handleProcessingError = (mediaType: string, operation: string, error: any) => {
-    console.error(`Error ${operation} ${mediaType}:`, error)
-    toast({
-      title: `Error ${operation} ${mediaType.toUpperCase()}`,
-      description:
-        error instanceof Error
-          ? error.message
-          : `Could not process. Try a different ${mediaType}.`,
-      variant: 'destructive',
-    })
+  const handleProcessingError = (operation: string, error: any) => {
+    console.error(`Error ${operation}:`, error)
+    toast(
+      error instanceof Error ? error.message : `Could not process. Try a different asset.`,
+    )
   }
 
   const updateAnimationLength = (length: number) => {
@@ -724,74 +667,64 @@ export function AsciiArtGenerator() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <div className="left-0 top-0 h-full w-64 transform overflow-hidden border-r bg-background duration-300 ease-in-out">
-        <div className="flex h-full flex-col">
-          <ScrollArea className="flex-1">
-            <div className="space-y-6 p-4">
-              {/* Project Management */}
-              <ProjectManagement settings={settings} updateSettings={updateSettings} />
-
-              <Separator className="my-6" />
-
-              {/* Source Selection Tabs */}
-              <SourceSelectionTabs
-                settings={settings}
-                updateSourceSettings={updateSourceSettings}
-                setShowCodeSidebar={setShowCodeSidebar}
+      <div className="left-0 top-0 flex h-full w-64 transform flex-col overflow-hidden border-r bg-background">
+        {/* Source Selection Tabs */}
+        <SourceSelector settings={settings.source} updateSettings={updateSourceSettings} />
+        <div className="overflow-auto">
+          <div className="space-y-6 py-4">
+            {/* Preprocessing (for non-code sources) */}
+            {settings.source.type !== 'code' && (
+              <PreprocessingControls
+                settings={settings.preprocessing}
+                updateSettings={updatePreprocessingSettings}
               />
+            )}
 
-              {/* Preprocessing (for non-code sources) */}
-              {settings.source.type !== 'code' && (
-                <>
-                  <Separator className="my-6" />
-                  <PreprocessingControls
-                    settings={settings.preprocessing}
-                    updateSettings={updatePreprocessingSettings}
-                  />
-                </>
-              )}
+            <hr />
 
-              <Separator className="my-6" />
+            {/* Output Configuration */}
+            <OutputConfiguration
+              settings={settings.output}
+              updateSettings={updateOutputSettings}
+              sourceType={settings.source.type}
+            />
 
-              {/* Output Configuration */}
-              <OutputConfiguration
-                settings={settings.output}
-                updateSettings={updateOutputSettings}
-                sourceType={settings.source.type}
-              />
+            {/* Animation Options (for animated content) */}
+            {(settings.source.type === 'code' ||
+              settings.source.type === 'gif' ||
+              settings.source.type === 'video') && (
+              <>
+                <hr />
+                <AnimationOptions
+                  settings={settings.animation}
+                  updateSettings={updateAnimationSettings}
+                  sourceType={settings.source.type}
+                />
+              </>
+            )}
 
-              {/* Animation Options (for animated content) */}
-              {(settings.source.type === 'code' ||
-                settings.source.type === 'gif' ||
-                settings.source.type === 'video') && (
-                <>
-                  <Separator className="my-6" />
-                  <AnimationOptions
-                    settings={settings.animation}
-                    updateSettings={updateAnimationSettings}
-                    sourceType={settings.source.type}
-                  />
-                </>
-              )}
+            <hr />
 
-              <Separator className="my-6" />
+            {/* Export Options */}
+            <ExportOptions
+              program={program}
+              sourceType={settings.source.type}
+              animationController={animationController}
+              animationLength={settings.animation.animationLength}
+              isExporting={isExporting}
+              setIsExporting={setIsExporting}
+              dimensions={{
+                width: settings.output.columns,
+                height: settings.output.rows,
+              }}
+              disabled={!program}
+            />
 
-              {/* Export Options */}
-              <ExportOptions
-                program={program}
-                sourceType={settings.source.type}
-                animationController={animationController}
-                animationLength={settings.animation.animationLength}
-                isExporting={isExporting}
-                setIsExporting={setIsExporting}
-                dimensions={{
-                  width: settings.output.columns,
-                  height: settings.output.rows,
-                }}
-                disabled={!program}
-              />
-            </div>
-          </ScrollArea>
+            <hr />
+
+            {/* Project Management */}
+            <ProjectManagement settings={settings} updateSettings={updateSettings} />
+          </div>
         </div>
       </div>
 
@@ -823,72 +756,10 @@ export function AsciiArtGenerator() {
             settings={settings.source}
             updateSettings={updateSourceSettings}
             isOpen={showCodeSidebar}
+            setShowCodeSidebar={setShowCodeSidebar}
           />
         </div>
       </div>
-    </div>
-  )
-}
-
-// Extract some components to reduce file size
-function SourceSelectionTabs({
-  settings,
-  updateSourceSettings,
-  setShowCodeSidebar,
-}: {
-  settings: AsciiSettings
-  updateSourceSettings: (settings: Partial<AsciiSettings['source']>) => void
-  setShowCodeSidebar: (open: boolean) => void
-}) {
-  return (
-    <div className="space-y-4">
-      <Tabs
-        defaultValue="image"
-        onValueChange={(value) => {
-          setShowCodeSidebar(value === 'code')
-        }}
-      >
-        <TabsList className="mb-4 grid grid-cols-3">
-          <TabsTrigger value="image">Image</TabsTrigger>
-          <TabsTrigger value="gif">GIF</TabsTrigger>
-          <TabsTrigger value="code">Code</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="image" className="mt-0">
-          <SourceSelector
-            type="image"
-            settings={settings.source}
-            updateSettings={updateSourceSettings}
-          />
-        </TabsContent>
-
-        <TabsContent value="gif" className="mt-0">
-          <SourceSelector
-            type="gif"
-            settings={settings.source}
-            updateSettings={updateSourceSettings}
-          />
-        </TabsContent>
-
-        <TabsContent value="video" className="mt-0">
-          <SourceSelector
-            type="video"
-            settings={settings.source}
-            updateSettings={updateSourceSettings}
-          />
-        </TabsContent>
-
-        {/* Only show selector in sidebar for non-code modes */}
-        {settings.source.type !== 'code' && (
-          <TabsContent value="code" className="mt-0">
-            <SourceSelector
-              type="code"
-              settings={settings.source}
-              updateSettings={updateSourceSettings}
-            />
-          </TabsContent>
-        )}
-      </Tabs>
     </div>
   )
 }

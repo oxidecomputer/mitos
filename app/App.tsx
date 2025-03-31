@@ -1,6 +1,6 @@
-import { AsciiArtGenerator } from '~/components/ascii-art-generator'
+import { Toaster } from 'sonner'
 
-import { Toaster } from './components/ui/toaster'
+import { AsciiArtGenerator } from '~/components/ascii-art-generator'
 
 function App() {
   return (

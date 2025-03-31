@@ -1,23 +1,16 @@
 import { saveAs } from 'file-saver'
 import html2canvas from 'html2canvas'
 import JSZip from 'jszip'
-import { Copy, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
-import { Button } from '~/components/ui/button'
-import { Label } from '~/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '~/components/ui/select'
-import { useToast } from '~/components/ui/use-toast'
 import type { Program } from '~/lib/animation'
+import { InputButton } from '~/lib/ui/src'
+import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
 import { type SourceType } from './ascii-art-generator'
 import { getContent, type AnimationController } from './ascii-preview'
+import { Container } from './container'
 
 export type ExportFormat = 'frames' | 'png' | 'svg'
 export type ExportScale = '1x' | '2x' | '3x' | '4x'
@@ -44,7 +37,6 @@ export function ExportOptions({
   dimensions,
   disabled,
 }: ExportOptionsProps) {
-  const { toast } = useToast()
   const [exportFormat, setExportFormat] = useState<ExportFormat>(
     sourceType === 'code' ? 'frames' : 'png',
   )
@@ -87,21 +79,14 @@ export function ExportOptions({
       }
     } catch (error) {
       console.error('Error exporting frames:', error)
-      toast({
-        title: 'Export failed',
-        description: 'An error occurred while exporting',
-        variant: 'destructive',
-      })
+      toast('An error occurred while exporting')
     } finally {
       setIsExporting(false)
     }
   }
 
   const exportSingleFrame = async () => {
-    toast({
-      title: 'Exporting frame',
-      description: 'Preparing image...',
-    })
+    toast('Preparing image...')
 
     // Allow DOM to update
     await new Promise((resolve) => setTimeout(resolve, 50))
@@ -125,21 +110,14 @@ export function ExportOptions({
       1.0,
     )
 
-    toast({
-      title: 'Export complete',
-      description: 'Frame has been exported as PNG',
-    })
+    toast('Frame has been exported as PNG')
   }
 
   const generateSvgContent = () => {
     const asciiElement = document.querySelector('.ascii-animation pre')
 
     if (!asciiElement) {
-      toast({
-        title: 'Export failed',
-        description: 'Could not find ASCII content',
-        variant: 'destructive',
-      })
+      toast('Could not find ASCII content')
       return null
     }
 
@@ -210,11 +188,7 @@ export function ExportOptions({
       return svgContent
     } catch (error) {
       console.error('Error creating SVG:', error)
-      toast({
-        title: 'SVG Export failed',
-        description: 'Error creating SVG file',
-        variant: 'destructive',
-      })
+      toast('Error creating SVG file')
       return null
     }
   }
@@ -226,13 +200,10 @@ export function ExportOptions({
     const blob = new Blob([svgContent], { type: 'image/svg+xml' })
     saveAs(blob, 'ascii-art.svg')
 
-    toast({
-      title: 'Export complete',
-      description: 'ASCII art has been exported as SVG vector graphics',
-    })
+    toast('Exported as SVG')
   }
 
-  const copySvgToClipboard = async () => {
+  const copySvg = async () => {
     if (!program) return
 
     try {
@@ -247,19 +218,27 @@ export function ExportOptions({
       // Copy SVG content to clipboard
       await navigator.clipboard.writeText(svgContent)
 
-      toast({
-        title: 'Copied to clipboard',
-        description: 'SVG has been copied to clipboard. You can paste it into Figma.',
-      })
+      toast('SVG has been copied to clipboard')
     } catch (error) {
       console.error('Error copying SVG to clipboard:', error)
-      toast({
-        title: 'Copy failed',
-        description: 'Failed to copy SVG to clipboard',
-        variant: 'destructive',
-      })
+      toast('Failed to copy SVG to clipboard')
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  // Convert ASCII data to text with line breaks and copy to clipboard
+  // Adds line breaks based on column width
+  const copyText = () => {
+    if (!program) return
+
+    try {
+      navigator.clipboard.writeText(getContent(dimensions) || '').then(() => {
+        toast('ASCII art has been copied to your clipboard')
+      })
+    } catch (error) {
+      console.error('Error copying to clipboard:', error)
+      toast('Could not copy to clipboard')
     }
   }
 
@@ -289,10 +268,7 @@ export function ExportOptions({
   ) => {
     const zip = new JSZip()
 
-    toast({
-      title: 'Exporting frames',
-      description: `Preparing ${totalFrames} frames for export...`,
-    })
+    toast(`Preparing ${totalFrames} frames for export...`)
 
     for (let i = 0; i < totalFrames; i++) {
       if (animationController) {
@@ -314,10 +290,7 @@ export function ExportOptions({
 
       // Update progress
       if (i % 5 === 0 || i === totalFrames - 1) {
-        toast({
-          title: 'Exporting frames',
-          description: `Progress: ${Math.round(((i + 1) / totalFrames) * 100)}%`,
-        })
+        toast(`Progress: ${Math.round(((i + 1) / totalFrames) * 100)}%`)
       }
     }
 
@@ -331,10 +304,7 @@ export function ExportOptions({
     const zipBlob = await zip.generateAsync({ type: 'blob' })
     saveAs(zipBlob, 'ascii-animation-frames.zip')
 
-    toast({
-      title: 'Export complete',
-      description: 'All frames have been exported as PNG files in a zip archive',
-    })
+    toast('All frames have been exported as PNG files in a zip archive')
   }
 
   // The ASCII is HTML so we need some way to turn it into an image
@@ -369,78 +339,62 @@ export function ExportOptions({
   }, [sourceType, animationLength])
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="mb-4 text-lg font-medium">Export Options</h3>
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="export-format">Format</Label>
-            <Select
-              value={exportFormat}
-              onValueChange={(value) => setExportFormat(value as ExportFormat)}
-              disabled={isExporting}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Export as" />
-              </SelectTrigger>
-              <SelectContent>
-                {(sourceType === 'code' || sourceType === 'gif') && animationLength > 1 ? (
-                  <SelectItem value="frames">PNGs</SelectItem>
-                ) : (
-                  <>
-                    <SelectItem value="svg">SVG</SelectItem>
-                    <SelectItem value="png">PNG</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+    <Container>
+      <InputSelect
+        value={exportFormat}
+        onChange={(value) => setExportFormat(value as ExportFormat)}
+        options={
+          (sourceType === 'code' || sourceType === 'gif') && animationLength > 1
+            ? (['frames'] as ExportFormat[])
+            : (['svg', 'png'] as ExportFormat[])
+        }
+        labelize={(format) => (format === 'frames' ? 'PNGs' : format.toUpperCase())}
+        disabled={isExporting}
+      >
+        Format
+      </InputSelect>
+      {exportFormat !== 'svg' && (
+        <InputSelect
+          value={exportScale}
+          onChange={(value) => setExportScale(value as ExportScale)}
+          options={['1x', '2x', '3x', '4x']}
+          disabled={isExporting}
+        >
+          Quality
+        </InputSelect>
+      )}
+      <div className="space-y-2">
+        <InputButton
+          variant="secondary"
+          className="mt-2 w-full"
+          onClick={exportContent}
+          disabled={isExporting || disabled}
+        >
+          {sourceType === 'code' || sourceType === 'gif' || sourceType === 'video'
+            ? `Export ${exportFormat === 'frames' ? 'Frames' : 'Frame'}`
+            : 'Export Image'}
+        </InputButton>
 
-          {exportFormat !== 'svg' && (
-            <div className="space-y-2">
-              <Label htmlFor="export-scale">Quality</Label>
-              <Select
-                value={exportScale}
-                onValueChange={(value) => setExportScale(value as ExportScale)}
-                disabled={isExporting}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Scale" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1x">1x</SelectItem>
-                  <SelectItem value="2x">2x</SelectItem>
-                  <SelectItem value="3x">3x</SelectItem>
-                  <SelectItem value="4x">4x</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {exportFormat === 'svg' && (
-            <Button
-              className="mt-2 w-full"
-              onClick={copySvgToClipboard}
-              disabled={isExporting || disabled}
-              variant="outline"
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy SVG
-            </Button>
-          )}
-
-          <Button
-            className="mt-2 w-full"
-            onClick={exportContent}
+        <div className="flex gap-2">
+          <InputButton
+            variant="secondary"
+            onClick={copyText}
             disabled={isExporting || disabled}
           >
-            <Download className="mr-2 h-4 w-4" />
-            {sourceType === 'code' || sourceType === 'gif' || sourceType === 'video'
-              ? `Export ${exportFormat === 'frames' ? 'Frames' : 'Frame'}`
-              : 'Export Image'}
-          </Button>
+            Copy text
+          </InputButton>
+
+          {exportFormat === 'svg' && (
+            <InputButton
+              variant="secondary"
+              onClick={copySvg}
+              disabled={isExporting || disabled}
+            >
+              Copy SVG
+            </InputButton>
+          )}
         </div>
       </div>
-    </div>
+    </Container>
   )
 }

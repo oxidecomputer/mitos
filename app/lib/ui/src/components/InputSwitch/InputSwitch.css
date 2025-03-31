@@ -1,0 +1,91 @@
+/* Import base styles */
+@import '../../styles/variables.css';
+
+/* InputSwitch styles */
+.ui-switch {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 1em;
+}
+
+.ui-switch__track {
+  position: relative;
+  width: calc(var(--mt-input-height-xs) * 2);
+  height: var(--mt-input-height-xs);
+  border-radius: 9999px;
+  background-color: var(--mt-color-input);
+  transition: background-color var(--mt-transition-fast);
+}
+
+.ui-switch__track:hover {
+  background-color: var(--mt-color-input-hover);
+}
+
+.ui-switch__track:has(:checked) {
+  background-color: var(--mt-primary);
+}
+
+.ui-switch__track:has(:checked):hover {
+  background-color: var(--mt-primary-hover);
+}
+
+.ui-switch__track:has(.ui-switch__input:focus),
+.ui-switch__track--subfocus {
+  position: relative;
+}
+
+.ui-switch__track:has(.ui-switch__input:focus)::before,
+.ui-switch__track--subfocus::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 1px solid var(--mt-primary);
+  border-radius: 999px;
+}
+
+.ui-switch__handle {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(var(--mt-input-height-xs) - 8px);
+  height: calc(var(--mt-input-height-xs) - 8px);
+  border-radius: 9999px;
+  background-color: var(--mt-text-secondary);
+  transition:
+    left var(--mt-transition-fast),
+    width var(--mt-transition-fast),
+    background-color var(--mt-transition-fast);
+  pointer-events: none;
+}
+
+.ui-switch__handle--tweaking {
+  width: calc(var(--mt-input-height-xs) - 4px);
+}
+
+.ui-switch__input:checked + .ui-switch__handle {
+  left: calc(100% - var(--mt-input-height-xs) + 4px);
+  background-color: var(--mt-background);
+}
+
+.ui-switch__input:checked + .ui-switch__handle--tweaking {
+  left: calc(100% - var(--mt-input-height-xs));
+}
+
+.ui-switch__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-switch__input:focus {
+  pointer-events: auto;
+}
+
+.ui-switch label {
+  color: var(--mt-text);
+  font-size: var(--mt-font-size-label);
+  font-family: var(--mt-font-label);
+  user-select: none;
+  flex-grow: 1;
+}

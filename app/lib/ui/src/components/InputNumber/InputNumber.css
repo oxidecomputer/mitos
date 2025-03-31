@@ -1,0 +1,173 @@
+.ui-number {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--mt-spacing-xs);
+  font-family: var(--mt-font-base);
+}
+
+.ui-number__container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 24px;
+  width: 60px;
+}
+
+.ui-number__container--has-range {
+  display: grid;
+  grid-template-columns: 1fr 60px;
+  gap: var(--mt-spacing-sm);
+  align-items: center;
+  width: 100%;
+}
+
+.ui-number__slider-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.ui-number__bar {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  border-radius: var(--mt-radius-sm);
+  background-color: var(--mt-color-input);
+}
+
+.ui-number__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background-color: var(--mt-primary);
+}
+
+.ui-number__scrubber {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--mt-radius-sm);
+  background-color: var(--mt-primary);
+  box-shadow: 0 0 0 2px var(--mt-background);
+  cursor: pointer;
+  left: calc(var(--percentage, 0%) * (100% - 12px));
+  transition: background-color var(--mt-transition-normal);
+}
+
+.ui-number__scrubber:hover {
+  background-color: var(--mt-primary-hover);
+}
+
+.ui-number__input {
+  width: 100%;
+  height: 24px;
+  padding: 0 var(--mt-spacing-sm);
+  font-size: 12px;
+  color: var(--mt-text);
+  background-color: var(--mt-color-input);
+  border: 1px solid var(--mt-border);
+  border-radius: var(--mt-radius-sm);
+  outline: none;
+  -moz-appearance: textfield;
+  text-align: center;
+  transition: border-color var(--mt-transition-normal);
+}
+
+.ui-number:hover input {
+  border-color: var(--mt-primary);
+}
+
+.ui-number__input:focus {
+  outline: none;
+  border-color: var(--mt-primary);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}
+
+.ui-number__input::-webkit-outer-spin-button,
+.ui-number__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.ui-number__controls {
+  display: flex;
+  flex-direction: column;
+  height: 24px;
+  gap: 2px;
+}
+
+.ui-number__track {
+  position: relative;
+  width: 60px;
+  height: 14px;
+  background-color: var(--mt-color-input);
+  border-radius: var(--mt-radius-sm);
+  cursor: ew-resize;
+  overflow: hidden;
+}
+
+.ui-number__dragger {
+  width: 60px;
+  height: 8px;
+  cursor: ew-resize;
+  background-color: var(--mt-border);
+  opacity: 0.3;
+  transition:
+    opacity var(--mt-transition-normal),
+    background-color var(--mt-transition-normal);
+  border-radius: var(--mt-radius-sm);
+}
+
+.ui-number__dragger:hover {
+  opacity: 0.6;
+  background-color: var(--mt-color-input);
+}
+
+body.dragging .ui-number__dragger {
+  opacity: 0.8;
+  background-color: var(--mt-primary);
+}
+
+.ui-number label {
+  font-size: var(--mt-font-size-label);
+  font-family: var(--mt-font-label);
+  color: var(--mt-text);
+  user-select: none;
+}
+
+/* Disabled state */
+.ui-number__input[disabled] {
+  cursor: not-allowed;
+}
+
+.ui-number__container:has(input[disabled]) {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* When slider is hidden, adjust container layout */
+.ui-number__container:not(.ui-number__container--has-range) {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--mt-spacing-md);
+}
+
+/* When slider is hidden, adjust label and input widths */
+.ui-number:not(:has(.ui-number__container--has-range)) {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--mt-spacing-md);
+}
+
+.ui-number:not(:has(.ui-number__container--has-range)) .ui-number__label {
+  flex: 0 0 auto;
+}

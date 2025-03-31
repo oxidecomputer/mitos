@@ -1,12 +1,13 @@
 import { useState } from 'react'
 
+import { InputButton } from '~/lib/ui/src'
+
 import type { SourceType } from './ascii-art-generator'
 import CodeEditor from './code-editor'
-import { Button } from './ui/button'
-import { Label } from './ui/label'
 
 interface CodeSidebarProps {
   isOpen: boolean
+  setShowCodeSidebar: (val: boolean) => void
   settings: {
     type: SourceType
     data: string | null
@@ -21,7 +22,12 @@ interface CodeSidebarProps {
   ) => void
 }
 
-export function CodeSidebar({ isOpen, settings, updateSettings }: CodeSidebarProps) {
+export function CodeSidebar({
+  isOpen,
+  setShowCodeSidebar,
+  settings,
+  updateSettings,
+}: CodeSidebarProps) {
   const [pendingCode, setPendingCode] = useState(settings.code)
 
   const handleCodeRun = () => {
@@ -32,21 +38,27 @@ export function CodeSidebar({ isOpen, settings, updateSettings }: CodeSidebarPro
     setPendingCode(value)
   }
 
-  if (!isOpen) return null
+  console.log(isOpen)
 
   return (
-    <div className="w-1/2 max-w-[30rem] overflow-auto border-l bg-background p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <Label>Code Input</Label>
-        <Button
-          size="sm"
-          onClick={handleCodeRun}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          Run
-        </Button>
+    <div className="relative">
+      <div className="absolute -left-3 top-3 -translate-x-[100%]">
+        <InputButton onClick={() => setShowCodeSidebar(!isOpen)} inline>
+          {isOpen ? 'Hide' : 'Show'}
+        </InputButton>
       </div>
-      <CodeEditor value={pendingCode} onChange={handleCodeChange} />
+      {isOpen && (
+        <div className="relative w-full max-w-[30rem] overflow-auto border-l bg-background">
+          <CodeEditor value={pendingCode} onChange={handleCodeChange} />
+          <InputButton
+            inline
+            onClick={handleCodeRun}
+            className="absolute bottom-2 right-2 w-auto"
+          >
+            Run
+          </InputButton>
+        </div>
+      )}
     </div>
   )
 }

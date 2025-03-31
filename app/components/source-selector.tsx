@@ -1,15 +1,16 @@
-import cn from 'clsx'
-import { Upload } from 'lucide-react'
 import type React from 'react'
 import { useRef, useState } from 'react'
+import { toast } from 'sonner'
 
-import { Button } from '~/components/ui/button'
-import { useToast } from '~/components/ui/use-toast'
+import { InputButton } from '~/lib/ui/src'
 
 import type { SourceType } from './ascii-art-generator'
+import { Container } from './container'
 
-interface SourceSelectorProps {
-  type: SourceType
+export function SourceSelector({
+  settings,
+  updateSettings,
+}: {
   settings: {
     type: SourceType
     data: string | null
@@ -22,12 +23,9 @@ interface SourceSelectorProps {
       code: string
     }>,
   ) => void
-}
-
-export function SourceSelector({ type, settings, updateSettings }: SourceSelectorProps) {
+}) {
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const { toast } = useToast()
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -60,44 +58,27 @@ export function SourceSelector({ type, settings, updateSettings }: SourceSelecto
     const file = files[0]
     const validImageTypes = ['image/jpeg', 'image/png']
     const validGifTypes = ['image/gif']
-    const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime']
 
-    // Determine acceptable file types based on source type
-    let acceptableTypes: string[] = []
-    let typeDescription = ''
-
-    switch (type) {
-      case 'image':
-        acceptableTypes = validImageTypes
-        typeDescription = 'JPG or PNG'
-        break
-      case 'gif':
-        acceptableTypes = validGifTypes
-        typeDescription = 'GIF'
-        break
-      case 'video':
-        acceptableTypes = validVideoTypes
-        typeDescription = 'MP4, WebM, or QuickTime'
-        break
-      default:
-        acceptableTypes = []
+    // Auto-detect file type
+    if (validGifTypes.includes(file.type)) {
+      // It's a GIF
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        updateSettings({ data: result, type: 'gif' })
+      }
+      reader.readAsDataURL(file)
+    } else if (validImageTypes.includes(file.type)) {
+      // It's a static image
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        updateSettings({ data: result, type: 'image' })
+      }
+      reader.readAsDataURL(file)
+    } else {
+      toast('Please upload an image (JPG, PNG) or a GIF file.')
     }
-
-    if (type !== 'code' && !acceptableTypes.includes(file.type)) {
-      toast({
-        title: 'Invalid file type',
-        description: `Please upload a ${typeDescription} file.`,
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const result = e.target?.result as string
-      updateSettings({ data: result, type })
-    }
-    reader.readAsDataURL(file)
   }
 
   const handleButtonClick = () => {
@@ -105,7 +86,7 @@ export function SourceSelector({ type, settings, updateSettings }: SourceSelecto
   }
 
   return (
-    <div>
+    <Container className="border-b py-3">
       <div
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -116,36 +97,17 @@ export function SourceSelector({ type, settings, updateSettings }: SourceSelecto
           ref={inputRef}
           type="file"
           className="hidden"
-          accept={
-            type === 'image'
-              ? '.jpg,.jpeg,.png'
-              : type === 'gif'
-                ? '.gif'
-                : type === 'video'
-                  ? '.mp4,.webm,.mov,.qt'
-                  : '.jpg,.jpeg,.png,.gif,.mp4,.webm,.mov,.qt'
-          }
+          accept=".jpg,.jpeg,.png,.gif"
           onChange={handleChange}
         />
 
-        <Button
+        <InputButton
+          variant={dragActive ? 'secondary' : 'default'}
           onClick={handleButtonClick}
-          className={cn(
-            'w-full transition-colors',
-            dragActive && 'border-dashed bg-primary/10 text-primary',
-          )}
         >
-          <Upload className="mr-2 h-4 w-4" />
-          {settings.data ? 'Replace' : 'Upload'}{' '}
-          {type === 'image'
-            ? 'Image'
-            : type === 'gif'
-              ? 'GIF'
-              : type === 'video'
-                ? 'Video'
-                : 'File'}
-        </Button>
+          {settings.data ? 'Replace Media' : 'Upload Image/GIF'}
+        </InputButton>
       </div>
-    </div>
+    </Container>
   )
 }

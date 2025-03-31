@@ -1,20 +1,18 @@
-import { Copy, Pause, Play, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
+import { Pause, Play, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { Button } from '~/components/ui/button'
-import { Slider } from '~/components/ui/slider'
-import { useToast } from '~/components/ui/use-toast'
 import type { createAnimation, Program } from '~/lib/animation'
+import { InputButton, InputNumber } from '~/lib/ui/src'
 
 import AsciiAnimation from './ascii-animation'
-import type { SourceType } from './ascii-art-generator'
+import type { GridType, SourceType } from './ascii-art-generator'
 import { GridOverlay } from './grid-overlay'
 
 interface AsciiPreviewProps {
   program: Program | null
   dimensions: { width: number; height: number }
   sourceType: SourceType
-  gridType: 'none' | 'horizontal' | 'vertical' | 'both'
+  gridType: GridType
   showUnderlyingImage: boolean
   underlyingImageUrl: string | null
   settings: {
@@ -43,7 +41,6 @@ export function AsciiPreview({
   isProcessing = false,
 }: AsciiPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const { toast } = useToast()
   const [zoomLevel, setZoomLevel] = useState(1)
   const [frame, setFrame] = useState(0)
 
@@ -57,32 +54,6 @@ export function AsciiPreview({
 
   const handleResetZoom = () => {
     setZoomLevel(1)
-  }
-
-  const handleZoomChange = (value: number[]) => {
-    setZoomLevel(value[0])
-  }
-
-  // Convert ASCII data to text with line breaks and copy to clipboard
-  // Adds line breaks based on column width
-  const copyToClipboard = () => {
-    if (!program) return
-
-    try {
-      navigator.clipboard.writeText(getContent(dimensions) || '').then(() => {
-        toast({
-          title: 'Copied to clipboard',
-          description: 'ASCII art has been copied to your clipboard',
-        })
-      })
-    } catch (error) {
-      console.error('Error copying to clipboard:', error)
-      toast({
-        title: 'Copy failed',
-        description: 'Could not copy to clipboard',
-        variant: 'destructive',
-      })
-    }
   }
 
   if (!program) {
@@ -105,55 +76,35 @@ export function AsciiPreview({
       {/* Zoom controls */}
       {program && (
         <div className="absolute left-2 top-2 z-30 flex items-center gap-2 rounded-md bg-white/80 p-2 shadow-sm backdrop-blur-sm">
-          <Button
-            variant="outline"
-            size="icon"
+          <InputButton
+            variant="secondary"
             onClick={handleZoomOut}
             disabled={zoomLevel <= 0.5}
           >
             <ZoomOut className="h-4 w-4" />
-          </Button>
+          </InputButton>
 
-          <div className="w-32 px-2">
-            <Slider
-              value={[zoomLevel]}
-              min={0.5}
-              max={5}
-              step={0.25}
-              onValueChange={handleZoomChange}
-            />
-          </div>
+          <InputNumber
+            showSlider={false}
+            value={zoomLevel}
+            min={0.5}
+            max={5}
+            step={0.25}
+            onChange={setZoomLevel}
+            formatOptions={{ style: 'percent' }}
+          />
 
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleZoomIn}
-            disabled={zoomLevel >= 5}
-          >
+          <InputButton variant="secondary" onClick={handleZoomIn} disabled={zoomLevel >= 5}>
             <ZoomIn className="h-4 w-4" />
-          </Button>
+          </InputButton>
 
-          <Button
-            variant="outline"
-            size="icon"
+          <InputButton
+            variant="secondary"
             onClick={handleResetZoom}
             disabled={zoomLevel === 1}
           >
             <RotateCcw className="h-4 w-4" />
-          </Button>
-
-          <span className="ml-1 text-xs font-medium">{Math.round(zoomLevel * 100)}%</span>
-
-          <div className="ml-2 h-5 border-r border-gray-300"></div>
-
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={copyToClipboard}
-            title="Copy ASCII to clipboard"
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
+          </InputButton>
         </div>
       )}
 
@@ -283,28 +234,21 @@ function FrameSlider({
     <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md bg-white/80 p-2 shadow-sm backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={togglePlay}
-            title={playing ? 'Pause' : 'Play'}
-          >
+          <InputButton onClick={togglePlay}>
             {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </Button>
+          </InputButton>
         </div>
 
         <span className="text-xs text-muted-foreground">
           {frame} / {totalFrames}
         </span>
       </div>
-      <Slider
-        value={[frame]}
+      <InputNumber
+        value={frame}
         min={0}
         max={totalFrames}
         step={1}
-        onValueChange={(value) =>
-          animationController && animationController.setFrame(value[0])
-        }
+        onChange={(value) => animationController && animationController.setFrame(value)}
       />
     </div>
   )

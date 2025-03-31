@@ -1,20 +1,12 @@
-import type React from 'react'
 import { useState } from 'react'
 
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '~/components/ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '~/components/ui/select'
-import { Slider } from '~/components/ui/slider'
-import { Switch } from '~/components/ui/switch'
+import { InputSwitch } from '~/lib/ui/src'
+import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
+import { InputText } from '~/lib/ui/src/components/InputText/InputText'
 
 import type { GridType, SourceType } from './ascii-art-generator'
+import { AspectRatioInputNumber } from './aspect-ratio-input-number'
+import { Container } from './container'
 
 interface OutputConfigurationProps {
   settings: {
@@ -23,6 +15,7 @@ interface OutputConfigurationProps {
     showUnderlyingImage: boolean
     columns: number
     rows: number
+    aspectRatio?: number
   }
   updateSettings: (
     settings: Partial<{
@@ -31,6 +24,7 @@ interface OutputConfigurationProps {
       showUnderlyingImage: boolean
       columns: number
       rows: number
+      aspectRatio?: number
     }>,
   ) => void
   sourceType: SourceType
@@ -48,6 +42,23 @@ export const predefinedCharacterSets = {
   numbers: '0123456789 ',
 }
 
+const characterSets: CharacterSet[] = [
+  'light',
+  'boxes',
+  'binaryBoxes',
+  'binary',
+  'binaryDirection',
+  'steps',
+  'intersect',
+  'standard',
+  'numbers',
+  'custom',
+]
+
+type CharacterSet = keyof typeof predefinedCharacterSets | 'custom'
+
+const gridOptions: GridType[] = ['none', 'horizontal', 'vertical', 'both']
+
 export function OutputConfiguration({
   settings,
   updateSettings,
@@ -63,122 +74,78 @@ export function OutputConfiguration({
     })
   }
 
-  const handleCustomCharacterSetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateSettings({ characterSet: e.target.value })
+  const handleCustomCharacterSetChange = (val: string) => {
+    updateSettings({ characterSet: val })
     setSelectedCharSet('custom')
   }
 
   return (
-    <div>
-      <h3 className="mb-4 text-lg font-medium">Output Configuration</h3>
+    <Container>
       <div className="space-y-4">
         {sourceType !== 'code' && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="characterSet">Character Set</Label>
-              <Select onValueChange={handleCharacterSetChange} value={selectedCharSet}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a character set" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="boxes">Boxes</SelectItem>
-                  <SelectItem value="binaryBoxes">Binary Boxes</SelectItem>
-                  <SelectItem value="binary">Binary</SelectItem>
-                  <SelectItem value="binaryDirection">Binary Direction</SelectItem>
-                  <SelectItem value="steps">Steps</SelectItem>
-                  <SelectItem value="intersect">Intersect</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="numbers">Numbers</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <InputSelect<CharacterSet>
+              value={selectedCharSet as CharacterSet}
+              onChange={handleCharacterSetChange}
+              options={characterSets}
+              labelize={(label) => label}
+              placeholder="Select a character set"
+            >
+              Character Set
+            </InputSelect>
 
-            <div className="space-y-2">
-              <Label htmlFor="customCharacterSet">Custom Character Set</Label>
-              <Input
-                id="customCharacterSet"
+            <div className="mt-2 border-l py-1 pl-3">
+              <InputText
                 value={settings.characterSet}
                 onChange={handleCustomCharacterSetChange}
                 placeholder="Enter custom characters"
-                className="[font-family:GT_America_Mono]"
+                className="[fontFamily:--font-mono]"
               />
-              <p className="text-xs text-muted-foreground">
-                Characters ordered from darkest to lightest
-              </p>
             </div>
-          </>
+          </div>
         )}
 
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <Label htmlFor="columns">Columns</Label>
-            <span className="text-sm text-muted-foreground">{settings.columns}</span>
-          </div>
-          <Slider
-            id="columns"
-            min={20}
-            max={240}
-            step={1}
-            value={[settings.columns]}
-            onValueChange={(value) => updateSettings({ columns: value[0] })}
-          />
-        </div>
+        <AspectRatioInputNumber
+          width={settings.columns}
+          height={settings.rows}
+          onWidthChange={(value) => updateSettings({ columns: value })}
+          onHeightChange={(value) => updateSettings({ rows: value })}
+          aspectRatio={settings.aspectRatio}
+          onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
+          minWidth={20}
+          maxWidth={240}
+          minHeight={10}
+          maxHeight={120}
+        />
 
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <Label htmlFor="rows">Rows</Label>
-            <span className="text-sm text-muted-foreground">{settings.rows}</span>
-          </div>
-          <Slider
-            id="rows"
-            min={10}
-            max={120}
-            step={1}
-            value={[settings.rows]}
-            onValueChange={(value) => updateSettings({ rows: value[0] })}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Grid Lines</Label>
-          <RadioGroup
-            value={settings.grid}
-            onValueChange={(value) => updateSettings({ grid: value as GridType })}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="none" id="grid-none" />
-              <Label htmlFor="grid-none">No Grid</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="horizontal" id="grid-horizontal" />
-              <Label htmlFor="grid-horizontal">Horizontal Lines</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="vertical" id="grid-vertical" />
-              <Label htmlFor="grid-vertical">Vertical Lines</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="both" id="grid-both" />
-              <Label htmlFor="grid-both">Both</Label>
-            </div>
-          </RadioGroup>
-        </div>
+        <InputSelect<GridType>
+          value={settings.grid}
+          onChange={(value) => updateSettings({ grid: value })}
+          options={gridOptions}
+          labelize={(option) => {
+            const labels = {
+              none: 'No Grid',
+              horizontal: 'Horizontal Lines',
+              vertical: 'Vertical Lines',
+              both: 'Both',
+            }
+            return labels[option]
+          }}
+        >
+          Grid Lines
+        </InputSelect>
 
         {sourceType === 'image' && (
           <div className="flex items-center justify-between">
-            <Label htmlFor="show-underlying-image">Show Image</Label>
-            <Switch
-              id="show-underlying-image"
+            <InputSwitch
               checked={settings.showUnderlyingImage}
-              onCheckedChange={(checked) =>
-                updateSettings({ showUnderlyingImage: checked })
-              }
-            />
+              onChange={(checked) => updateSettings({ showUnderlyingImage: checked })}
+            >
+              Show Image
+            </InputSwitch>
           </div>
         )}
       </div>
-    </div>
+    </Container>
   )
 }
