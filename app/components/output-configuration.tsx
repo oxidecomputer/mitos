@@ -81,71 +81,69 @@ export function OutputConfiguration({
 
   return (
     <Container>
-      <div className="space-y-4">
-        {sourceType !== 'code' && (
-          <div>
-            <InputSelect<CharacterSet>
-              value={selectedCharSet as CharacterSet}
-              onChange={handleCharacterSetChange}
-              options={characterSets}
-              labelize={(label) => label}
-              placeholder="Select a character set"
-            >
-              Character Set
-            </InputSelect>
+      {sourceType !== 'code' && (
+        <div>
+          <InputSelect<CharacterSet>
+            value={selectedCharSet as CharacterSet}
+            onChange={handleCharacterSetChange}
+            options={characterSets}
+            labelize={(label) => label}
+            placeholder="Select a character set"
+          >
+            Character Set
+          </InputSelect>
 
-            <div className="mt-2 border-l py-1 pl-3">
-              <InputText
-                value={settings.characterSet}
-                onChange={handleCustomCharacterSetChange}
-                placeholder="Enter custom characters"
-                className="[fontFamily:--font-mono]"
-              />
-            </div>
+          <div className="border-default mt-2 border-l py-1 pl-3">
+            <InputText
+              value={settings.characterSet}
+              onChange={handleCustomCharacterSetChange}
+              placeholder="Enter custom characters"
+              className="[fontFamily:--font-mono]"
+            />
           </div>
-        )}
+        </div>
+      )}
 
-        <AspectRatioInputNumber
-          width={settings.columns}
-          height={settings.rows}
-          onWidthChange={(value) => updateSettings({ columns: value })}
-          onHeightChange={(value) => updateSettings({ rows: value })}
-          aspectRatio={settings.aspectRatio}
-          onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
-          minWidth={20}
-          maxWidth={240}
-          minHeight={10}
-          maxHeight={120}
-        />
+      <AspectRatioInputNumber
+        width={settings.columns}
+        height={settings.rows}
+        onWidthChange={(value) => updateSettings({ columns: value })}
+        onHeightChange={(value) => updateSettings({ rows: value })}
+        aspectRatio={settings.aspectRatio}
+        onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
+        minWidth={20}
+        maxWidth={240}
+        minHeight={10}
+        maxHeight={120}
+      />
 
-        <InputSelect<GridType>
-          value={settings.grid}
-          onChange={(value) => updateSettings({ grid: value })}
-          options={gridOptions}
-          labelize={(option) => {
-            const labels = {
-              none: 'No Grid',
-              horizontal: 'Horizontal Lines',
-              vertical: 'Vertical Lines',
-              both: 'Both',
-            }
-            return labels[option]
-          }}
-        >
-          Grid Lines
-        </InputSelect>
+      <InputSelect<GridType>
+        value={settings.grid}
+        onChange={(value) => updateSettings({ grid: value })}
+        options={gridOptions}
+        labelize={(option) => {
+          const labels = {
+            none: 'No Grid',
+            horizontal: 'Horizontal Lines',
+            vertical: 'Vertical Lines',
+            both: 'Both',
+          }
+          return labels[option]
+        }}
+      >
+        Grid Lines
+      </InputSelect>
 
-        {sourceType === 'image' && (
-          <div className="flex items-center justify-between">
-            <InputSwitch
-              checked={settings.showUnderlyingImage}
-              onChange={(checked) => updateSettings({ showUnderlyingImage: checked })}
-            >
-              Show Image
-            </InputSwitch>
-          </div>
-        )}
-      </div>
+      {sourceType === 'image' && (
+        <div className="flex items-center justify-between">
+          <InputSwitch
+            checked={settings.showUnderlyingImage}
+            onChange={(checked) => updateSettings({ showUnderlyingImage: checked })}
+          >
+            Show Image
+          </InputSwitch>
+        </div>
+      )}
     </Container>
   )
 }

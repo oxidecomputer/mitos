@@ -36,7 +36,7 @@
   width: 100%;
   height: 2px;
   border-radius: var(--mt-radius-sm);
-  background-color: var(--mt-color-input);
+  background-color: var(--mt-border);
 }
 
 .ui-number__fill {
@@ -44,23 +44,23 @@
   left: 0;
   top: 0;
   height: 100%;
-  background-color: var(--mt-primary);
+  background-color: var(--mt-highlight-secondary);
 }
 
 .ui-number__scrubber {
   position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: var(--mt-radius-sm);
-  background-color: var(--mt-primary);
+  width: var(--mt-scrubber-width);
+  height: var(--mt-scrubber-height);
+  border-radius: var(--mt-radius-xs);
+  background-color: var(--mt-highlight);
   box-shadow: 0 0 0 2px var(--mt-background);
   cursor: pointer;
-  left: calc(var(--percentage, 0%) * (100% - 12px));
-  transition: background-color var(--mt-transition-normal);
+  left: calc(var(--percentage, 0%) * (100% - var(--mt-scrubber-width)));
+  transition: height var(--mt-transition-normal);
 }
 
 .ui-number__scrubber:hover {
-  background-color: var(--mt-primary-hover);
+  height: calc(var(--mt-scrubber-height) + 4px);
 }
 
 .ui-number__input {
@@ -68,7 +68,6 @@
   height: 24px;
   padding: 0 var(--mt-spacing-sm);
   font-size: 12px;
-  color: var(--mt-text);
   background-color: var(--mt-color-input);
   border: 1px solid var(--mt-border);
   border-radius: var(--mt-radius-sm);
@@ -79,13 +78,13 @@
 }
 
 .ui-number:hover input {
-  border-color: var(--mt-primary);
+  border-color: var(--mt-highlight);
 }
 
 .ui-number__input:focus {
   outline: none;
-  border-color: var(--mt-primary);
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+  border-color: var(--mt-highlight);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mt-highlight) 40%, transparent);
 }
 
 .ui-number__input::-webkit-outer-spin-button,
@@ -130,13 +129,13 @@
 
 body.dragging .ui-number__dragger {
   opacity: 0.8;
-  background-color: var(--mt-primary);
+  background-color: var(--mt-highlight);
 }
 
 .ui-number label {
   font-size: var(--mt-font-size-label);
   font-family: var(--mt-font-label);
-  color: var(--mt-text);
+  color: var(--mt-text-secondary);
   user-select: none;
 }
 

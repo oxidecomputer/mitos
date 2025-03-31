@@ -1,6 +1,6 @@
 import './InputButton.css'
 
-import cn from 'clsx'
+import { cn } from '~/lib/utils'
 
 export type ButtonVariant = 'default' | 'secondary'
 
@@ -12,6 +12,7 @@ export interface InputButtonProps {
   className?: string
   type?: 'button' | 'submit' | 'reset'
   inline?: boolean
+  icon?: boolean
 }
 
 export const InputButton = ({
@@ -22,6 +23,7 @@ export const InputButton = ({
   className = '',
   type = 'button',
   inline = false,
+  icon = false,
 }: InputButtonProps) => {
   return (
     <button
@@ -30,6 +32,7 @@ export const InputButton = ({
         'ui-button',
         `ui-button--${variant}`,
         inline && 'ui-button--inline',
+        icon && 'ui-button--icon',
         className,
       )}
       onClick={onClick}

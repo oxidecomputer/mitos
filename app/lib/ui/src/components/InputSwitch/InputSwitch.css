@@ -16,18 +16,23 @@
   border-radius: 9999px;
   background-color: var(--mt-color-input);
   transition: background-color var(--mt-transition-fast);
+  border: 1px solid var(--mt-border);
+  background: var(--mt-background);
+  transition: border-color var(--mt-transition-fast);
 }
 
 .ui-switch__track:hover {
   background-color: var(--mt-color-input-hover);
 }
 
-.ui-switch__track:has(:checked) {
-  background-color: var(--mt-primary);
+.ui-switch__track:hover {
+  border-color: var(--mt-highlight);
 }
 
-.ui-switch__track:has(:checked):hover {
-  background-color: var(--mt-primary-hover);
+.ui-switch__track:focus {
+  outline: none;
+  border-color: var(--mt-highlight);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mt-highlight) 40%, transparent);
 }
 
 .ui-switch__track:has(.ui-switch__input:focus),
@@ -35,19 +40,19 @@
   position: relative;
 }
 
-.ui-switch__track:has(.ui-switch__input:focus)::before,
-.ui-switch__track--subfocus::before {
+.ui-switch__track:has(.ui-switch__input:focus)::before {
   content: '';
   position: absolute;
-  inset: -3px;
-  border: 1px solid var(--mt-primary);
-  border-radius: 999px;
+  inset: 0px;
+  border: 1px solid var(--mt-highlight);
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mt-highlight) 40%, transparent);
 }
 
 .ui-switch__handle {
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: 3px;
+  left: 3px;
   width: calc(var(--mt-input-height-xs) - 8px);
   height: calc(var(--mt-input-height-xs) - 8px);
   border-radius: 9999px;
@@ -65,7 +70,7 @@
 
 .ui-switch__input:checked + .ui-switch__handle {
   left: calc(100% - var(--mt-input-height-xs) + 4px);
-  background-color: var(--mt-background);
+  background-color: var(--mt-highlight);
 }
 
 .ui-switch__input:checked + .ui-switch__handle--tweaking {
@@ -83,7 +88,7 @@
 }
 
 .ui-switch label {
-  color: var(--mt-text);
+  color: var(--mt-text-secondary);
   font-size: var(--mt-font-size-label);
   font-family: var(--mt-font-label);
   user-select: none;

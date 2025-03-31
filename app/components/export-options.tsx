@@ -1,5 +1,5 @@
 import { saveAs } from 'file-saver'
-import html2canvas from 'html2canvas'
+import html2canvas from 'html2canvas-pro'
 import JSZip from 'jszip'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -53,13 +53,12 @@ export function ExportOptions({
   const exportContent = async () => {
     if (!program) return
 
+    const isAnimated =
+      (sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') &&
+      animationController
+    const totalFrames = isAnimated ? animationLength : 1
     try {
       setIsExporting(true)
-
-      const isAnimated =
-        (sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') &&
-        animationController
-      const totalFrames = isAnimated ? animationLength : 1
 
       // Pause animation during export if animated
       let wasPlaying = false
@@ -268,8 +267,6 @@ export function ExportOptions({
   ) => {
     const zip = new JSZip()
 
-    toast(`Preparing ${totalFrames} frames for export...`)
-
     for (let i = 0; i < totalFrames; i++) {
       if (animationController) {
         animationController.setFrame(i)
@@ -288,12 +285,14 @@ export function ExportOptions({
 
       zip.file(`frame_${String(i).padStart(4, '0')}.png`, blob)
 
-      // Update progress
       if (i % 5 === 0 || i === totalFrames - 1) {
-        toast(`Progress: ${Math.round(((i + 1) / totalFrames) * 100)}%`)
+        toast.loading(`Exporting frames: ${Math.round(((i + 1) / totalFrames) * 100)}%`, {
+          id: 'export-progress',
+        })
       }
     }
 
+    // Restore animation state
     if (animationController) {
       animationController.setFrame(currentFrame)
       if (wasPlaying) {
@@ -304,7 +303,7 @@ export function ExportOptions({
     const zipBlob = await zip.generateAsync({ type: 'blob' })
     saveAs(zipBlob, 'ascii-animation-frames.zip')
 
-    toast('All frames have been exported as PNG files in a zip archive')
+    toast.success('Export complete!', { id: 'export-progress' })
   }
 
   // The ASCII is HTML so we need some way to turn it into an image
@@ -319,12 +318,24 @@ export function ExportOptions({
     const scaleValue = parseInt(exportScale.replace('x', ''))
 
     return html2canvas(containerElement as HTMLElement, {
-      backgroundColor: 'white',
-      scale: scaleValue, // Use the selected scale
+      backgroundColor: 'transparent',
+      scale: scaleValue,
       logging: false,
       allowTaint: true,
       useCORS: true,
       removeContainer: false,
+      onclone: (document) => {
+        // Find elements with CSS color functions and simplify them
+        const elements = document.querySelectorAll('*')
+        elements.forEach((el) => {
+          const style = window.getComputedStyle(el)
+          const color = style.color
+          if (color.includes('color(')) {
+            // Set to a basic color that html2canvas can handle
+            ;(el as HTMLElement).style.color = 'currentColor'
+          }
+        })
+      },
     })
   }
 

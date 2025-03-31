@@ -1,3 +1,4 @@
+import { DocumentApi16Icon } from '@oxide/design-system/icons/react'
 import type React from 'react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -10,7 +11,11 @@ import { Container } from './container'
 export function SourceSelector({
   settings,
   updateSettings,
+  setShowCodeSidebar,
+  showCodeSidebar,
 }: {
+  setShowCodeSidebar: (val: boolean) => void
+  showCodeSidebar: boolean
   settings: {
     type: SourceType
     data: string | null
@@ -65,7 +70,8 @@ export function SourceSelector({
       const reader = new FileReader()
       reader.onload = (e) => {
         const result = e.target?.result as string
-        updateSettings({ data: result, type: 'gif' })
+        updateSettings({ data: result, type: 'gif', code: '' })
+        setShowCodeSidebar(false)
       }
       reader.readAsDataURL(file)
     } else if (validImageTypes.includes(file.type)) {
@@ -73,7 +79,8 @@ export function SourceSelector({
       const reader = new FileReader()
       reader.onload = (e) => {
         const result = e.target?.result as string
-        updateSettings({ data: result, type: 'image' })
+        updateSettings({ data: result, type: 'image', code: '' })
+        setShowCodeSidebar(false)
       }
       reader.readAsDataURL(file)
     } else {
@@ -84,14 +91,14 @@ export function SourceSelector({
   const handleButtonClick = () => {
     inputRef.current?.click()
   }
-
   return (
-    <Container className="border-b py-3">
+    <Container className="border-default border-b py-3">
       <div
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
+        className="flex gap-2"
       >
         <input
           ref={inputRef}
@@ -105,7 +112,15 @@ export function SourceSelector({
           variant={dragActive ? 'secondary' : 'default'}
           onClick={handleButtonClick}
         >
-          {settings.data ? 'Replace Media' : 'Upload Image/GIF'}
+          {settings.data ? 'Replace Media' : 'Upload Media'}
+        </InputButton>
+        <InputButton
+          variant="secondary"
+          inline
+          icon
+          onClick={() => setShowCodeSidebar(!showCodeSidebar)}
+        >
+          <DocumentApi16Icon className="text-secondary" />
         </InputButton>
       </div>
     </Container>

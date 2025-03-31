@@ -8,7 +8,7 @@
   overflow: hidden;
   background: var(--mt-background);
   height: var(--mt-input-height-md);
-  border-radius: var(--mt-radius-md);
+  border-radius: var(--mt-radius-sm);
   padding: 0;
   gap: 1px;
   transition: background-color var(--mt-transition-fast);
@@ -56,7 +56,7 @@
 }
 
 .ui-radio__label--active {
-  background: var(--mt-primary);
+  background: var(--mt-highlight);
   color: var(--mt-background);
   transition: none;
 }

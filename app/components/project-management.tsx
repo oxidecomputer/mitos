@@ -42,6 +42,7 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
 
   const handleLoadProject = (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
+      console.log(e.target)
       const file = e.target.files?.[0]
       if (!file) return
 
@@ -52,6 +53,8 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
           const projectData = JSON.parse(json)
           setProjectName(projectData.name || 'Imported Project')
           updateSettings(projectData.settings)
+
+          console.log(projectData)
 
           toast(`${projectData.name} has been loaded successfully.`)
         } catch (error) {
@@ -76,11 +79,11 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
         <InputButton variant="secondary" onClick={handleSaveProject}>
           Save
         </InputButton>
-        <InputButton variant="secondary" onClick={handleSaveProject}>
+        <InputButton variant="secondary">
           Load
           <input
             type="file"
-            className="hidden"
+            className="absolute inset-0 z-10 opacity-0"
             accept=".json"
             onChange={handleLoadProject}
           />

@@ -6,7 +6,13 @@ function App() {
   return (
     <main className="h-screen min-h-screen bg-background p-0">
       <AsciiArtGenerator />
-      <Toaster />
+      <Toaster
+        toastOptions={{
+          className: '!bg-raise !rounded-md !elevation-2 !border-default !text-default',
+        }}
+        offset={12}
+        position="top-right"
+      />
     </main>
   )
 }

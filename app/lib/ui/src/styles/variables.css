@@ -1,17 +1,20 @@
 :root {
   /* Colors */
-  --mt-primary: #007aff;
-  --mt-primary-hover: #0056b3;
-  --mt-text: #333333;
-  --mt-text-secondary: #666666;
-  --mt-background: #ffffff;
-  --mt-background-hover: #f5f5f5;
-  --mt-border: #e0e0e0;
+  --mt-highlight: var(--theme-accent-800);
+  --mt-highlight-secondary: var(--theme-accent-600);
+  --mt-primary: var(--theme-accent-300);
+  --mt-primary-hover: var(--theme-accent-400);
+  --mt-primary-text: var(--theme-accent-800);
+  --mt-text: var(--content-raise);
+  --mt-text-secondary: var(--content-default);
+  --mt-background: var(--surface-default);
+  --mt-background-hover: var(--surface-hover);
+  --mt-border: var(--base-neutral-400);
   --mt-disabled: #cccccc;
 
   /* Input specific colors */
-  --mt-color-input: #f5f5f5;
-  --mt-color-input-hover: #ebebeb;
+  --mt-color-input: var(--surface-default);
+  --mt-color-input-hover: var(--surface-hover);
 
   /* Component sizes */
   --mt-input-height-xs: 20px;
@@ -26,9 +29,10 @@
   --mt-spacing-xl: 24px;
 
   /* Border Radius */
-  --mt-radius-sm: 4px;
+  --mt-radius-xs: 2px;
+  --mt-radius-sm: 3px;
   --mt-radius-md: 6px;
-  --mt-radius-lg: 8px;
+  --mt-radius-lg: 12px;
 
   /* Transitions */
   --mt-transition-fast: 150ms ease;
@@ -49,4 +53,8 @@
   --mt-font-button: var(--mt-font-label);
   --mt-font-size-base: 12px;
   --mt-font-size-label: 11px;
+
+  /* Number input */
+  --mt-scrubber-width: 8px;
+  --mt-scrubber-height: 16px;
 }

@@ -10,7 +10,7 @@ import {
   predefinedCharacterSets,
 } from '~/components/output-configuration'
 import { PreprocessingControls } from '~/components/preprocessing-controls'
-import { ProjectManagement } from '~/components/project-management'
+// import { ProjectManagement } from '~/components/project-management'
 import { SourceSelector } from '~/components/source-selector'
 import type { Program } from '~/lib/animation'
 import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-program'
@@ -102,7 +102,6 @@ const DEFAULT_SETTINGS: AsciiSettings = {
     showUnderlyingImage: false,
     columns: 80,
     rows: 40,
-    aspectRatio: 0.5,
   },
   animation: {
     animationLength: 100,
@@ -552,14 +551,6 @@ export function AsciiArtGenerator() {
     }))
   }
 
-  // Settings update functions
-  const updateSettings = (newSettings: Partial<AsciiSettings>) => {
-    setSettings((prev) => ({
-      ...prev,
-      ...newSettings,
-    }))
-  }
-
   const updateSourceSettings = (sourceSettings: Partial<typeof settings.source>) => {
     setSettings((prev) => {
       // If switching source type, reset program to ensure clean transition
@@ -618,20 +609,26 @@ export function AsciiArtGenerator() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <div className="left-0 top-0 flex h-full w-64 transform flex-col overflow-hidden border-r bg-background">
+      <div className="border-default bg-raise left-0 top-0 flex h-full w-64 transform flex-col overflow-hidden border-r">
         {/* Source Selection Tabs */}
-        <SourceSelector settings={settings.source} updateSettings={updateSourceSettings} />
+        <SourceSelector
+          settings={settings.source}
+          updateSettings={updateSourceSettings}
+          showCodeSidebar={showCodeSidebar}
+          setShowCodeSidebar={setShowCodeSidebar}
+        />
         <div className="overflow-auto">
           <div className="space-y-6 py-4">
             {/* Preprocessing (for non-code sources) */}
             {settings.source.type !== 'code' && (
-              <PreprocessingControls
-                settings={settings.preprocessing}
-                updateSettings={updatePreprocessingSettings}
-              />
+              <>
+                <PreprocessingControls
+                  settings={settings.preprocessing}
+                  updateSettings={updatePreprocessingSettings}
+                />
+                <hr />
+              </>
             )}
-
-            <hr />
 
             {/* Output Configuration */}
             <OutputConfiguration
@@ -671,10 +668,9 @@ export function AsciiArtGenerator() {
               disabled={!program}
             />
 
-            <hr />
-
+            {/* <hr /> */}
             {/* Project Management */}
-            <ProjectManagement settings={settings} updateSettings={updateSettings} />
+            {/* <ProjectManagement settings={settings} updateSettings={updateSettings} /> */}
           </div>
         </div>
       </div>
@@ -683,7 +679,7 @@ export function AsciiArtGenerator() {
       <div className="flex-1 overflow-hidden">
         <div className="flex h-full">
           {/* ASCII Preview */}
-          <div className="flex-grow overflow-hidden bg-white">
+          <div className="bg-default flex-grow overflow-hidden">
             <AsciiPreview
               program={program}
               dimensions={{
@@ -707,7 +703,6 @@ export function AsciiArtGenerator() {
             settings={settings.source}
             updateSettings={updateSourceSettings}
             isOpen={showCodeSidebar}
-            setShowCodeSidebar={setShowCodeSidebar}
           />
         </div>
       </div>

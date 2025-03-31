@@ -2,21 +2,21 @@
 @import '../../styles/variables.css';
 
 .ui-text input {
+  color: var(--mt-text);
   height: var(--mt-input-height-md);
   width: 100%;
   padding: 0 var(--mt-spacing-md);
-  border-radius: var(--mt-radius-md);
+  border-radius: var(--mt-radius-sm);
   border: 1px solid var(--mt-border);
   background: var(--mt-background);
   transition: border-color var(--mt-transition-fast);
 }
 
 .ui-text:hover input {
-  border-color: var(--mt-primary);
+  border-color: var(--mt-highlight);
 }
 
 .ui-text {
-  color: var(--mt-text);
   font-size: var(--mt-font-size-base);
   font-family: var(--mt-font-base);
   gap: var(----mt-font-size-base);
@@ -25,13 +25,14 @@
 }
 
 .ui-text label {
+  color: var(--mt-text-secondary);
   font-size: var(--mt-font-size-label);
 }
 
 .ui-text input:focus {
   outline: none;
-  border-color: var(--mt-primary);
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+  border-color: var(--mt-highlight);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mt-highlight) 40%, transparent);
 }
 
 .ui-text:disabled input {

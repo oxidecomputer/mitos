@@ -1,16 +1,12 @@
+@import '@oxide/design-system/styles/main.css';
+@import '@oxide/design-system/styles/yellow.css';
+@import '@oxide/design-system/styles/purple.css';
+@import '@oxide/design-system/styles/green.css';
+@import '@oxide/design-system/styles/blue.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
 
 @layer base {
   :root {
@@ -24,17 +20,17 @@ body {
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
   img {
     @apply inline-block;
   }
+  body {
+    @apply bg-default text-default;
+  }
   pre {
     @apply font-mono;
+  }
+  pre span {
+    @apply text-raise;
   }
   .ui-switch label,
   .ui-number label,
@@ -43,6 +39,21 @@ body {
   .ui-radio label,
   label,
   .ui-button {
-    @apply uppercase tracking-wide;
+    @apply uppercase tracking-wider;
+  }
+  .ui-button:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 0;
+    border-radius: var(--mt-radius-sm);
+    border-width: 1px;
+    border-color: currentColor;
+    opacity: 0.05;
+  }
+  hr {
+    @apply border-default;
   }
 }

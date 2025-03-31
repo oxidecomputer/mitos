@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { InputNumber, InputSwitch } from '~/lib/ui/src'
 
 // Constants for character dimensions
-const CHAR_WIDTH = 7.45
-const CHAR_HEIGHT = 15
+export const CHAR_WIDTH = 7.45
+export const CHAR_HEIGHT = 15
 
 export interface AspectRatioInputNumberProps {
   width: number
@@ -190,7 +190,7 @@ export const AspectRatioInputNumber = ({
           Lock Aspect Ratio
         </InputSwitch>
 
-        <div className="mt-2 border-l py-1 pl-3">
+        <div className="border-default mt-2 border-l py-1 pl-3">
           {isLocked && (
             <InputNumber
               value={aspectRatio || 1}
