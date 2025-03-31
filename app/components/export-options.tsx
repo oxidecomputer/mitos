@@ -395,15 +395,13 @@ export function ExportOptions({
             Copy text
           </InputButton>
 
-          {exportFormat === 'svg' && (
-            <InputButton
-              variant="secondary"
-              onClick={copySvg}
-              disabled={isExporting || disabled}
-            >
-              Copy SVG
-            </InputButton>
-          )}
+          <InputButton
+            variant="secondary"
+            onClick={copySvg}
+            disabled={isExporting || disabled}
+          >
+            Copy SVG
+          </InputButton>
         </div>
       </div>
     </Container>
