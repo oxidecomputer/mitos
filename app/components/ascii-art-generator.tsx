@@ -206,15 +206,10 @@ export function AsciiArtGenerator() {
         await reprocessCachedFrames(cachedMedia, columns, rows)
       } else {
         // Settings haven't changed, use existing processed frames
-        await useCachedFrames(cachedMedia, sourceType, columns, rows)
+        await useCachedFrames(cachedMedia, columns, rows)
       }
     } else {
-      // No cache or different source - need to extract and process frames
-      if (sourceType === 'gif') {
-        await processGifSource(sourceData, columns, rows)
-      } else {
-        await processVideoSource(sourceData, columns, rows)
-      }
+      await processGifSource(sourceData, columns, rows)
     }
   }
 
@@ -245,33 +240,44 @@ export function AsciiArtGenerator() {
     rows: number,
   ) => {
     setIsProcessing(true)
-    toast('Applying new visual settings...')
+
+    const reprocessingPromise = new Promise<{ frames: number }>(async (resolve, reject) => {
+      try {
+        const result = await processAnimatedMedia(cache.rawFrames, settings)
+
+        // Update cache with newly processed frames
+        updateMediaCache(cache, result.frames)
+        setProcessedImageUrl(result.firstFrameUrl || null)
+
+        // Create program with newly processed frames
+        const newProgram = await createImageAsciiProgram(
+          result.firstFrameData,
+          columns,
+          rows,
+          result.frames,
+          settings.animation.frameRate,
+        )
+
+        setProgram(newProgram)
+
+        resolve({ frames: result.frames.length })
+      } catch (error) {
+        reject(error)
+      }
+    })
+
+    // Show a promise-based toast that updates its state
+    toast.promise(reprocessingPromise, {
+      loading: 'Applying new visual settings...',
+      success: (data) => `Reprocessed ${data.frames} frames with new settings`,
+      error: (error) =>
+        `Error: ${error instanceof Error ? error.message : 'Could not apply settings'}`,
+    })
 
     try {
-      const result = await processAnimatedMedia(cache.rawFrames, settings, (progress) => {
-        if (progress % 5 === 0 || progress === cache.rawFrames.length - 1) {
-          toast(`Processing frame ${progress + 1} of ${cache.rawFrames.length}...`)
-        }
-      })
-
-      // Update cache with newly processed frames
-      updateMediaCache(cache, result.frames)
-      setProcessedImageUrl(result.firstFrameUrl || null)
-
-      // Create program with newly processed frames
-      const newProgram = await createImageAsciiProgram(
-        result.firstFrameData,
-        columns,
-        rows,
-        result.frames,
-        settings.animation.frameRate,
-      )
-
-      setProgram(newProgram)
-
-      toast(`Reprocessed ${result.frames.length} frames with new settings`)
-    } catch (error) {
-      handleProcessingError('reprocessing', error)
+      await reprocessingPromise
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -300,12 +306,7 @@ export function AsciiArtGenerator() {
   )
 
   // Use cached frames without reprocessing
-  const useCachedFrames = async (
-    cache: CachedMediaData,
-    mediaType: 'gif' | 'video',
-    columns: number,
-    rows: number,
-  ) => {
+  const useCachedFrames = async (cache: CachedMediaData, columns: number, rows: number) => {
     toast('Applying cached frames...')
 
     try {
@@ -333,99 +334,36 @@ export function AsciiArtGenerator() {
       handleProcessingError('loading cached', error)
 
       // If using cached frames fails, try reprocessing
-      if (mediaType === 'gif') {
-        await processGifSource(cache.sourceUrl, columns, rows)
-      } else {
-        await processVideoSource(cache.sourceUrl, columns, rows)
-      }
+      await processGifSource(cache.sourceUrl, columns, rows)
     }
   }
 
   // Process GIF source using gifuct-js
   const processGifSource = async (gifData: string, columns: number, rows: number) => {
-    toast('Reading GIF structure...')
+    const processingPromise = new Promise(async (resolve, reject) => {
+      try {
+        // Convert data URL to binary data
+        const bytes = dataUrlToUint8Array(gifData)
 
-    try {
-      // Convert data URL to binary data
-      const bytes = dataUrlToUint8Array(gifData)
+        // Parse the GIF and extract frames
+        const gif = parseGIF(bytes)
+        const frames = decompressFrames(gif, true)
 
-      // Parse the GIF and extract frames
-      const gif = parseGIF(bytes)
-      const frames = decompressFrames(gif, true)
-
-      toast(`Found ${frames.length} frames. Processing...`)
-
-      if (frames.length === 0) {
-        throw new Error('No frames found in GIF')
-      }
-
-      // Extract frames as data URLs
-      const rawFrames = await extractGifFrames(gif, frames)
-
-      // Process all extracted frames
-      const result = await processAnimatedMedia(rawFrames, settings, (progress) => {
-        if (progress % 5 === 0 || progress === rawFrames.length - 1) {
-          toast(`Processing frame ${progress + 1} of ${rawFrames.length}...`)
+        if (frames.length === 0) {
+          throw new Error('No frames found in GIF')
         }
-      })
 
-      // Create cache entry
-      setCachedMedia({
-        type: 'gif',
-        sourceUrl: gifData,
-        rawFrames,
-        processedFrames: {
-          settings: {
-            columns: settings.output.columns,
-            rows: settings.output.rows,
-            characterSet: settings.output.characterSet,
-            whitePoint: settings.preprocessing.whitePoint,
-            blackPoint: settings.preprocessing.blackPoint,
-            brightness: settings.preprocessing.brightness,
-            invert: settings.preprocessing.invert,
-            dithering: settings.preprocessing.dithering,
-            ditheringAlgorithm: settings.preprocessing.ditheringAlgorithm,
-          },
-          frames: result.frames,
-        },
-      })
+        // Extract frames as data URLs
+        const rawFrames = await extractGifFrames(gif, frames)
 
-      // Set preview
-      setProcessedImageUrl(result.firstFrameUrl)
+        // Process all extracted frames
+        const result = await processAnimatedMedia(rawFrames, settings)
 
-      // Create animated program
-      const newProgram = await createImageAsciiProgram(
-        result.firstFrameData,
-        columns,
-        rows,
-        result.frames,
-        settings.animation.frameRate,
-      )
-
-      setProgram(newProgram)
-      updateAnimationLength(result.frames.length)
-
-      toast(`Processed ${result.frames.length} frames`)
-    } catch (error) {
-      handleProcessingError('processing', error)
-    }
-  }
-
-  // Process video source (simplified as this would use the browser's video processing)
-  const processVideoSource = async (videoData: string, columns: number, rows: number) => {
-    try {
-      const result = await processImage(videoData, settings, true)
-
-      if (result.processedImageUrl) {
-        setProcessedImageUrl(result.processedImageUrl)
-      }
-
-      if (result.rawFrames && result.frames) {
-        // Cache the extracted frames
+        // Create cache entry
         setCachedMedia({
-          type: 'video',
-          sourceUrl: videoData,
-          rawFrames: result.rawFrames,
+          type: 'gif',
+          sourceUrl: gifData,
+          rawFrames,
           processedFrames: {
             settings: {
               columns: settings.output.columns,
@@ -441,24 +379,41 @@ export function AsciiArtGenerator() {
             frames: result.frames,
           },
         })
-      }
 
-      // Create animated program
-      const newProgram = await createImageAsciiProgram(
-        result.data,
-        columns,
-        rows,
-        result.frames || [],
-        settings.animation.frameRate,
-      )
+        // Set preview
+        setProcessedImageUrl(result.firstFrameUrl)
 
-      setProgram(newProgram)
+        // Create animated program
+        const newProgram = await createImageAsciiProgram(
+          result.firstFrameData,
+          columns,
+          rows,
+          result.frames,
+          settings.animation.frameRate,
+        )
 
-      if (result.frames) {
+        setProgram(newProgram)
         updateAnimationLength(result.frames.length)
+
+        resolve({
+          frames: result.frames.length,
+        })
+      } catch (error) {
+        reject(error)
       }
-    } catch (error) {
-      handleProcessingError('processing', error)
+    })
+
+    toast.promise(processingPromise, {
+      loading: 'Processing GIF frames...',
+      success: (data) => `Processed ${(data as any).frames} frames successfully`,
+      error: (error) =>
+        `Error: ${error instanceof Error ? error.message : 'Could not process GIF'}`,
+    })
+
+    try {
+      await processingPromise
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -520,10 +475,7 @@ export function AsciiArtGenerator() {
     let previousImageData: ImageData | null = null
 
     for (let i = 0; i < frames.length; i++) {
-      // Update progress periodically
-      if (i % 5 === 0 || i === frames.length - 1) {
-        toast(`Processing frame ${i + 1} of ${frames.length}...`)
-      }
+      // No need for progress toasts here
 
       const frame = frames[i]
 
@@ -583,7 +535,6 @@ export function AsciiArtGenerator() {
 
     return rawFrames
   }
-
   const handleProcessingError = (operation: string, error: any) => {
     console.error(`Error ${operation}:`, error)
     toast(
