@@ -4,6 +4,34 @@
 @import '@oxide/design-system/styles/green.css';
 @import '@oxide/design-system/styles/blue.css';
 
+@font-face {
+  font-family: 'GT America Mono';
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('/fonts/GT-America-Mono-Regular-OCC.woff2') format('woff2'),
+    url('/fonts/GT-America-Mono-Regular-OCC.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'SuisseIntl';
+  src:
+    url('/fonts/SuisseIntl-Regular-WebS.woff2') format('woff2'),
+    url('/fonts/SuisseIntl-Regular-WebS.woff') format('woff');
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'SuisseIntl';
+  src:
+    url('/fonts/SuisseIntl-Medium-WebS.woff2') format('woff2'),
+    url('/fonts/SuisseIntl-Medium-WebS.woff') format('woff');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,7 +39,7 @@
 @layer base {
   :root {
     --font-mono: 'GT America Mono', monospace;
-    --font-sans: "Suisse Int'l", sans-serif;
+    --font-sans: 'SuisseIntl', sans-serif;
 
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
@@ -24,7 +52,7 @@
     @apply inline-block;
   }
   body {
-    @apply bg-default text-default;
+    @apply text-default bg-default;
   }
   pre {
     @apply font-mono;
