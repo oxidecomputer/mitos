@@ -77,7 +77,7 @@
   transition: border-color var(--mt-transition-normal);
 }
 
-.ui-number:hover input {
+.ui-number input:hover {
   border-color: var(--mt-highlight);
 }
 
@@ -125,11 +125,6 @@
 .ui-number__dragger:hover {
   opacity: 0.6;
   background-color: var(--mt-color-input);
-}
-
-body.dragging .ui-number__dragger {
-  opacity: 0.8;
-  background-color: var(--mt-highlight);
 }
 
 .ui-number label {
