@@ -190,8 +190,8 @@ export const AspectRatioInputNumber = ({
           Lock Aspect Ratio
         </InputSwitch>
 
-        <div className="border-default mt-2 border-l py-1 pl-3">
-          {isLocked && (
+        {isLocked && (
+          <div className="border-default mt-2 border-l py-1 pl-3">
             <InputNumber
               value={aspectRatio || 1}
               onChange={handleAspectRatioChange}
@@ -203,8 +203,8 @@ export const AspectRatioInputNumber = ({
             >
               Aspect Ratio
             </InputNumber>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </>
   )
