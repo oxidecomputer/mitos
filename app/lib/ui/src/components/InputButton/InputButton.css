@@ -1,0 +1,67 @@
+/* Import base styles */
+@import '../../styles/variables.css';
+
+/* InputButton styles */
+.ui-button:active {
+  transform: translateY(1px);
+}
+
+.ui-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ui-button--primary:hover {
+  background-color: var(--mt-primary-hover);
+}
+
+.ui-button {
+  position: relative;
+  height: var(--mt-input-height-md, 32px);
+  width: 100%;
+  border-radius: var(--mt-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--mt-spacing-md);
+  transition:
+    background-color var(--mt-transition-fast),
+    color var(--mt-transition-fast);
+  font-size: var(--mt-font-size-label);
+  font-family: var(--mt-font-button);
+}
+
+.ui-button.ui-button--icon {
+  padding: 0 var(--mt-spacing-sm);
+}
+
+/* Default variant */
+.ui-button--default {
+  background-color: var(--mt-primary);
+  color: var(--mt-primary-text);
+  border-color: var(--mt-highlight);
+}
+
+.ui-button.ui-button--inline {
+  width: auto;
+}
+
+.ui-button--default:hover {
+  background: var(--mt-primary-hover);
+}
+
+/* Secondary variant */
+.ui-button--secondary {
+  background: var(--mt-background);
+  color: var(--mt-text);
+  border: 1px solid var(--mt-border);
+}
+
+.ui-button--secondary:hover {
+  background: var(--mt-background-hover);
+}
+
+.ui-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}

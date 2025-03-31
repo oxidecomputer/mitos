@@ -1,0 +1,50 @@
+/* Import base styles */
+@import '../../styles/variables.css';
+
+.ui-select select {
+  color: var(--mt-text);
+  height: var(--mt-input-height-md);
+  width: 100%;
+  padding-left: var(--mt-spacing-md);
+  border-radius: var(--mt-radius-sm);
+  border: 1px solid var(--mt-border);
+  background: var(--mt-background);
+  line-height: var(--mt-font-size-base);
+  transition: border-color var(--mt-transition-fast);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--mt-spacing-md) center;
+  padding-right: calc(var(--mt-spacing-md) * 2 + 12px);
+}
+
+.ui-select label {
+  color: var(--mt-secondary);
+  font-family: var(--mt-font-label);
+  font-size: var(--mt-font-size-label);
+}
+
+.ui-select {
+  font-size: var(--mt-font-size-base);
+  font-family: var(--mt-font-base);
+  flex-direction: column;
+  display: flex;
+  align-items: start;
+  gap: var(--mt-spacing-xs);
+}
+
+.ui-select:hover select {
+  border-color: var(--mt-highlight);
+}
+
+.ui-select select:focus {
+  outline: none;
+  border-color: var(--mt-highlight);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mt-highlight) 40%, transparent);
+}
+
+.ui-select:disabled select {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

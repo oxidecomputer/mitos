@@ -1,12 +1,12 @@
-import { Save, Upload } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
-import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
-import { useToast } from '~/components/ui/use-toast'
+import { InputButton } from '~/lib/ui/src'
+import { InputText } from '~/lib/ui/src/components/InputText/InputText'
 
 import type { AsciiSettings } from './ascii-art-generator'
+import { Container } from './container'
 
 interface ProjectManagementProps {
   settings: AsciiSettings
@@ -15,7 +15,6 @@ interface ProjectManagementProps {
 
 export function ProjectManagement({ settings, updateSettings }: ProjectManagementProps) {
   const [projectName, setProjectName] = useState('My ASCII Project')
-  const { toast } = useToast()
 
   const handleSaveProject = () => {
     try {
@@ -35,21 +34,15 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      toast({
-        title: 'Project saved',
-        description: `${projectName} has been saved to your device.`,
-      })
+      toast(`${projectName} has been saved to your device.`)
     } catch (error) {
-      toast({
-        title: 'Error saving project',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
+      toast(error instanceof Error ? error.message : 'Unknown error')
     }
   }
 
   const handleLoadProject = (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
+      console.log(e.target)
       const file = e.target.files?.[0]
       if (!file) return
 
@@ -61,60 +54,41 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
           setProjectName(projectData.name || 'Imported Project')
           updateSettings(projectData.settings)
 
-          toast({
-            title: 'Project loaded',
-            description: `${projectData.name} has been loaded successfully.`,
-          })
+          console.log(projectData)
+
+          toast(`${projectData.name} has been loaded successfully.`)
         } catch (error) {
-          toast({
-            title: 'Error parsing project file',
-            description: 'The selected file is not a valid project file.',
-            variant: 'destructive',
-          })
+          toast('The selected file is not a valid project file')
         }
       }
       reader.readAsText(file)
     } catch (error) {
-      toast({
-        title: 'Error loading project',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
+      toast(error instanceof Error ? error.message : 'Unknown error')
     }
   }
 
   return (
-    <div>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Input
-            id="projectName"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            placeholder="Enter project name"
+    <Container>
+      <InputText
+        value={projectName}
+        onChange={setProjectName}
+        placeholder="Enter project name"
+      />
+
+      <div className="flex gap-2">
+        <InputButton variant="secondary" onClick={handleSaveProject}>
+          Save
+        </InputButton>
+        <InputButton variant="secondary">
+          Load
+          <input
+            type="file"
+            className="absolute inset-0 z-10 opacity-0"
+            accept=".json"
+            onChange={handleLoadProject}
           />
-        </div>
-
-        <div className="flex gap-2">
-          <Button className="flex-1" onClick={handleSaveProject}>
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </Button>
-
-          <Button className="flex-1" asChild>
-            <label>
-              <Upload className="mr-2 h-4 w-4" />
-              Load
-              <input
-                type="file"
-                className="hidden"
-                accept=".json"
-                onChange={handleLoadProject}
-              />
-            </label>
-          </Button>
-        </div>
+        </InputButton>
       </div>
-    </div>
+    </Container>
   )
 }

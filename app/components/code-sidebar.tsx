@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
+import { InputButton } from '~/lib/ui/src'
+
 import type { SourceType } from './ascii-art-generator'
 import CodeEditor from './code-editor'
-import { Button } from './ui/button'
-import { Label } from './ui/label'
 
 interface CodeSidebarProps {
   isOpen: boolean
@@ -25,7 +25,7 @@ export function CodeSidebar({ isOpen, settings, updateSettings }: CodeSidebarPro
   const [pendingCode, setPendingCode] = useState(settings.code)
 
   const handleCodeRun = () => {
-    updateSettings({ code: pendingCode, type: 'code' })
+    updateSettings({ data: null, code: pendingCode, type: 'code' })
   }
 
   const handleCodeChange = (value: string) => {
@@ -35,18 +35,13 @@ export function CodeSidebar({ isOpen, settings, updateSettings }: CodeSidebarPro
   if (!isOpen) return null
 
   return (
-    <div className="w-1/2 max-w-[30rem] overflow-auto border-l bg-background p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <Label>Code Input</Label>
-        <Button
-          size="sm"
-          onClick={handleCodeRun}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          Run
-        </Button>
-      </div>
+    <div className="border-default relative w-full max-w-[30rem] border-l bg-background">
       <CodeEditor value={pendingCode} onChange={handleCodeChange} />
+      <div className="!absolute -left-2 top-2 -translate-x-[100%]">
+        <InputButton inline onClick={handleCodeRun}>
+          Run
+        </InputButton>
+      </div>
     </div>
   )
 }

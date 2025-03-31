@@ -1,12 +1,18 @@
-import { AsciiArtGenerator } from '~/components/ascii-art-generator'
+import { Toaster } from 'sonner'
 
-import { Toaster } from './components/ui/toaster'
+import { AsciiArtGenerator } from '~/components/ascii-art-generator'
 
 function App() {
   return (
     <main className="h-screen min-h-screen bg-background p-0">
       <AsciiArtGenerator />
-      <Toaster />
+      <Toaster
+        toastOptions={{
+          className: '!bg-raise !rounded-md !elevation-2 !border-default !text-default',
+        }}
+        offset={12}
+        position="top-right"
+      />
     </main>
   )
 }

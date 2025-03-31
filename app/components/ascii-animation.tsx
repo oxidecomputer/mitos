@@ -31,7 +31,6 @@ export default function AsciiAnimation({
 
     try {
       const animController = createAnimation(program, {
-        allowSelect: true,
         element: asciiEl.current,
         onFrameUpdate: onFrameUpdate ? onFrameUpdate : undefined,
         maxFrames,
@@ -57,7 +56,7 @@ export default function AsciiAnimation({
     >
       <pre
         ref={asciiEl}
-        className="relative m-0 whitespace-pre bg-[transparent] p-0 font-mono text-xs leading-[1.2] text-black"
+        className="pointer-events-none relative m-0 select-none whitespace-pre bg-[transparent] p-0 font-mono leading-[1.2]"
         style={{ fontFamily: '"GT America Mono",monospace', fontSize: '12px' }}
       />
     </div>

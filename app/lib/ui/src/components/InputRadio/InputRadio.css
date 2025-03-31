@@ -1,0 +1,67 @@
+/* Import base styles */
+@import '../../styles/variables.css';
+
+/* InputRadio styles */
+.ui-radio {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  background: var(--mt-background);
+  height: var(--mt-input-height-md);
+  border-radius: var(--mt-radius-sm);
+  padding: 0;
+  gap: 1px;
+  transition: background-color var(--mt-transition-fast);
+}
+
+.ui-radio__item {
+  flex-grow: 1;
+  position: relative;
+}
+
+.ui-radio input {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1; /* Ensure input is on top to capture hover */
+}
+
+.ui-radio input:disabled {
+  cursor: not-allowed;
+}
+
+.ui-radio__label {
+  display: flex;
+  height: 100%;
+  font-size: var(--mt-font-size-label);
+  font-family: var(--mt-font-label);
+  border-radius: var(--mt-input-border-radius);
+  overflow: hidden;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  transition:
+    background-color var(--mt-transition-fast),
+    color var(--mt-transition-fast);
+  pointer-events: none; /* Prevent label from capturing pointer events */
+}
+
+/* Use input hover to control label background */
+.ui-radio input:hover + .ui-radio__label:not(.ui-radio__label--active) {
+  background: var(--mt-background-hover);
+}
+
+.ui-radio__label--active {
+  background: var(--mt-highlight);
+  color: var(--mt-background);
+  transition: none;
+}
+
+/* Hover state for active labels */
+.ui-radio input:hover + .ui-radio__label--active {
+  background: var(--mt-primary-hover);
+}
