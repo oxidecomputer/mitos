@@ -133,7 +133,7 @@ export function AsciiPreview({
   if (!program) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8">
-        <p className="text-tertiary text-widest font-mono text-[13px] uppercase">
+        <p className="text-widest font-mono text-[13px] uppercase text-tertiary">
           {sourceType === 'image'
             ? `Upload an image to see the ASCII preview`
             : 'Enter code to see the ASCII preview'}
@@ -149,7 +149,7 @@ export function AsciiPreview({
     <div className="relative flex h-full w-full flex-col">
       {/* Zoom controls */}
       {program && (
-        <div className="bg-raise border-default absolute left-2 top-2 z-30 flex items-center gap-1 rounded-md border p-2">
+        <div className="absolute left-2 top-2 z-30 flex items-center gap-1 rounded-md border p-2 bg-raise border-default">
           <InputNumber
             showSlider={false}
             value={zoomLevel}
@@ -192,11 +192,11 @@ export function AsciiPreview({
       >
         {(isExporting || isProcessing) && (
           <div className="absolute inset-0 z-50 flex items-center justify-center">
-            <div className="bg-default elevation-2 border-default rounded-md border p-4 text-center">
-              <div className="text-raise mb-2 text-lg font-semibold">
+            <div className="rounded-md border p-4 text-center bg-default border-default elevation-2">
+              <div className="mb-2 text-lg font-semibold text-raise">
                 {isExporting ? 'Exporting Frames' : 'Processing Media'}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-muted-foreground text-sm">
                 Please wait, this may take a moment...
               </div>
             </div>
@@ -307,7 +307,7 @@ function FrameSlider({
   }, [sourceType, animationController])
 
   return (
-    <div className="bg-raise border-default absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md border p-2">
+    <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md border p-2 bg-raise border-default">
       <div className="flex items-center gap-2">
         <InputButton onClick={togglePlay} inline>
           {playing ? <Pause12 /> : <DirectionRightIcon />}
@@ -315,7 +315,7 @@ function FrameSlider({
         <InputNumber
           value={frame}
           min={0}
-          max={totalFrames}
+          max={totalFrames - 1}
           step={1}
           onChange={(value) => animationController && animationController.setFrame(value)}
           className="grow"

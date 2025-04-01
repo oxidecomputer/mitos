@@ -56,7 +56,12 @@ export interface AsciiSettings {
   }
 }
 
-const DEFAULT_CODE = `const density = 'Ñ@#W$9876543210?!abc;:+=-,._ ';
+const DEFAULT_CODE = `/**
+@author ertdfgcvb
+@url https://play.ertdfgcvb.xyz/#/src/basics/coordinates_xy
+*/
+
+const density = 'Ñ@#W$9876543210?!abc;:+=-,._ ';
 
 // Renders each cell
 function main(coord, context, cursor, buffer) {
@@ -609,7 +614,7 @@ export function AsciiArtGenerator() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <div className="border-default bg-raise left-0 top-0 flex h-full w-64 transform flex-col overflow-hidden border-r">
+      <div className="left-0 top-0 flex h-full w-64 transform flex-col overflow-hidden border-r bg-raise border-default">
         {/* Source Selection Tabs */}
         <SourceSelector
           settings={settings.source}
@@ -679,7 +684,7 @@ export function AsciiArtGenerator() {
       <div className="flex-1 overflow-hidden">
         <div className="flex h-full">
           {/* ASCII Preview */}
-          <div className="bg-default flex-grow overflow-hidden">
+          <div className="flex-grow overflow-hidden bg-default">
             <AsciiPreview
               program={program}
               dimensions={{
