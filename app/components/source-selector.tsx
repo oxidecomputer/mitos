@@ -101,6 +101,7 @@ export function SourceSelector({
         className="flex gap-2"
       >
         <input
+          key={settings.type}
           ref={inputRef}
           type="file"
           className="hidden"

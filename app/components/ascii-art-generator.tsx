@@ -303,7 +303,7 @@ export function AsciiArtGenerator() {
   )
 
   const getRelevantSettings = (settings: AsciiSettings) => {
-    const { source, preprocessing, output } = settings
+    const { source, preprocessing, output, animation } = settings
 
     // For code sources, we only care about the code and dimensions
     if (source.type === 'code') {
@@ -312,6 +312,7 @@ export function AsciiArtGenerator() {
         code: source.code,
         columns: output.columns,
         rows: output.rows,
+        frameRate: animation.frameRate,
       }
     }
 
@@ -322,6 +323,7 @@ export function AsciiArtGenerator() {
       preprocessing,
       columns: output.columns,
       rows: output.rows,
+      frameRate: animation.frameRate,
       characterSet: output.characterSet,
     }
   }
@@ -691,6 +693,7 @@ export function AsciiArtGenerator() {
       return newSettings
     })
   }
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
@@ -766,6 +769,7 @@ export function AsciiArtGenerator() {
           {/* ASCII Preview */}
           <div className="flex-grow overflow-hidden bg-default">
             <AsciiPreview
+              key={settings.source.type}
               program={program}
               dimensions={{
                 width: settings.output.columns,

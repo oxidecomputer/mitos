@@ -18,14 +18,25 @@ export default function AsciiAnimation({
   setAnimationController: (controller: AnimationController) => void
 }) {
   const asciiEl = useRef<HTMLPreElement>(null)
+  const controllerRef = useRef(animationController)
+
+  useEffect(() => {
+    controllerRef.current = animationController
+  }, [animationController])
 
   // Force re-initialization when component mounts or program changes
   useEffect(() => {
     if (!asciiEl.current) return
 
+    // Use the ref to access the current controller
+    const currentController = controllerRef.current
+
+    const wasPlaying = currentController ? currentController.getState().playing : false
+    const currentFrame = currentController ? currentController.getState().frame : 0
+
     // Clean up previous animation controller
-    if (animationController) {
-      animationController.cleanup()
+    if (currentController) {
+      currentController.cleanup()
       setAnimationController(null)
     }
 
@@ -36,17 +47,14 @@ export default function AsciiAnimation({
         maxFrames,
       })
 
+      animController.togglePlay(wasPlaying)
+      animController.setFrame(currentFrame)
+
       setAnimationController(animController)
     } catch (error) {
       console.error('Error creating animation controller:', error)
     }
-
-    return function cleanup() {
-      if (animationController) {
-        animationController.cleanup()
-      }
-    }
-  }, [program, maxFrames, onFrameUpdate])
+  }, [program, maxFrames, onFrameUpdate, setAnimationController])
 
   return (
     <div

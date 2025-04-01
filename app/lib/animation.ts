@@ -8,7 +8,6 @@ const defaultSettings: Settings = {
   element: null,
   cols: 0,
   rows: 0,
-  once: true,
   reducedMotion: false,
   fps: 30,
   allowSelect: false,
@@ -19,7 +18,6 @@ export interface Settings {
   element: HTMLElement | null
   cols: number
   rows: number
-  once: boolean
   reducedMotion: boolean
   fps: number
   allowSelect: boolean
@@ -33,6 +31,8 @@ export interface Settings {
 }
 
 interface State {
+  playing: boolean
+  dead: boolean
   time: number
   frame: number
   cycle: number
@@ -131,6 +131,8 @@ export function createAnimation(
 
   const settings: Settings = { ...defaultSettings, ...runSettings, ...program.settings }
   const state: State = {
+    playing: false,
+    dead: false,
     time: 0,
     frame: 0,
     cycle: 0,
@@ -145,7 +147,6 @@ export function createAnimation(
   let timeSample = 0
   let interval = 0
   let timeOffset = 0
-  let stopped = false
   let pointer: Pointer
   const renderer = createRenderer()
   const fps: FPSType = new FPS()
@@ -246,13 +247,13 @@ export function createAnimation(
 
   // Main program loop
   function loop(t: number) {
-    if (stopped || !metrics) return
+    if (state.dead || !metrics) return
 
     // Timing
     const delta = t - timeSample
     if (delta < interval) {
       // Skip the frame
-      if (!settings.once) requestAnimationFrame(loop)
+      if (state.playing) requestAnimationFrame(loop)
       return
     }
 
@@ -370,16 +371,12 @@ export function createAnimation(
 
     // 7. --------------------------------------------------------------
     // Loop (eventually)
-    if (!settings.once) requestAnimationFrame(loop)
+    if (state.playing) requestAnimationFrame(loop)
   }
 
-  function togglePlay(isPlaying: boolean) {
-    if (stopped) return
-
-    if (!isPlaying) {
-      settings.once = true
-    } else {
-      settings.once = false
+  function togglePlay(playing: boolean) {
+    state.playing = playing
+    if (playing) {
       requestAnimationFrame(loop)
     }
   }
@@ -390,7 +387,25 @@ export function createAnimation(
   }
 
   function cleanup() {
-    stopped = true
+    state.dead = true
+
+    // 2. Remove event listeners from the element
+    // if (settings.element) {
+    //   settings.element.removeEventListener('pointermove', handlePointerMove);
+    //   settings.element.removeEventListener('pointerdown', handlePointerDown);
+    //   settings.element.removeEventListener('pointerup', handlePointerUp);
+    // }
+    //
+
+    buffer = []
+
+    // state.time = 0
+    // state.frame = 0
+    // state.cycle = 0
+
+    if (typeof program.cleanup === 'function') {
+      program.cleanup()
+    }
   }
 
   function updateSettings(newSettings: Partial<Settings>) {

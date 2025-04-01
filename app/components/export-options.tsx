@@ -63,7 +63,7 @@ export function ExportOptions({
       // Pause animation during export if animated
       let wasPlaying = false
       if (isAnimated && animationController) {
-        wasPlaying = !animationController.getState().once
+        wasPlaying = animationController.getState().playing
         animationController.togglePlay(false)
       }
 

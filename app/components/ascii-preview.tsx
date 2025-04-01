@@ -283,24 +283,29 @@ function FrameSlider({
   animationController: AnimationController
   sourceType?: SourceType
 }) {
-  const [playing, setPlaying] = useState(false)
+  const playing =
+    animationController && animationController.getState().playing ? true : false
 
   const togglePlay = () => {
-    if (animationController && !playing) {
-      setPlaying(true)
-      animationController.togglePlay(true)
-    } else {
-      setPlaying(false)
-      animationController?.togglePlay(false)
+    if (animationController) {
+      const newPlayState = !playing
+      animationController.togglePlay(newPlayState)
     }
   }
 
   // Reset frame when source type changes
   useEffect(() => {
     if (animationController) {
+      const wasPlaying = animationController.getState().playing
+
       animationController.setFrame(0)
+
+      // Restore play state
+      if (wasPlaying) {
+        animationController.togglePlay(true)
+      }
     }
-  }, [sourceType, animationController])
+  }, [sourceType])
 
   return (
     <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md border p-2 bg-raise border-default">

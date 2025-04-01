@@ -42,7 +42,6 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
 
   const handleLoadProject = (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
-      console.log(e.target)
       const file = e.target.files?.[0]
       if (!file) return
 
