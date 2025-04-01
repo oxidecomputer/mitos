@@ -283,15 +283,23 @@ function FrameSlider({
   animationController: AnimationController
   sourceType?: SourceType
 }) {
-  const playing =
-    animationController && animationController.getState().playing ? true : false
+  const [playing, setPlaying] = useState(
+    animationController && animationController.getState().playing ? true : false,
+  )
 
   const togglePlay = () => {
     if (animationController) {
       const newPlayState = !playing
       animationController.togglePlay(newPlayState)
+      setPlaying(newPlayState)
     }
   }
+
+  useEffect(() => {
+    if (animationController) {
+      setPlaying(animationController.getState().playing)
+    }
+  }, [animationController])
 
   // Reset frame when source type changes
   useEffect(() => {
