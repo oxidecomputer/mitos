@@ -137,11 +137,17 @@ export function AsciiArtGenerator() {
     settings: null,
     lastProcessedSettings: null,
   })
-  const processStaticImage = async (imageData: string, columns: number, rows: number) => {
+
+  const processStaticImage = async (
+    imageData: string,
+    columns: number,
+    rows: number,
+    currentSettings: AsciiSettings,
+  ) => {
     setIsProcessing(true)
 
     try {
-      const result = await processImage(imageData, settings)
+      const result = await processImage(imageData, currentSettings)
 
       if (result.processedImageUrl) {
         setProcessedImageUrl(result.processedImageUrl)
@@ -159,7 +165,7 @@ export function AsciiArtGenerator() {
     sourceData: string,
     columns: number,
     rows: number,
-    currentSettings: AsciiSettings = settings,
+    currentSettings: AsciiSettings,
   ) => {
     // Check if we can use cached media data
     const canReuseCache =
@@ -176,15 +182,19 @@ export function AsciiArtGenerator() {
         await reprocessCachedFrames(cachedMedia, columns, rows, currentSettings)
       } else {
         // Settings haven't changed, use existing processed frames
-        await useCachedFrames(cachedMedia, columns, rows)
+        await useCachedFrames(cachedMedia, columns, rows, currentSettings)
       }
     } else {
-      await processGifSource(sourceData, columns, rows)
+      await processGifSource(sourceData, columns, rows, currentSettings)
     }
   }
 
-  const processCodeSource = async (columns: number, rows: number) => {
-    const module = processCodeModule(settings.source.code)
+  const processCodeSource = async (
+    columns: number,
+    rows: number,
+    currentSettings: AsciiSettings,
+  ) => {
+    const module = processCodeModule(currentSettings.source.code)
     if (!module) {
       toast('Could not process your code. Check for syntax errors.')
       return
@@ -193,7 +203,7 @@ export function AsciiArtGenerator() {
     const newProgram = await createCodeAsciiProgram(
       columns,
       rows,
-      settings.animation.frameRate,
+      currentSettings.animation.frameRate,
       module,
     )
 
@@ -249,7 +259,7 @@ export function AsciiArtGenerator() {
           switch (source.type) {
             case 'image':
               if (source.data) {
-                await processStaticImage(source.data, columns, rows)
+                await processStaticImage(source.data, columns, rows, newSettings)
               }
               break
             case 'gif':
@@ -265,7 +275,7 @@ export function AsciiArtGenerator() {
               }
               break
             case 'code':
-              await processCodeSource(columns, rows)
+              await processCodeSource(columns, rows, newSettings)
               break
           }
 
@@ -353,7 +363,7 @@ export function AsciiArtGenerator() {
         const result = await processAnimatedMedia(cache.rawFrames, currentSettings)
 
         // Update cache with newly processed frames
-        updateMediaCache(cache, result.frames)
+        updateMediaCache(cache, result.frames, currentSettings)
         setProcessedImageUrl(result.firstFrameUrl || null)
 
         // Create program with newly processed frames
@@ -362,7 +372,7 @@ export function AsciiArtGenerator() {
           columns,
           rows,
           result.frames,
-          settings.animation.frameRate,
+          currentSettings.animation.frameRate,
         )
 
         setProgram(newProgram)
@@ -389,31 +399,37 @@ export function AsciiArtGenerator() {
   }
 
   // Update the media cache with new processed frames
-  const updateMediaCache = useCallback(
-    (cache: CachedMediaData, frames: any[]) => {
-      setCachedMedia({
-        ...cache,
-        processedFrames: {
-          settings: {
-            columns: settings.output.columns,
-            rows: settings.output.rows,
-            characterSet: settings.output.characterSet,
-            whitePoint: settings.preprocessing.whitePoint,
-            blackPoint: settings.preprocessing.blackPoint,
-            brightness: settings.preprocessing.brightness,
-            invert: settings.preprocessing.invert,
-            dithering: settings.preprocessing.dithering,
-            ditheringAlgorithm: settings.preprocessing.ditheringAlgorithm,
-          },
-          frames,
+  const updateMediaCache = (
+    cache: CachedMediaData,
+    frames: any[],
+    currentSettings: AsciiSettings,
+  ) => {
+    setCachedMedia({
+      ...cache,
+      processedFrames: {
+        settings: {
+          columns: currentSettings.output.columns,
+          rows: currentSettings.output.rows,
+          characterSet: currentSettings.output.characterSet,
+          whitePoint: currentSettings.preprocessing.whitePoint,
+          blackPoint: currentSettings.preprocessing.blackPoint,
+          brightness: currentSettings.preprocessing.brightness,
+          invert: currentSettings.preprocessing.invert,
+          dithering: currentSettings.preprocessing.dithering,
+          ditheringAlgorithm: currentSettings.preprocessing.ditheringAlgorithm,
         },
-      })
-    },
-    [settings],
-  )
+        frames,
+      },
+    })
+  }
 
   // Use cached frames without reprocessing
-  const useCachedFrames = async (cache: CachedMediaData, columns: number, rows: number) => {
+  const useCachedFrames = async (
+    cache: CachedMediaData,
+    columns: number,
+    rows: number,
+    currentSettings: AsciiSettings,
+  ) => {
     toast('Applying cached frames...')
 
     try {
@@ -426,7 +442,7 @@ export function AsciiArtGenerator() {
         columns,
         rows,
         processedFrames,
-        settings.animation.frameRate,
+        currentSettings.animation.frameRate,
       )
 
       // Set the first frame as preview
@@ -441,12 +457,17 @@ export function AsciiArtGenerator() {
       handleProcessingError('loading cached', error)
 
       // If using cached frames fails, try reprocessing
-      await processGifSource(cache.sourceUrl, columns, rows)
+      await processGifSource(cache.sourceUrl, columns, rows, currentSettings)
     }
   }
 
   // Process GIF source using gifuct-js
-  const processGifSource = async (gifData: string, columns: number, rows: number) => {
+  const processGifSource = async (
+    gifData: string,
+    columns: number,
+    rows: number,
+    currentSettings: AsciiSettings,
+  ) => {
     const processingPromise = new Promise(async (resolve, reject) => {
       try {
         // Convert data URL to binary data
@@ -464,7 +485,7 @@ export function AsciiArtGenerator() {
         const rawFrames = await extractGifFrames(gif, frames)
 
         // Process all extracted frames
-        const result = await processAnimatedMedia(rawFrames, settings)
+        const result = await processAnimatedMedia(rawFrames, currentSettings)
 
         // Create cache entry
         setCachedMedia({
@@ -473,15 +494,15 @@ export function AsciiArtGenerator() {
           rawFrames,
           processedFrames: {
             settings: {
-              columns: settings.output.columns,
-              rows: settings.output.rows,
-              characterSet: settings.output.characterSet,
-              whitePoint: settings.preprocessing.whitePoint,
-              blackPoint: settings.preprocessing.blackPoint,
-              brightness: settings.preprocessing.brightness,
-              invert: settings.preprocessing.invert,
-              dithering: settings.preprocessing.dithering,
-              ditheringAlgorithm: settings.preprocessing.ditheringAlgorithm,
+              columns: currentSettings.output.columns,
+              rows: currentSettings.output.rows,
+              characterSet: currentSettings.output.characterSet,
+              whitePoint: currentSettings.preprocessing.whitePoint,
+              blackPoint: currentSettings.preprocessing.blackPoint,
+              brightness: currentSettings.preprocessing.brightness,
+              invert: currentSettings.preprocessing.invert,
+              dithering: currentSettings.preprocessing.dithering,
+              ditheringAlgorithm: currentSettings.preprocessing.ditheringAlgorithm,
             },
             frames: result.frames,
           },
@@ -496,7 +517,7 @@ export function AsciiArtGenerator() {
           columns,
           rows,
           result.frames,
-          settings.animation.frameRate,
+          currentSettings.animation.frameRate,
         )
 
         setProgram(newProgram)
