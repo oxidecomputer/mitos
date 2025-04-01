@@ -191,13 +191,13 @@ export const AspectRatioInputNumber = ({
         </InputSwitch>
 
         {isLocked && (
-          <div className="border-default mt-2 border-l py-1 pl-3">
+          <div className="mt-2 border-l py-1 pl-3 border-default">
             <InputNumber
               value={aspectRatio || 1}
               onChange={handleAspectRatioChange}
               min={0.1}
               max={10}
-              step={0.1}
+              step={0.01}
               disabled={disabled}
               showSlider={false}
             >
