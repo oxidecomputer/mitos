@@ -1,12 +1,13 @@
 import { DocumentApi16Icon } from '@oxide/design-system/icons/react'
 import type React from 'react'
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { InputButton } from '~/lib/ui/src'
 
 import type { SourceType } from './ascii-art-generator'
 import { Container } from './container'
+import { PasteConfirmationDialog } from './paste-confirmation'
 
 export function SourceSelector({
   settings,
@@ -31,6 +32,58 @@ export function SourceSelector({
 }) {
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const [pastedImage, setPastedImage] = useState<{
+    previewUrl: string
+    file: File
+  } | null>(null)
+
+  const processFile = useCallback(
+    (file: File, dataUrl?: string) => {
+      const validImageTypes = ['image/jpeg', 'image/png']
+      const validGifTypes = ['image/gif']
+
+      if (validGifTypes.includes(file.type)) {
+        // It's a GIF
+        if (dataUrl) {
+          // If we already have the dataUrl (from paste preview)
+          updateSettings({ data: dataUrl, type: 'gif' })
+          setShowCodeSidebar(false)
+        } else {
+          // Read the file to get dataUrl
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            const result = e.target?.result as string
+            updateSettings({ data: result, type: 'gif' })
+            setShowCodeSidebar(false)
+          }
+          reader.readAsDataURL(file)
+        }
+        return true
+      } else if (validImageTypes.includes(file.type)) {
+        // It's a static image
+        if (dataUrl) {
+          // If we already have the dataUrl (from paste preview)
+          updateSettings({ data: dataUrl, type: 'image' })
+          setShowCodeSidebar(false)
+        } else {
+          // Read the file to get dataUrl
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            const result = e.target?.result as string
+            updateSettings({ data: result, type: 'image' })
+            setShowCodeSidebar(false)
+          }
+          reader.readAsDataURL(file)
+        }
+        return true
+      } else {
+        toast('Please upload an image (JPG, PNG) or a GIF file.')
+        return false
+      }
+    },
+    [updateSettings, setShowCodeSidebar],
+  )
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -61,32 +114,51 @@ export function SourceSelector({
 
   const handleFiles = (files: FileList) => {
     const file = files[0]
-    const validImageTypes = ['image/jpeg', 'image/png']
-    const validGifTypes = ['image/gif']
-
-    // Auto-detect file type
-    if (validGifTypes.includes(file.type)) {
-      // It's a GIF
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        updateSettings({ data: result, type: 'gif' })
-        setShowCodeSidebar(false)
-      }
-      reader.readAsDataURL(file)
-    } else if (validImageTypes.includes(file.type)) {
-      // It's a static image
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        updateSettings({ data: result, type: 'image' })
-        setShowCodeSidebar(false)
-      }
-      reader.readAsDataURL(file)
-    } else {
-      toast('Please upload an image (JPG, PNG) or a GIF file.')
-    }
+    processFile(file)
   }
+
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    const clipboardItems = e.clipboardData?.items
+    if (!clipboardItems) return
+
+    // Check for images in the clipboard
+    for (let i = 0; i < clipboardItems.length; i++) {
+      const item = clipboardItems[i]
+
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault() // Prevent default paste behavior
+
+        const file = item.getAsFile()
+        if (!file) continue
+
+        // Create a preview URL for the confirmation dialog
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const previewUrl = e.target?.result as string
+          setPastedImage({ previewUrl, file })
+        }
+        reader.readAsDataURL(file)
+        return
+      }
+    }
+  }, [])
+
+  const confirmPastedImage = useCallback(() => {
+    if (!pastedImage) return
+    processFile(pastedImage.file, pastedImage.previewUrl)
+    setPastedImage(null)
+  }, [pastedImage, processFile])
+
+  const cancelPastedImage = useCallback(() => {
+    setPastedImage(null)
+  }, [])
+
+  useEffect(() => {
+    document.addEventListener('paste', handlePaste)
+    return () => {
+      document.removeEventListener('paste', handlePaste)
+    }
+  }, [handlePaste])
 
   const handleButtonClick = () => {
     inputRef.current?.click()
@@ -123,6 +195,12 @@ export function SourceSelector({
         >
           <DocumentApi16Icon className="text-secondary" />
         </InputButton>
+        <PasteConfirmationDialog
+          open={!!pastedImage}
+          imageUrl={pastedImage && pastedImage.previewUrl}
+          onConfirm={confirmPastedImage}
+          onCancel={cancelPastedImage}
+        />
       </div>
     </Container>
   )

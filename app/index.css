@@ -84,4 +84,8 @@
   hr {
     @apply border-default;
   }
+  .dialog .arrow {
+    fill: var(--surface-default) !important;
+    font-size: 24px !important;
+  }
 }

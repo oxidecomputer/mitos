@@ -10,6 +10,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
+    "@ariakit/react": "^0.4.15",
     "@codemirror/lang-javascript": "^6.2.3",
     "@codemirror/language": "^6.11.0",
     "@codemirror/state": "^6.5.2",
