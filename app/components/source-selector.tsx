@@ -70,7 +70,7 @@ export function SourceSelector({
       const reader = new FileReader()
       reader.onload = (e) => {
         const result = e.target?.result as string
-        updateSettings({ data: result, type: 'gif', code: '' })
+        updateSettings({ data: result, type: 'gif' })
         setShowCodeSidebar(false)
       }
       reader.readAsDataURL(file)
@@ -79,7 +79,7 @@ export function SourceSelector({
       const reader = new FileReader()
       reader.onload = (e) => {
         const result = e.target?.result as string
-        updateSettings({ data: result, type: 'image', code: '' })
+        updateSettings({ data: result, type: 'image' })
         setShowCodeSidebar(false)
       }
       reader.readAsDataURL(file)
@@ -92,7 +92,7 @@ export function SourceSelector({
     inputRef.current?.click()
   }
   return (
-    <Container className="border-default border-b py-3">
+    <Container className="border-b py-3 border-default">
       <div
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}

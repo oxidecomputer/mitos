@@ -27,7 +27,6 @@ interface AsciiPreviewProps {
   animationController: AnimationController
   setAnimationController: (controller: AnimationController) => void
   isExporting: boolean
-  isProcessing?: boolean
 }
 
 export type AnimationController = ReturnType<typeof createAnimation> | null
@@ -43,7 +42,6 @@ export function AsciiPreview({
   animationController,
   setAnimationController,
   isExporting,
-  isProcessing = false,
 }: AsciiPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -190,12 +188,10 @@ export function AsciiPreview({
         className="relative flex flex-1 items-center justify-center overflow-auto"
         style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
       >
-        {(isExporting || isProcessing) && (
+        {isExporting && (
           <div className="absolute inset-0 z-50 flex items-center justify-center">
             <div className="rounded-md border p-4 text-center bg-default border-default elevation-2">
-              <div className="mb-2 text-lg font-semibold text-raise">
-                {isExporting ? 'Exporting Frames' : 'Processing Media'}
-              </div>
+              <div className="mb-2 text-lg font-semibold text-raise">Exporting Frames</div>
               <div className="text-muted-foreground text-sm">
                 Please wait, this may take a moment...
               </div>
