@@ -28,6 +28,7 @@ interface MediaProcessingSettings {
   ditheringAlgorithm: string
   columns: number
   rows: number
+  colorMapping: string
 }
 
 interface ProcessingResult {
@@ -219,13 +220,48 @@ function configureResizeContext(ctx: CanvasRenderingContext2D, blur: number) {
   ctx.imageSmoothingEnabled = false
 }
 
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255
+  g /= 255
+  b /= 255
+
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h = 0,
+    s = 0
+  const l = (max + min) / 2
+
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0)
+        break
+      case g:
+        h = (b - r) / d + 2
+        break
+      case b:
+        h = (r - g) / d + 4
+        break
+    }
+
+    h /= 6
+  }
+
+  return [h * 360, s * 100, l * 100]
+}
+
 function convertPixelsToAscii(
   pixelData: Uint8ClampedArray,
   width: number,
   height: number,
   settings: AsciiSettings,
 ): Data {
-  const characterSet = settings.output.characterSet || '@%#*+=-:. '
+  const characterSet = settings.output.characterSet
+  const colorMapping = settings.output.colorMapping
+
   const data: Data = {}
 
   for (let y = 0; y < height; y++) {
@@ -237,18 +273,34 @@ function convertPixelsToAscii(
       const g = pixelData[pixelIndex + 1]
       const b = pixelData[pixelIndex + 2]
 
-      // Calculate brightness with luminance formula
-      let brightness = 0.299 * r + 0.587 * g + 0.114 * b
+      let mappingValue = 0
 
-      // Apply white/black point normalization
-      brightness = normalizeWithPointAdjustment(
-        brightness,
+      switch (colorMapping) {
+        case 'hue': {
+          const [h, _, __] = rgbToHsl(r, g, b)
+          mappingValue = (h / 360) * 255 // Map hue (0-360) to 0-255 range
+          break
+        }
+        case 'saturation': {
+          const [_, s, __] = rgbToHsl(r, g, b)
+          mappingValue = (s / 100) * 255 // Map saturation (0-100) to 0-255 range
+          break
+        }
+        case 'brightness':
+        default:
+          // Use luminance formula for brightness
+          mappingValue = 0.299 * r + 0.587 * g + 0.114 * b
+          break
+      }
+
+      mappingValue = normalizeWithPointAdjustment(
+        mappingValue,
         settings.preprocessing.blackPoint,
         settings.preprocessing.whitePoint,
       )
 
-      // Map brightness to character
-      const charIndex = Math.floor((brightness / 255) * (characterSet.length - 1))
+      // Map to character
+      const charIndex = Math.floor((mappingValue / 255) * (characterSet.length - 1))
       const char = characterSet[charIndex] || ' '
 
       // Initialize column if needed

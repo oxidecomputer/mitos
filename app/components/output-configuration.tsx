@@ -4,7 +4,7 @@ import { InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 import { InputText } from '~/lib/ui/src/components/InputText/InputText'
 
-import type { GridType, SourceType } from './ascii-art-generator'
+import type { ColorMappingType, GridType, SourceType } from './ascii-art-generator'
 import { AspectRatioInputNumber } from './aspect-ratio-input-number'
 import { Container } from './container'
 
@@ -16,6 +16,7 @@ interface OutputConfigurationProps {
     columns: number
     rows: number
     aspectRatio?: number
+    colorMapping: ColorMappingType
   }
   updateSettings: (
     settings: Partial<{
@@ -25,6 +26,7 @@ interface OutputConfigurationProps {
       columns: number
       rows: number
       aspectRatio?: number
+      colorMapping: ColorMappingType
     }>,
   ) => void
   sourceType: SourceType
@@ -59,6 +61,8 @@ type CharacterSet = keyof typeof predefinedCharacterSets | 'custom'
 
 const gridOptions: GridType[] = ['none', 'horizontal', 'vertical', 'both']
 
+const colorMappingOptions: ColorMappingType[] = ['brightness', 'hue', 'saturation']
+
 export function OutputConfiguration({
   settings,
   updateSettings,
@@ -82,7 +86,7 @@ export function OutputConfiguration({
   return (
     <Container>
       {sourceType !== 'code' && (
-        <div>
+        <>
           <InputSelect<CharacterSet>
             value={selectedCharSet as CharacterSet}
             onChange={handleCharacterSetChange}
@@ -93,7 +97,7 @@ export function OutputConfiguration({
             Character Set
           </InputSelect>
 
-          <div className="border-default mt-2 border-l py-1 pl-3">
+          <div className="mt-2 border-l py-1 pl-3 border-default">
             <InputText
               value={settings.characterSet}
               onChange={handleCustomCharacterSetChange}
@@ -101,7 +105,23 @@ export function OutputConfiguration({
               className="[fontFamily:--font-mono]"
             />
           </div>
-        </div>
+
+          <InputSelect<ColorMappingType>
+            value={settings.colorMapping}
+            onChange={(value) => updateSettings({ colorMapping: value })}
+            options={colorMappingOptions}
+            labelize={(option) => {
+              const labels = {
+                brightness: 'Brightness',
+                hue: 'Hue',
+                saturation: 'Saturation',
+              }
+              return labels[option]
+            }}
+          >
+            Color Mapping
+          </InputSelect>
+        </>
       )}
 
       <AspectRatioInputNumber

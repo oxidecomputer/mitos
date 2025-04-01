@@ -26,6 +26,7 @@ import { CodeSidebar } from './code-sidebar'
 
 export type SourceType = 'image' | 'code' | 'gif' | 'video'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
+export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
 
 export interface AsciiSettings {
   source: {
@@ -49,6 +50,7 @@ export interface AsciiSettings {
     columns: number
     rows: number
     aspectRatio?: number
+    colorMapping: ColorMappingType
   }
   animation: {
     animationLength: number
@@ -107,6 +109,7 @@ const DEFAULT_SETTINGS: AsciiSettings = {
     showUnderlyingImage: false,
     columns: 80,
     rows: 40,
+    colorMapping: 'brightness',
   },
   animation: {
     animationLength: 100,
@@ -325,6 +328,7 @@ export function AsciiArtGenerator() {
       rows: output.rows,
       frameRate: animation.frameRate,
       characterSet: output.characterSet,
+      colorMapping: output.colorMapping,
     }
   }
 
@@ -342,6 +346,7 @@ export function AsciiArtGenerator() {
       cachedSettings.columns !== output.columns ||
       cachedSettings.rows !== output.rows ||
       cachedSettings.characterSet !== output.characterSet ||
+      cachedSettings.colorMapping !== output.colorMapping ||
       cachedSettings.whitePoint !== preprocessing.whitePoint ||
       cachedSettings.blackPoint !== preprocessing.blackPoint ||
       cachedSettings.brightness !== preprocessing.brightness ||
@@ -413,6 +418,7 @@ export function AsciiArtGenerator() {
           columns: currentSettings.output.columns,
           rows: currentSettings.output.rows,
           characterSet: currentSettings.output.characterSet,
+          colorMapping: currentSettings.output.colorMapping,
           whitePoint: currentSettings.preprocessing.whitePoint,
           blackPoint: currentSettings.preprocessing.blackPoint,
           brightness: currentSettings.preprocessing.brightness,
@@ -505,6 +511,7 @@ export function AsciiArtGenerator() {
               invert: currentSettings.preprocessing.invert,
               dithering: currentSettings.preprocessing.dithering,
               ditheringAlgorithm: currentSettings.preprocessing.ditheringAlgorithm,
+              colorMapping: currentSettings.output.colorMapping,
             },
             frames: result.frames,
           },
