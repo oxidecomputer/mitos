@@ -521,7 +521,7 @@ export function AsciiArtGenerator() {
         )
 
         setProgram(newProgram)
-        updateAnimationLength(result.frames.length)
+        updateSettings('animation', { animationLength: result.frames.length })
 
         resolve({
           frames: result.frames.length,
@@ -652,20 +652,17 @@ export function AsciiArtGenerator() {
     )
   }
 
-  const updateAnimationLength = (length: number) => {
-    setSettings((prev) => ({
-      ...prev,
-      animation: {
-        ...prev.animation,
-        animationLength: length,
-      },
-    }))
-  }
-
-  const updateSourceSettings = (sourceSettings: Partial<typeof settings.source>) => {
+  const updateSettings = <K extends keyof AsciiSettings>(
+    section: K,
+    newValues: Partial<AsciiSettings[K]>,
+  ) => {
     setSettings((prev) => {
-      // If switching source type, reset program to ensure clean transition
-      if (sourceSettings.type && sourceSettings.type !== prev.source.type) {
+      // Handle special case for source type changes
+      if (
+        section === 'source' &&
+        'type' in newValues &&
+        newValues.type !== prev.source.type
+      ) {
         setProgram(null)
         setProcessedImageUrl(null)
         setCachedMedia(null)
@@ -684,70 +681,16 @@ export function AsciiArtGenerator() {
 
       const newSettings = {
         ...prev,
-        source: {
-          ...prev.source,
-          ...sourceSettings,
+        [section]: {
+          ...prev[section],
+          ...newValues,
         },
       }
 
       queueProcessing(newSettings)
-
       return newSettings
     })
   }
-
-  const updatePreprocessingSettings = (
-    preprocessingSettings: Partial<typeof settings.preprocessing>,
-  ) => {
-    setSettings((prev) => {
-      const newSettings = {
-        ...prev,
-        preprocessing: {
-          ...prev.preprocessing,
-          ...preprocessingSettings,
-        },
-      }
-
-      queueProcessing(newSettings)
-
-      return newSettings
-    })
-  }
-
-  const updateOutputSettings = (outputSettings: Partial<typeof settings.output>) => {
-    setSettings((prev) => {
-      const newSettings = {
-        ...prev,
-        output: {
-          ...prev.output,
-          ...outputSettings,
-        },
-      }
-
-      queueProcessing(newSettings)
-
-      return newSettings
-    })
-  }
-
-  const updateAnimationSettings = (
-    animationSettings: Partial<typeof settings.animation>,
-  ) => {
-    setSettings((prev) => {
-      const newSettings = {
-        ...prev,
-        animation: {
-          ...prev.animation,
-          ...animationSettings,
-        },
-      }
-
-      queueProcessing(newSettings)
-
-      return newSettings
-    })
-  }
-
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
@@ -755,7 +698,7 @@ export function AsciiArtGenerator() {
         {/* Source Selection Tabs */}
         <SourceSelector
           settings={settings.source}
-          updateSettings={updateSourceSettings}
+          updateSettings={(changes) => updateSettings('source', changes)}
           showCodeSidebar={showCodeSidebar}
           setShowCodeSidebar={setShowCodeSidebar}
         />
@@ -766,7 +709,7 @@ export function AsciiArtGenerator() {
               <>
                 <PreprocessingControls
                   settings={settings.preprocessing}
-                  updateSettings={updatePreprocessingSettings}
+                  updateSettings={(changes) => updateSettings('preprocessing', changes)}
                 />
                 <hr />
               </>
@@ -775,7 +718,7 @@ export function AsciiArtGenerator() {
             {/* Output Configuration */}
             <OutputConfiguration
               settings={settings.output}
-              updateSettings={updateOutputSettings}
+              updateSettings={(changes) => updateSettings('output', changes)}
               sourceType={settings.source.type}
             />
 
@@ -787,7 +730,7 @@ export function AsciiArtGenerator() {
                 <hr />
                 <AnimationOptions
                   settings={settings.animation}
-                  updateSettings={updateAnimationSettings}
+                  updateSettings={(changes) => updateSettings('animation', changes)}
                   sourceType={settings.source.type}
                 />
               </>
@@ -842,7 +785,7 @@ export function AsciiArtGenerator() {
           {/* Code Sidebar */}
           <CodeSidebar
             settings={settings.source}
-            updateSettings={updateSourceSettings}
+            updateSettings={(changes) => updateSettings('source', changes)}
             isOpen={showCodeSidebar}
           />
         </div>
