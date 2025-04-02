@@ -1,6 +1,7 @@
 import { DocumentApi16Icon } from '@oxide/design-system/icons/react'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
 import { InputButton } from '~/lib/ui/src'
@@ -163,6 +164,10 @@ export function SourceSelector({
   const handleButtonClick = () => {
     inputRef.current?.click()
   }
+
+  // open file input with cmd+o
+  useHotkeys('meta+o', handleButtonClick, { preventDefault: true }, [])
+
   return (
     <Container className="border-b py-3 border-default">
       <div

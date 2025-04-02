@@ -4,6 +4,7 @@ import {
   Resize16Icon,
 } from '@oxide/design-system/icons/react'
 import { useEffect, useRef, useState } from 'react'
+import { useHotkeys } from 'react-hotkeys-hook'
 
 import type { createAnimation, Program } from '~/lib/animation'
 import { InputButton, InputNumber } from '~/lib/ui/src'
@@ -127,6 +128,9 @@ export function AsciiPreview({
       prevDimensionsRef.current = dimensions
     }
   }, [dimensions, autoFit])
+
+  // shift+2 auto fits canvas
+  useHotkeys('shift+2', () => setAutoFit(true), [])
 
   if (!program) {
     return (

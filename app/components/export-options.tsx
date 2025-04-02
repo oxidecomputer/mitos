@@ -2,6 +2,7 @@ import { saveAs } from 'file-saver'
 import html2canvas from 'html2canvas-pro'
 import JSZip from 'jszip'
 import { useEffect, useState } from 'react'
+import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
 import type { Program } from '~/lib/animation'
@@ -348,6 +349,12 @@ export function ExportOptions({
       setExportFormat('svg')
     }
   }, [sourceType, animationLength])
+
+  // Copy with cmd+c
+  useHotkeys('meta+c', () => copyText(), { preventDefault: true }, [])
+
+  // Copy svg with ctrl+shift+c
+  useHotkeys('ctrl+shift+c', () => copySvg(), { preventDefault: true }, [])
 
   return (
     <Container>
