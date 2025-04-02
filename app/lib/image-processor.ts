@@ -83,9 +83,6 @@ export async function processImage(
   settings: AsciiSettings,
   extractFrames: boolean = false,
 ): Promise<ProcessingResult> {
-  const width = settings.output.columns
-  const height = settings.output.rows
-
   return new Promise((resolve) => {
     if (extractFrames && settings.source.type === 'gif') {
       handleGifExtraction(imageData, settings, resolve)
@@ -95,6 +92,9 @@ export async function processImage(
     const img = new Image()
 
     img.onload = async () => {
+      const width = settings.output.columns
+      const height = settings.output.rows
+
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')!
 
