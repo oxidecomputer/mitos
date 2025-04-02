@@ -132,9 +132,7 @@ export function AsciiPreview({
     return (
       <div className="flex h-full flex-col items-center justify-center p-8">
         <p className="text-widest font-mono text-[13px] uppercase text-tertiary">
-          {sourceType === 'image'
-            ? `Upload an image to see the ASCII preview`
-            : 'Enter code to see the ASCII preview'}
+          Upload or paste an image to see the ASCII preview
         </p>
       </div>
     )
