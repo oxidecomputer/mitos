@@ -1,10 +1,6 @@
 import { redo, undo } from '@codemirror/commands'
 import { EditorView } from '@codemirror/view'
-import {
-  AutoRestart12Icon,
-  Info12Icon,
-  OpenLink12Icon,
-} from '@oxide/design-system/icons/react'
+import { Info12Icon } from '@oxide/design-system/icons/react'
 import { useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
