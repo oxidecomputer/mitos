@@ -7,6 +7,7 @@ import CodeMirror from '@uiw/react-codemirror'
 interface CodeEditorProps {
   value: string
   onChange: (value: string) => void
+  editorViewRef?: React.MutableRefObject<EditorView | null>
 }
 
 const oxideDark = {
@@ -111,7 +112,7 @@ const highlightStyle = HighlightStyle.define([
 
 const theme = EditorView.theme({
   '.cm-content': {
-    paddingTop: '12px',
+    paddingTop: '56px',
     paddingBottom: '44px',
     caretColor: oxideDark.cursor,
   },
@@ -166,7 +167,7 @@ const theme = EditorView.theme({
 
 const oxideDarkExtension = [theme, syntaxHighlighting(highlightStyle)]
 
-export default function CodeEditor({ value, onChange }: CodeEditorProps) {
+export default function CodeEditor({ value, onChange, editorViewRef }: CodeEditorProps) {
   const editorExtensions = [
     javascript({ jsx: false, typescript: false }),
     EditorView.lineWrapping,
@@ -187,6 +188,12 @@ export default function CodeEditor({ value, onChange }: CodeEditorProps) {
         autocompletion: true,
         foldGutter: true,
         indentOnInput: true,
+        history: true,
+      }}
+      onCreateEditor={(view) => {
+        if (editorViewRef) {
+          editorViewRef.current = view
+        }
       }}
     />
   )

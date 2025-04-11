@@ -42,3 +42,31 @@ export const InputButton = ({
     </button>
   )
 }
+
+export const LinkButton = ({
+  children,
+  variant = 'default',
+  onClick,
+  className = '',
+  to,
+  inline = false,
+  icon = false,
+}: Omit<InputButtonProps, 'type' | 'disabled'> & { to: string }) => {
+  return (
+    <a
+      href={to}
+      target="_blank"
+      rel="noreferrer"
+      className={cn(
+        'ui-button',
+        `ui-button--${variant}`,
+        inline && 'ui-button--inline',
+        icon && 'ui-button--icon',
+        className,
+      )}
+      onClick={onClick}
+    >
+      {children}
+    </a>
+  )
+}
