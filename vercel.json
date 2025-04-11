@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/js/viewscript.js",
+      "destination": "https://trck.oxide.computer/js/plausible.js"
+    }
+  ]
+}
