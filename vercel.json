@@ -4,5 +4,6 @@
       "source": "/js/viewscript.js",
       "destination": "https://trck.oxide.computer/js/plausible.js"
     }
+    { "source": "/api/event", "destination": "https://trck.oxide.computer/api/event" }
   ]
 }
