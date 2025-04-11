@@ -5,9 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mitos ASCII Tool</title>
 
-    <% if (process.env.MODE=== 'production') { %>
-    <script defer data-domain="oxide.computer" src="/js/viewscript.js"></script>
-    <% } %>
+    <script type="module">
+      if (import.meta.env.PROD) {
+        const script = document.createElement('script')
+        script.defer = true
+        script.setAttribute('data-domain', 'oxide.computer')
+        script.src = '/js/viewscript.js'
+        document.head.appendChild(script)
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
