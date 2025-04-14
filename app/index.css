@@ -16,24 +16,26 @@
   font-style: normal;
   font-weight: 400;
   src:
-    url('/fonts/GT-America-Mono-Regular-OCC.woff2') format('woff2'),
-    url('/fonts/GT-America-Mono-Regular-OCC.woff') format('woff');
+    url('https://oxide.computer/fonts/GT-America-Mono-Regular-OCC.woff2') format('woff2'),
+    url('https://oxide.computer/fonts/GT-America-Mono-Regular-OCC.woff') format('woff');
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'SuisseIntl';
   src:
-    url('/fonts/SuisseIntl-Regular-WebS.woff2') format('woff2'),
-    url('/fonts/SuisseIntl-Regular-WebS.woff') format('woff');
+    url('https://oxide.computer/fonts/SuisseIntl-Regular-WebS.woff2') format('woff2'),
+    url('https://oxide.computer/fonts/SuisseIntl-Regular-WebS.woff') format('woff');
   font-style: normal;
   font-weight: 400;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'SuisseIntl';
   src:
-    url('/fonts/SuisseIntl-Medium-WebS.woff2') format('woff2'),
-    url('/fonts/SuisseIntl-Medium-WebS.woff') format('woff');
+    url('https://oxide.computer/fonts/SuisseIntl-Medium-WebS.woff2') format('woff2'),
+    url('https://oxide.computer/fonts/SuisseIntl-Medium-WebS.woff') format('woff');
   font-style: normal;
   font-weight: 500;
   font-display: swap;
