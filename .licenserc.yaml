@@ -13,7 +13,7 @@ header:
   paths:
     - '**/*.{ts,tsx,css,js,sh}'
 
-  excludes:
+  paths-ignore:
     - 'app/lib/animation.ts'
     - 'app/lib/core/**'
     - 'app/lib/modules/**'
