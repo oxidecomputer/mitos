@@ -2,6 +2,8 @@
 
 Mitos is an ASCII art generator built by Oxide Computer Company. It converts images, GIFs, into ASCII text illustrations, with a live-code option. It's used for producting branded ASCII graphics.
 
+![GncCsR9XIAAO2AA](https://github.com/user-attachments/assets/01e12760-f527-427e-8e13-7eb019a8cc4a)
+
 Live version: [https://mitos.shared.oxide.computer/](https://mitos.shared.oxide.computer/)
 
 ## Features
