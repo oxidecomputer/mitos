@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 claude.md
+
+public/fonts
+package-lock.json
