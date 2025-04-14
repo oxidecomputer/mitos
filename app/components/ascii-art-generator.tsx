@@ -6,7 +6,7 @@
  * Copyright Oxide Computer Company
  */
 import { decompressFrames, ParsedFrame, ParsedGif, parseGIF } from 'gifuct-js'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as R from 'remeda'
 import { toast } from 'sonner'
 
@@ -28,6 +28,7 @@ import {
   processImage,
   type CachedMediaData,
 } from '~/lib/image-processor'
+import { cn } from '~/lib/utils'
 
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
@@ -131,6 +132,7 @@ export function AsciiArtGenerator() {
   const [program, setProgram] = useState<Program | null>(null)
   const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null)
   const [animationController, setAnimationController] = useState<AnimationController>(null)
+  const [dragActive, setDragActive] = useState(false)
 
   // Processing state
   const [isExporting, setIsExporting] = useState(false)
@@ -611,49 +613,122 @@ export function AsciiArtGenerator() {
     )
   }
 
-  const updateSettings = <K extends keyof AsciiSettings>(
-    section: K,
-    newValues: Partial<AsciiSettings[K]>,
-  ) => {
-    setSettings((prev) => {
-      // Handle special case for source type changes
-      if (
-        section === 'source' &&
-        'type' in newValues &&
-        newValues.type !== prev.source.type
-      ) {
-        setProgram(null)
-        setProcessedImageUrl(null)
-        setCachedMedia(null)
+  const updateSettings = useCallback(
+    <K extends keyof AsciiSettings>(section: K, newValues: Partial<AsciiSettings[K]>) => {
+      setSettings((prev) => {
+        // Handle special case for source type changes
+        if (
+          section === 'source' &&
+          'type' in newValues &&
+          newValues.type !== prev.source.type
+        ) {
+          setProgram(null)
+          setProcessedImageUrl(null)
+          setCachedMedia(null)
 
-        if (animationController) {
-          setAnimationController(null)
+          if (animationController) {
+            setAnimationController(null)
+          }
+
+          // Reset last processed settings
+          lastProcessedSettings.current = null
         }
 
-        // Reset last processed settings
-        lastProcessedSettings.current = null
-      }
+        return {
+          ...prev,
+          [section]: {
+            ...prev[section],
+            ...newValues,
+          },
+        }
+      })
+    },
+    [animationController],
+  )
 
-      return {
-        ...prev,
-        [section]: {
-          ...prev[section],
-          ...newValues,
-        },
+  const processFile = useCallback(
+    (file: File, dataUrl?: string) => {
+      const validImageTypes = ['image/jpeg', 'image/png']
+      const validGifTypes = ['image/gif']
+
+      if (validGifTypes.includes(file.type)) {
+        // It's a GIF
+        if (dataUrl) {
+          // If we already have the dataUrl (from paste preview)
+          updateSettings('source', { data: dataUrl, type: 'gif' })
+          setShowCodeSidebar(false)
+        } else {
+          // Read the file to get dataUrl
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            const result = e.target?.result as string
+            updateSettings('source', { data: result, type: 'gif' })
+            setShowCodeSidebar(false)
+          }
+          reader.readAsDataURL(file)
+        }
+        return true
+      } else if (validImageTypes.includes(file.type)) {
+        // It's a static image
+        if (dataUrl) {
+          // If we already have the dataUrl (from paste preview)
+          updateSettings('source', { data: dataUrl, type: 'image' })
+          setShowCodeSidebar(false)
+        } else {
+          // Read the file to get dataUrl
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            const result = e.target?.result as string
+            updateSettings('source', { data: result, type: 'image' })
+            setShowCodeSidebar(false)
+          }
+          reader.readAsDataURL(file)
+        }
+        return true
+      } else {
+        toast('Please upload an image (JPG, PNG) or a GIF file.')
+        return false
       }
-    })
+    },
+    [updateSettings, setShowCodeSidebar],
+  )
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0])
+    }
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div
+      className="flex h-screen overflow-hidden"
+      onDragEnter={handleDrag}
+      onDragLeave={handleDrag}
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+    >
       {/* Sidebar */}
       <div className="left-0 top-0 flex h-full w-64 transform flex-col overflow-hidden border-r bg-raise border-default">
         {/* Source Selection Tabs */}
         <SourceSelector
           settings={settings.source}
-          updateSettings={(changes) => updateSettings('source', changes)}
           showCodeSidebar={showCodeSidebar}
           setShowCodeSidebar={setShowCodeSidebar}
+          processFile={processFile}
         />
         <div className="flex grow flex-col justify-between overflow-auto">
           <div className="space-y-6 py-4">
@@ -729,7 +804,15 @@ export function AsciiArtGenerator() {
       <div className="flex-1 overflow-hidden">
         <div className="flex h-full">
           {/* ASCII Preview */}
-          <div className="flex-grow overflow-hidden bg-default">
+          <div
+            className={cn(
+              'relative flex-grow overflow-hidden',
+              dragActive ? 'bg-secondary' : 'bg-default',
+            )}
+          >
+            {dragActive && (
+              <div className="absolute inset-1 rounded border border-dashed border-accent-secondary" />
+            )}
             <AsciiPreview
               key={settings.source.type}
               program={program}
