@@ -1,6 +1,8 @@
 # Mitos
 
-Mitos is an ASCII art generator built by Oxide Computer Company. It converts images, GIFs, into ASCII text illustrations, with a live-code option. It's used for producting branded ASCII graphics.
+Mitos is an ASCII art generator built by Oxide Computer Company. It converts images, GIFs,
+into ASCII text illustrations, with a live-code option. It's used for producting branded
+ASCII graphics.
 
 Live version: [https://mitos.shared.oxide.computer/](https://mitos.shared.oxide.computer/)
 
@@ -28,19 +30,25 @@ Mitos is built with:
 - CodeMirror (for the code editor)
 - gifuct-js (GIF processing)
 
-The project builds on [play.core](https://play.ertdfgcvb.xyz/) by Andreas Gysin (ertdfgcvb), an ASCII rendering library with an API inspired by GLSL programming. Whilst it might be more efficient to process and render the text directly to the DOM, sidestepping the need for a library— the library enables consistent rendering and easier packaging of self-contained ASCII art components.
+The project builds on [play.core](https://play.ertdfgcvb.xyz/) by Andreas Gysin (ertdfgcvb),
+an ASCII rendering library with an API inspired by GLSL programming. Whilst it might be more
+efficient to process and render the text directly to the DOM, sidestepping the need for a
+library— the library enables consistent rendering and easier packaging of self-contained
+ASCII art components.
 
 ## Getting Started
 
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/oxidecomputer/mitos.git
    cd mitos
    ```
 
 2. Install dependencies:
+
    ```bash
    bun install
    ```
@@ -52,7 +60,10 @@ The project builds on [play.core](https://play.ertdfgcvb.xyz/) by Andreas Gysin 
 
 ## Contributing
 
-In its present state, Mitos is an internal tool for Oxide Computer Company and is tightly coupled to Oxide's design system. While we're open to PRs, we are a small company and the primary goal of this repo is as an internal tool, so we can't guarantee that all PRs will be integrated.
+In its present state, Mitos is an internal tool for Oxide Computer Company and is tightly
+coupled to Oxide's design system. While we're open to PRs, we are a small company and the
+primary goal of this repo is as an internal tool, so we can't guarantee that all PRs will be
+integrated.
 
 ## Credits
 
