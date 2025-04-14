@@ -1,0 +1,16 @@
+header:
+  # default is 80, need to make it slightly longer for a long shebang
+  license-location-threshold: 100
+  license:
+    spdx-id: MPL-2.0
+    content: |
+      This Source Code Form is subject to the terms of the Mozilla Public
+      License, v. 2.0. If a copy of the MPL was not distributed with this
+      file, you can obtain one at https://mozilla.org/MPL/2.0/.
+
+      Copyright Oxide Computer Company
+
+  paths:
+    - '**/*.{ts,tsx,css,html,js,sh}'
+
+  comment: on-failure
