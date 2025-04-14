@@ -9,7 +9,6 @@ import { DocumentApi16Icon } from '@oxide/design-system/icons/react'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { toast } from 'sonner'
 
 import { InputButton } from '~/lib/ui/src'
 
@@ -19,9 +18,9 @@ import { PasteConfirmationDialog } from './paste-confirmation'
 
 export function SourceSelector({
   settings,
-  updateSettings,
   setShowCodeSidebar,
   showCodeSidebar,
+  processFile,
 }: {
   setShowCodeSidebar: (val: boolean) => void
   showCodeSidebar: boolean
@@ -30,88 +29,14 @@ export function SourceSelector({
     data: string | null
     code: string
   }
-  updateSettings: (
-    settings: Partial<{
-      type: SourceType
-      data: string | null
-      code: string
-    }>,
-  ) => void
+  processFile: (file: File, dataUrl?: string) => boolean // Add this prop type
 }) {
-  const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [pastedImage, setPastedImage] = useState<{
     previewUrl: string
     file: File
   } | null>(null)
-
-  const processFile = useCallback(
-    (file: File, dataUrl?: string) => {
-      const validImageTypes = ['image/jpeg', 'image/png']
-      const validGifTypes = ['image/gif']
-
-      if (validGifTypes.includes(file.type)) {
-        // It's a GIF
-        if (dataUrl) {
-          // If we already have the dataUrl (from paste preview)
-          updateSettings({ data: dataUrl, type: 'gif' })
-          setShowCodeSidebar(false)
-        } else {
-          // Read the file to get dataUrl
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            const result = e.target?.result as string
-            updateSettings({ data: result, type: 'gif' })
-            setShowCodeSidebar(false)
-          }
-          reader.readAsDataURL(file)
-        }
-        return true
-      } else if (validImageTypes.includes(file.type)) {
-        // It's a static image
-        if (dataUrl) {
-          // If we already have the dataUrl (from paste preview)
-          updateSettings({ data: dataUrl, type: 'image' })
-          setShowCodeSidebar(false)
-        } else {
-          // Read the file to get dataUrl
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            const result = e.target?.result as string
-            updateSettings({ data: result, type: 'image' })
-            setShowCodeSidebar(false)
-          }
-          reader.readAsDataURL(file)
-        }
-        return true
-      } else {
-        toast('Please upload an image (JPG, PNG) or a GIF file.')
-        return false
-      }
-    },
-    [updateSettings, setShowCodeSidebar],
-  )
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(e.dataTransfer.files)
-    }
-  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault()
@@ -177,13 +102,7 @@ export function SourceSelector({
 
   return (
     <Container className="border-b py-3 border-default">
-      <div
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        className="flex gap-2"
-      >
+      <div className="flex gap-2">
         <input
           key={settings.type}
           ref={inputRef}
@@ -193,10 +112,7 @@ export function SourceSelector({
           onChange={handleChange}
         />
 
-        <InputButton
-          variant={dragActive ? 'secondary' : 'default'}
-          onClick={handleButtonClick}
-        >
+        <InputButton variant="default" onClick={handleButtonClick}>
           {settings.data ? 'Replace Media' : 'Upload Media'}
         </InputButton>
         <InputButton
