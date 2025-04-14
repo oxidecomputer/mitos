@@ -655,7 +655,7 @@ export function AsciiArtGenerator() {
           showCodeSidebar={showCodeSidebar}
           setShowCodeSidebar={setShowCodeSidebar}
         />
-        <div className="overflow-auto">
+        <div className="flex grow flex-col justify-between overflow-auto">
           <div className="space-y-6 py-4">
             {/* Preprocessing (for non-code sources) */}
             {settings.source.type !== 'code' && (
@@ -710,6 +710,18 @@ export function AsciiArtGenerator() {
             {/* Project Management */}
             {/* <ProjectManagement settings={settings} updateSettings={updateSettings} /> */}
           </div>
+          <div className="flex grow items-end p-3 pb-2">
+            <a
+              href="https://oxide.computer"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 font-mono uppercase text-quaternary [font-size:12px]"
+            >
+              /*
+              <div className="link-with-underline text-secondary">Made by Oxide</div>
+              */
+            </a>
+          </div>
         </div>
       </div>
 
@@ -747,3 +759,21 @@ export function AsciiArtGenerator() {
     </div>
   )
 }
+
+export const TreeNodeEnd = ({ className }: { className?: string }) => (
+  <svg
+    width="16"
+    height="8"
+    viewBox="0 0 16 8"
+    className={className}
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M1 2H0V7V8H1H16V7H1V2Z"
+      fill="currentColor"
+    />
+  </svg>
+)
