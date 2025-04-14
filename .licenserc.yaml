@@ -11,6 +11,11 @@ header:
       Copyright Oxide Computer Company
 
   paths:
-    - '**/*.{ts,tsx,css,html,js,sh}'
+    - '**/*.{ts,tsx,css,js,sh}'
+
+  excludes:
+    - 'app/lib/animation.ts'
+    - 'app/lib/core/**'
+    - 'app/lib/modules/**'
 
   comment: on-failure
