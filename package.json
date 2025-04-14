@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "fmt": "prettier --write --ignore-path ./.gitignore  .",
+    "fmt:check": "prettier --check --ignore-path ./.gitignore . ",
     "preview": "vite preview",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "lint": "eslint app"
   },
   "dependencies": {
     "@ariakit/react": "^0.4.15",
