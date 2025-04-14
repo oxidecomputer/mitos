@@ -56,7 +56,7 @@ export function ExportOptions({
     } else if (exportFormat === 'frames') {
       setExportFormat('png')
     }
-  }, [sourceType])
+  }, [sourceType, exportFormat])
 
   const exportContent = async () => {
     if (!program) return

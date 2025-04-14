@@ -63,7 +63,7 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
           console.log(projectData)
 
           toast(`${projectData.name} has been loaded successfully.`)
-        } catch (error) {
+        } catch (_error) {
           toast('The selected file is not a valid project file')
         }
       }

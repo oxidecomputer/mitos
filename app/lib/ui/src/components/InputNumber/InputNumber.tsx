@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNumberField } from 'react-aria'
 import { useNumberFieldState } from 'react-stately'
 
@@ -96,23 +96,37 @@ export const InputNumber = ({
     }
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (dragging && dragStart?.bounds) {
-      const bounds = dragStart.bounds
-      const containerWidth = bounds.width
-      const dx = e.clientX - dragStart.x
-      const percentageMoved = dx / containerWidth
-      const valueRange = max - min
-      const valueDelta = valueRange * percentageMoved
-      const multiplier = e.shiftKey ? 0.1 : 1 // Shift for finer control
-      const newValue = dragStart.value + valueDelta * multiplier
+  const clampValue = useCallback(
+    (val: number) => {
+      // Round to step precision
+      const rounded = Math.round(val / step) * step
 
-      // Only update if the value has actually changed
-      if (newValue !== value) {
-        onChange(clampValue(newValue))
+      // Apply min/max constraints
+      return Math.min(max, Math.max(min, rounded))
+    },
+    [min, max, step],
+  )
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (dragging && dragStart?.bounds) {
+        const bounds = dragStart.bounds
+        const containerWidth = bounds.width
+        const dx = e.clientX - dragStart.x
+        const percentageMoved = dx / containerWidth
+        const valueRange = max - min
+        const valueDelta = valueRange * percentageMoved
+        const multiplier = e.shiftKey ? 0.1 : 1 // Shift for finer control
+        const newValue = dragStart.value + valueDelta * multiplier
+
+        // Only update if the value has actually changed
+        if (newValue !== value) {
+          onChange(clampValue(newValue))
+        }
       }
-    }
-  }
+    },
+    [dragging, dragStart, value, clampValue, onChange, min, max],
+  )
 
   const handleMouseUp = () => {
     setDragging(false)
@@ -120,14 +134,6 @@ export const InputNumber = ({
 
     // Remove the dragging class from body
     document.body.classList.remove('dragging')
-  }
-
-  const clampValue = (val: number) => {
-    // Round to step precision
-    const rounded = Math.round(val / step) * step
-
-    // Apply min/max constraints
-    return Math.min(max, Math.max(min, rounded))
   }
 
   useEffect(() => {
@@ -140,7 +146,7 @@ export const InputNumber = ({
         document.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [dragging, dragStart, value])
+  }, [dragging, dragStart, value, handleMouseMove])
 
   const hasRange = max !== Infinity && min !== -Infinity
   const percentage = hasRange

@@ -15,15 +15,15 @@ export async function createImageAsciiProgram(
   frames?: Data[],
   frameRate: number = 30,
 ): Promise<Program> {
-  width = Math.max(1, width)
-  height = Math.max(1, height)
+  const w = Math.max(1, width)
+  const h = Math.max(1, height)
 
   // Default program
   const program: Program = {
     settings: {
       fps: frameRate,
-      cols: width,
-      rows: height,
+      cols: w,
+      rows: h,
       color: '#000000',
       backgroundColor: '#ffffff',
     },
@@ -73,10 +73,10 @@ export async function createCodeAsciiProgram(
   width: number,
   height: number,
   frameRate: number,
-  programModuleLoader: { load: () => Promise<any> },
-): Promise<Program> {
-  width = Math.max(1, width)
-  height = Math.max(1, height)
+  programModuleLoader: { load: () => Promise<Program> },
+): Promise<Program | null> {
+  const w = Math.max(1, width)
+  const h = Math.max(1, height)
 
   let programModule = null
   if (typeof programModuleLoader.load === 'function') {
@@ -84,6 +84,7 @@ export async function createCodeAsciiProgram(
       programModule = await programModuleLoader.load()
     } catch (error) {
       console.error('Failed to load program module:', error)
+      return null
     }
   }
 
@@ -99,14 +100,14 @@ export async function createCodeAsciiProgram(
   const program: Program = {
     settings: {
       fps: frameRate,
-      cols: width,
-      rows: height,
+      cols: w,
+      rows: h,
       color: '#000000',
       backgroundColor: '#ffffff',
     },
 
     boot: (_context, _buffer, userData) => {
-      if (hasCustomProgram && typeof programModule.boot === 'function') {
+      if (hasCustomProgram && programModule && typeof programModule.boot === 'function') {
         try {
           programModule.boot(_context, _buffer, userData)
         } catch (error) {
@@ -116,7 +117,7 @@ export async function createCodeAsciiProgram(
     },
 
     main: (pos, context, cursor, buffer, userData) => {
-      if (hasCustomProgram && typeof programModule.main === 'function') {
+      if (hasCustomProgram && programModule && typeof programModule.main === 'function') {
         try {
           const result = programModule.main(pos, context, cursor, buffer, userData)
           if (result) return result
@@ -133,10 +134,12 @@ export async function createCodeAsciiProgram(
   }
 
   // Add pre function if available
-  if (hasCustomProgram && typeof programModule.pre === 'function') {
+  if (hasCustomProgram && programModule && typeof programModule.pre === 'function') {
     program.pre = (context, cursor, buffer, userData) => {
       try {
-        programModule.pre(context, cursor, buffer, userData)
+        if (programModule && programModule.pre) {
+          programModule.pre(context, cursor, buffer, userData)
+        }
       } catch (error) {
         console.error('Error in custom pre function:', error)
       }
@@ -144,10 +147,12 @@ export async function createCodeAsciiProgram(
   }
 
   // Add post function if available
-  if (hasCustomProgram && typeof programModule.post === 'function') {
+  if (hasCustomProgram && programModule && typeof programModule.post === 'function') {
     program.post = (context, cursor, buffer, userData) => {
       try {
-        programModule.post(context, cursor, buffer, userData)
+        if (programModule && programModule.post) {
+          programModule.post(context, cursor, buffer, userData)
+        }
       } catch (error) {
         console.error('Error in custom post function:', error)
       }

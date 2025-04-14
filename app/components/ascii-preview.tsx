@@ -10,7 +10,7 @@ import {
   DirectionRightIcon,
   Resize16Icon,
 } from '@oxide/design-system/icons/react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 import type { createAnimation, Program } from '~/lib/animation'
@@ -77,18 +77,21 @@ export function AsciiPreview({
     setDragStart({ x: e.clientX, y: e.clientY })
   }
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging) {
-      const dx = e.clientX - dragStart.x
-      const dy = e.clientY - dragStart.y
-      setPosition((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
-      setDragStart({ x: e.clientX, y: e.clientY })
-    }
-  }
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging) {
+        const dx = e.clientX - dragStart.x
+        const dy = e.clientY - dragStart.y
+        setPosition((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
+        setDragStart({ x: e.clientX, y: e.clientY })
+      }
+    },
+    [isDragging, dragStart],
+  )
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false)
-  }
+  }, [])
 
   const handleResetView = () => {
     setZoomLevel(1)
@@ -98,15 +101,15 @@ export function AsciiPreview({
 
   useEffect(() => {
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove as any)
+      document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove as any)
+      document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [isDragging, dragStart])
+  }, [isDragging, dragStart, handleMouseMove, handleMouseUp])
 
   useEffect(() => {
     if (autoFit && containerRef.current && program) {
@@ -192,7 +195,6 @@ export function AsciiPreview({
         ref={containerRef}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         className="relative flex flex-1 items-center justify-center overflow-auto"
         style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
@@ -322,6 +324,7 @@ function FrameSlider({
         animationController.togglePlay(true)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceType])
 
   return (
