@@ -95,4 +95,9 @@
     fill: var(--surface-default) !important;
     font-size: 24px !important;
   }
+  .link-with-underline {
+    @apply text-default hover:text-raise;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 60%, transparent);
+  }
 }
