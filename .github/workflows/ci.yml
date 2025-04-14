@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm install
+      - name: Check format
+        run: npm run fmt:check
+      - name: Typecheck
+        run: npm run tsc
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test run
+      - name: Build
+        run: npm run build

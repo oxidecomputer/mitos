@@ -1,3 +1,10 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Copyright Oxide Computer Company
+ */
 import { useRef } from 'react'
 
 import type { GridType } from './ascii-art-generator'
@@ -36,7 +43,7 @@ export function GridOverlay({ grid, cols, rows }: GridOverlayProps) {
   return (
     <div
       ref={gridRef}
-      className="grid-overlay text-quaternary pointer-events-none absolute inset-0 z-10"
+      className="grid-overlay pointer-events-none absolute inset-0 z-10 text-quaternary"
       data-grid-type={grid}
     >
       <svg

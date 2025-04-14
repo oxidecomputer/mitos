@@ -1,4 +1,12 @@
-import { type Cell, type Context, invariant } from "../animation"
+/*
+ * This Source Code Form is subject to the terms of the Apache License,
+ * v. 2.0. If a copy of the license was not distributed with this file, you can
+ * obtain one at https://github.com/ertdfgcvb/play.core/blob/master/LICENSE.
+ *
+ * Modified from https://github.com/ertdfgcvb/play.core
+ * Copyright ertdfgcvb (Andreas Gysin)
+ */
+import { invariant, type Cell, type Context } from '../animation'
 
 export default function createRenderer() {
   const backBuffer: Cell[] = []
@@ -7,12 +15,17 @@ export default function createRenderer() {
   function render(context: Context, buffer: Cell[]): void {
     const element = context.settings.element
 
-    invariant(!!element, "Element is required")
+    invariant(!!element, 'Element is required')
 
     // Detect resize and validate dimensions
     if (context.rows !== rows || context.cols !== cols) {
       // Validate dimensions
-      if (context.rows <= 0 || context.cols <= 0 || !isFinite(context.rows) || !isFinite(context.cols)) {
+      if (
+        context.rows <= 0 ||
+        context.cols <= 0 ||
+        !isFinite(context.rows) ||
+        !isFinite(context.cols)
+      ) {
         console.error(`Invalid dimensions: ${context.cols} x ${context.rows}`)
         return
       }
@@ -24,8 +37,8 @@ export default function createRenderer() {
 
     // DOM rows update: expand lines if necessary
     while (element.childElementCount < rows) {
-      const span = document.createElement("span")
-      span.style.display = "block"
+      const span = document.createElement('span')
+      span.style.display = 'block'
       element.appendChild(span)
     }
 
@@ -36,8 +49,8 @@ export default function createRenderer() {
     }
 
     // Set default text color to black for white background
-    element.style.color = "black"
-    element.style.backgroundColor = "transparent"
+    element.style.color = 'black'
+    element.style.backgroundColor = 'transparent'
 
     // A bit of a cumbersome render-loop…
     // A few notes: the fastest way I found to render the image
@@ -71,8 +84,8 @@ export default function createRenderer() {
       // Skip row if update is not necessary
       if (rowNeedsUpdate === false) continue
 
-      let html = "" // Accumulates the markup
-      let prevCell = { char: "" } // defaultCell
+      let html = '' // Accumulates the markup
+      let prevCell = { char: '' } // defaultCell
       let tagIsOpen = false
 
       for (let i = 0; i < cols; i++) {
@@ -84,26 +97,30 @@ export default function createRenderer() {
         // If there is a change in style a new span has to be inserted
         if (!isSameCellStyle(currCell, prevCell)) {
           // Close the previous tag
-          if (tagIsOpen) html += "</span>"
+          if (tagIsOpen) html += '</span>'
 
           const c = currCell.color === context.settings.color ? null : currCell.color
-          const b = currCell.backgroundColor === context.settings.backgroundColor ? null : currCell.backgroundColor
-          const w = currCell.fontWeight === context.settings.fontWeight ? null : currCell.fontWeight
+          const b =
+            currCell.backgroundColor === context.settings.backgroundColor
+              ? null
+              : currCell.backgroundColor
+          const w =
+            currCell.fontWeight === context.settings.fontWeight ? null : currCell.fontWeight
 
           // Accumulate the CSS inline attribute.
-          let css = ""
-          if (c) css += "color:" + c + ";"
-          if (b) css += "background:" + b + ";"
-          if (w) css += "font-weight:" + w + ";"
+          let css = ''
+          if (c) css += 'color:' + c + ';'
+          if (b) css += 'background:' + b + ';'
+          if (w) css += 'font-weight:' + w + ';'
           if (css) css = ' style="' + css + '"'
-          html += "<span" + css + ">"
+          html += '<span' + css + '>'
           tagIsOpen = true
         }
-        html += currCell.char || " "
+        html += currCell.char || ' '
         prevCell = currCell
       }
       if (tagIsOpen) {
-        html += "</span>"
+        html += '</span>'
       }
 
       // Write the row
@@ -116,8 +133,8 @@ export default function createRenderer() {
 
   // Move helper functions inside closure to access backBuffer
   function isSameCell(cellA: Cell | undefined, cellB: Cell | undefined): boolean {
-    if (typeof cellA !== "object") return false
-    if (typeof cellB !== "object") return false
+    if (typeof cellA !== 'object') return false
+    if (typeof cellB !== 'object') return false
     if (cellA?.char !== cellB?.char) return false
     if (cellA?.fontWeight !== cellB?.fontWeight) return false
     if (cellA?.color !== cellB?.color) return false
@@ -136,4 +153,3 @@ export default function createRenderer() {
     render,
   }
 }
-
