@@ -10,7 +10,8 @@
     "fmt:check": "prettier --check --ignore-path ./.gitignore . ",
     "preview": "vite preview",
     "tsc": "tsc",
-    "lint": "eslint app"
+    "lint": "eslint app",
+    "ci": "bun run fmt:check && bun run tsc && bun run lint"
   },
   "dependencies": {
     "@ariakit/react": "^0.4.15",
