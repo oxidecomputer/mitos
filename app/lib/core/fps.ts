@@ -1,3 +1,11 @@
+/*
+ * This Source Code Form is subject to the terms of the Apache License,
+ * v. 2.0. If a copy of the license was not distributed with this file, you can
+ * obtain one at https://github.com/ertdfgcvb/play.core/blob/master/LICENSE.
+ *
+ * Modified from https://github.com/ertdfgcvb/play.core
+ * Copyright ertdfgcvb (Andreas Gysin)
+ */
 export type FPSType = {
   update: (time: number) => number
 }
@@ -23,4 +31,3 @@ export default class FPS {
     return this.fps
   }
 }
-

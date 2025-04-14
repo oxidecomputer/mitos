@@ -1,3 +1,11 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Copyright Oxide Computer Company
+ */
+import { DitheringAlgorithm } from '~/lib/image-processor'
 import { InputSwitch } from '~/lib/ui/src'
 import { InputNumber } from '~/lib/ui/src/components/InputNumber/InputNumber'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
@@ -12,7 +20,7 @@ interface PreprocessingControlsProps {
     blur: number
     invert: boolean
     dithering: boolean
-    ditheringAlgorithm: 'floydSteinberg' | 'atkinson' | 'ordered' | 'bayer'
+    ditheringAlgorithm: DitheringAlgorithm
   }
   updateSettings: (
     settings: Partial<{
@@ -22,7 +30,7 @@ interface PreprocessingControlsProps {
       blur: number
       invert: boolean
       dithering: boolean
-      ditheringAlgorithm: 'floydSteinberg' | 'atkinson' | 'ordered' | 'bayer'
+      ditheringAlgorithm: DitheringAlgorithm
     }>,
   ) => void
 }
@@ -87,7 +95,9 @@ export function PreprocessingControls({
       {settings.dithering && (
         <InputSelect
           value={settings.ditheringAlgorithm}
-          onChange={(value) => updateSettings({ ditheringAlgorithm: value as any })}
+          onChange={(value) =>
+            updateSettings({ ditheringAlgorithm: value as DitheringAlgorithm })
+          }
           options={['floydSteinberg', 'atkinson', 'ordered', 'bayer']}
           labelize={(algorithm) => {
             switch (algorithm) {

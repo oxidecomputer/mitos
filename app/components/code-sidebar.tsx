@@ -1,7 +1,14 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Copyright Oxide Computer Company
+ */
 import { redo, undo } from '@codemirror/commands'
 import { EditorView } from '@codemirror/view'
 import { Info12Icon } from '@oxide/design-system/icons/react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 import { InputButton } from '~/lib/ui/src'
@@ -53,6 +60,18 @@ export function CodeSidebar({ isOpen, settings, updateSettings }: CodeSidebarPro
     setPendingCode(value)
   }
 
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging.current) return
+    const newWidth = window.innerWidth - e.clientX
+    setWidth(Math.min(Math.max(newWidth, 300), 800)) // Min 300px, max 800px
+  }, [])
+
+  const stopResize = useCallback(() => {
+    isDragging.current = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', stopResize)
+  }, [handleMouseMove])
+
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault()
     isDragging.current = true
@@ -60,24 +79,12 @@ export function CodeSidebar({ isOpen, settings, updateSettings }: CodeSidebarPro
     document.addEventListener('mouseup', stopResize)
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging.current) return
-    const newWidth = window.innerWidth - e.clientX
-    setWidth(Math.min(Math.max(newWidth, 300), 800)) // Min 300px, max 800px
-  }
-
-  const stopResize = () => {
-    isDragging.current = false
-    document.removeEventListener('mousemove', handleMouseMove)
-    document.removeEventListener('mouseup', stopResize)
-  }
-
   useEffect(() => {
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', stopResize)
     }
-  }, [])
+  }, [handleMouseMove, stopResize])
 
   // shift+r runs code
   useHotkeys(

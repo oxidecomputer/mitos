@@ -1,3 +1,10 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Copyright Oxide Computer Company
+ */
 import { saveAs } from 'file-saver'
 import html2canvas from 'html2canvas-pro'
 import JSZip from 'jszip'
@@ -49,7 +56,7 @@ export function ExportOptions({
     } else if (exportFormat === 'frames') {
       setExportFormat('png')
     }
-  }, [sourceType])
+  }, [sourceType, exportFormat])
 
   const exportContent = async () => {
     if (!program) return

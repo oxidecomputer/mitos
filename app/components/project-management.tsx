@@ -1,3 +1,10 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Copyright Oxide Computer Company
+ */
 import type React from 'react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -56,7 +63,7 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
           console.log(projectData)
 
           toast(`${projectData.name} has been loaded successfully.`)
-        } catch (error) {
+        } catch (_error) {
           toast('The selected file is not a valid project file')
         }
       }

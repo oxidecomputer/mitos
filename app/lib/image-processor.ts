@@ -1,3 +1,10 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, you can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Copyright Oxide Computer Company
+ */
 import type { AsciiSettings } from '~/components/ascii-art-generator'
 
 import type { Data } from './types'
@@ -13,25 +20,32 @@ export interface CachedMediaData {
   }
 }
 
-interface MediaFrame {
+export type MediaFrame = {
   dataUrl: string
   timestamp?: number
 }
 
-interface MediaProcessingSettings {
+export type DitheringAlgorithm =
+  | 'floydSteinberg'
+  | 'atkinson'
+  | 'burkes'
+  | 'sierra'
+  | 'sierraLite'
+
+export type MediaProcessingSettings = {
   characterSet: string
   whitePoint: number
   blackPoint: number
   brightness: number
   invert: boolean
   dithering: boolean
-  ditheringAlgorithm: string
+  ditheringAlgorithm: DitheringAlgorithm
   columns: number
   rows: number
   colorMapping: string
 }
 
-interface ProcessingResult {
+export type ProcessingResult = {
   data: Data
   width: number
   height: number
@@ -221,12 +235,12 @@ function configureResizeContext(ctx: CanvasRenderingContext2D, blur: number) {
 }
 
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  r /= 255
-  g /= 255
-  b /= 255
+  const rNorm = r / 255
+  const gNorm = g / 255
+  const bNorm = b / 255
 
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
+  const max = Math.max(rNorm, gNorm, bNorm)
+  const min = Math.min(rNorm, gNorm, bNorm)
   let h = 0,
     s = 0
   const l = (max + min) / 2
@@ -236,14 +250,14 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
 
     switch (max) {
-      case r:
-        h = (g - b) / d + (g < b ? 6 : 0)
+      case rNorm:
+        h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0)
         break
-      case g:
-        h = (b - r) / d + 2
+      case gNorm:
+        h = (bNorm - rNorm) / d + 2
         break
-      case b:
-        h = (r - g) / d + 4
+      case bNorm:
+        h = (rNorm - gNorm) / d + 4
         break
     }
 
@@ -326,9 +340,9 @@ function normalizeWithPointAdjustment(
   const range = whitePoint - blackPoint
   if (range <= 0) return value
 
-  value = Math.max(0, value - blackPoint)
-  value = Math.min(255, value)
-  return (value / range) * 255
+  let valueNorm = Math.max(0, value - blackPoint)
+  valueNorm = Math.min(255, value)
+  return (valueNorm / range) * 255
 }
 
 // Image processing utilities
