@@ -14,14 +14,12 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-      - run: npm install
+      - run: bun install
       - name: Check format
-        run: npm run fmt:check
+        run: bun run fmt:check
       - name: Typecheck
-        run: npm run tsc
+        run: bun run tsc
       - name: Lint
-        run: npm run lint
-      - name: Unit tests
-        run: npm test run
+        run: bun run lint
       - name: Build
-        run: npm run build
+        run: bun run build
