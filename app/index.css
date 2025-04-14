@@ -48,7 +48,8 @@
 @layer base {
   :root {
     --font-mono: 'GT America Mono', monospace;
-    --font-sans: 'SuisseIntl', sans-serif;
+    --font-sans:
+      'SuisseIntl', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;

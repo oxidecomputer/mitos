@@ -21,6 +21,19 @@ const config: Config = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     '*.{js,ts,jsx,tsx,mdx}',
   ],
+  theme: {
+    fontFamily: {
+      sans: [
+        'SuisseIntl',
+        '-apple-system',
+        'BlinkMacSystemFont',
+        'Helvetica',
+        'Arial',
+        'sans-serif',
+      ],
+      mono: ['GT America Mono', 'monospace'],
+    },
+  },
   plugins: [
     plugin(({ addUtilities }) => {
       addUtilities(colorUtilities)

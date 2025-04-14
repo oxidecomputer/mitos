@@ -56,8 +56,9 @@
   --mt-z-index-modal: 1100;
   --mt-z-index-tooltip: 1200;
 
-  --mt-font-base: 'SuisseIntl';
-  --mt-font-label: 'GT America Mono';
+  --mt-font-base:
+    'SuisseIntl'-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  --mt-font-label: 'GT America Mono', monospace;
   --mt-font-button: var(--mt-font-label);
   --mt-font-size-base: 12px;
   --mt-font-size-label: 11px;
