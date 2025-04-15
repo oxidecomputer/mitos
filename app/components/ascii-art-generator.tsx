@@ -673,7 +673,6 @@ export function AsciiArtGenerator() {
             updateSettings('source', { data: dataUrl, type: 'gif' })
             // Then update the aspect ratio in a separate call to ensure it triggers the effect
             setTimeout(() => {
-              console.log('Setting GIF aspect ratio to:', aspectRatio)
               updateSettings('output', { aspectRatio })
             }, 50)
             setShowCodeSidebar(false)
@@ -684,14 +683,12 @@ export function AsciiArtGenerator() {
           reader.onload = (e) => {
             const result = e.target?.result as string
             setAspectRatioFromImage(result).then((aspectRatio) => {
-              console.log('Setting GIF with aspect ratio:', aspectRatio)
-
               // First update the source with the new GIF
               updateSettings('source', { data: result, type: 'gif' })
 
-              // Then update the aspect ratio in a separate call to ensure it triggers the effect
+              // Then update the aspect ratio in a separate call with slight delay
+              // This ensures it happens after the source update is processed
               setTimeout(() => {
-                console.log('Setting GIF aspect ratio to:', aspectRatio)
                 updateSettings('output', { aspectRatio })
               }, 50)
 
@@ -706,14 +703,12 @@ export function AsciiArtGenerator() {
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
           setAspectRatioFromImage(dataUrl).then((aspectRatio) => {
-            console.log('Setting image with aspect ratio:', aspectRatio)
-
             // First update the source with the new image
             updateSettings('source', { data: dataUrl, type: 'image' })
 
-            // Then update the aspect ratio in a separate call to ensure it triggers the effect
+            // Then update the aspect ratio in a separate call with slight delay
+            // This ensures it happens after the source update is processed
             setTimeout(() => {
-              console.log('Setting aspect ratio to:', aspectRatio)
               updateSettings('output', { aspectRatio })
             }, 50)
 
@@ -725,14 +720,12 @@ export function AsciiArtGenerator() {
           reader.onload = (e) => {
             const result = e.target?.result as string
             setAspectRatioFromImage(result).then((aspectRatio) => {
-              console.log('Setting image with aspect ratio:', aspectRatio)
-
               // First update the source with the new image
               updateSettings('source', { data: result, type: 'image' })
 
-              // Then update the aspect ratio in a separate call to ensure it triggers the effect
+              // Then update the aspect ratio in a separate call with slight delay
+              // This ensures it happens after the source update is processed
               setTimeout(() => {
-                console.log('Setting aspect ratio to:', aspectRatio)
                 updateSettings('output', { aspectRatio })
               }, 50)
 
