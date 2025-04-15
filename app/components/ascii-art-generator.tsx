@@ -648,7 +648,7 @@ export function AsciiArtGenerator() {
 
   const processFile = useCallback(
     (file: File, dataUrl?: string) => {
-      const validImageTypes = ['image/jpeg', 'image/png']
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
       const validGifTypes = ['image/gif']
 
       if (validGifTypes.includes(file.type)) {
@@ -686,7 +686,7 @@ export function AsciiArtGenerator() {
         }
         return true
       } else {
-        toast('Please upload an image (JPG, PNG) or a GIF file.')
+        toast('Please upload an image (JPG, PNG, WEBP, AVIF) or a GIF file.')
         return false
       }
     },
