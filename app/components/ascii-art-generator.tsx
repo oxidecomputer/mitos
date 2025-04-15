@@ -651,19 +651,52 @@ export function AsciiArtGenerator() {
       const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
       const validGifTypes = ['image/gif']
 
+      // Helper to set aspect ratio from an image
+      const setAspectRatioFromImage = (imageUrl: string): Promise<number> => {
+        return new Promise((resolve) => {
+          const img = new Image()
+          img.onload = () => {
+            // Calculate the image aspect ratio
+            const aspectRatio = img.width / img.height
+            resolve(aspectRatio)
+          }
+          img.src = imageUrl
+        })
+      }
+
       if (validGifTypes.includes(file.type)) {
         // It's a GIF
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
-          updateSettings('source', { data: dataUrl, type: 'gif' })
-          setShowCodeSidebar(false)
+          setAspectRatioFromImage(dataUrl).then((aspectRatio) => {
+            // First update the source with the new GIF
+            updateSettings('source', { data: dataUrl, type: 'gif' })
+            // Then update the aspect ratio in a separate call to ensure it triggers the effect
+            setTimeout(() => {
+              console.log('Setting GIF aspect ratio to:', aspectRatio)
+              updateSettings('output', { aspectRatio })
+            }, 50)
+            setShowCodeSidebar(false)
+          })
         } else {
           // Read the file to get dataUrl
           const reader = new FileReader()
           reader.onload = (e) => {
             const result = e.target?.result as string
-            updateSettings('source', { data: result, type: 'gif' })
-            setShowCodeSidebar(false)
+            setAspectRatioFromImage(result).then((aspectRatio) => {
+              console.log('Setting GIF with aspect ratio:', aspectRatio)
+
+              // First update the source with the new GIF
+              updateSettings('source', { data: result, type: 'gif' })
+
+              // Then update the aspect ratio in a separate call to ensure it triggers the effect
+              setTimeout(() => {
+                console.log('Setting GIF aspect ratio to:', aspectRatio)
+                updateSettings('output', { aspectRatio })
+              }, 50)
+
+              setShowCodeSidebar(false)
+            })
           }
           reader.readAsDataURL(file)
         }
@@ -672,15 +705,39 @@ export function AsciiArtGenerator() {
         // It's a static image
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
-          updateSettings('source', { data: dataUrl, type: 'image' })
-          setShowCodeSidebar(false)
+          setAspectRatioFromImage(dataUrl).then((aspectRatio) => {
+            console.log('Setting image with aspect ratio:', aspectRatio)
+
+            // First update the source with the new image
+            updateSettings('source', { data: dataUrl, type: 'image' })
+
+            // Then update the aspect ratio in a separate call to ensure it triggers the effect
+            setTimeout(() => {
+              console.log('Setting aspect ratio to:', aspectRatio)
+              updateSettings('output', { aspectRatio })
+            }, 50)
+
+            setShowCodeSidebar(false)
+          })
         } else {
           // Read the file to get dataUrl
           const reader = new FileReader()
           reader.onload = (e) => {
             const result = e.target?.result as string
-            updateSettings('source', { data: result, type: 'image' })
-            setShowCodeSidebar(false)
+            setAspectRatioFromImage(result).then((aspectRatio) => {
+              console.log('Setting image with aspect ratio:', aspectRatio)
+
+              // First update the source with the new image
+              updateSettings('source', { data: result, type: 'image' })
+
+              // Then update the aspect ratio in a separate call to ensure it triggers the effect
+              setTimeout(() => {
+                console.log('Setting aspect ratio to:', aspectRatio)
+                updateSettings('output', { aspectRatio })
+              }, 50)
+
+              setShowCodeSidebar(false)
+            })
           }
           reader.readAsDataURL(file)
         }
