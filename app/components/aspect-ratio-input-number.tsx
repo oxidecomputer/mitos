@@ -74,41 +74,39 @@ export const AspectRatioInputNumber = ({
     setInternalHeight(height)
   }, [width, height])
 
-  // Calculate the maximum possible width based on height constraints and aspect ratio
+  // Calculate effective min/max values that respect aspect ratio constraints
+  // These functions determine the boundary values to prevent distortion
   const getMaxWidthForAspectRatio = useCallback(
     (ratio: number) => {
       if (!ratio) return maxWidth
-      // The maximum width is the smaller of the maxWidth and the width that would make height exactly maxHeight
+      // The maximum width is the smaller of maxWidth and the width that would make height exactly maxHeight
       return Math.min(maxWidth, getWidthFromHeight(maxHeight, ratio))
     },
     [maxWidth, maxHeight, getWidthFromHeight],
   )
 
-  // Calculate the minimum possible width based on height constraints and aspect ratio
   const getMinWidthForAspectRatio = useCallback(
     (ratio: number) => {
       if (!ratio) return minWidth
-      // The minimum width is the larger of the minWidth and the width that would make height exactly minHeight
+      // The minimum width is the larger of minWidth and the width that would make height exactly minHeight
       return Math.max(minWidth, getWidthFromHeight(minHeight, ratio))
     },
     [minWidth, minHeight, getWidthFromHeight],
   )
 
-  // Calculate the maximum possible height based on width constraints and aspect ratio
   const getMaxHeightForAspectRatio = useCallback(
     (ratio: number) => {
       if (!ratio) return maxHeight
-      // The maximum height is the smaller of the maxHeight and the height that would make width exactly maxWidth
+      // The maximum height is the smaller of maxHeight and the height that would make width exactly maxWidth
       return Math.min(maxHeight, getHeightFromWidth(maxWidth, ratio))
     },
     [maxHeight, maxWidth, getHeightFromWidth],
   )
 
-  // Calculate the minimum possible height based on width constraints and aspect ratio
   const getMinHeightForAspectRatio = useCallback(
     (ratio: number) => {
       if (!ratio) return minHeight
-      // The minimum height is the larger of the minHeight and the height that would make width exactly minWidth
+      // The minimum height is the larger of minHeight and the height that would make width exactly minWidth
       return Math.max(minHeight, getHeightFromWidth(minWidth, ratio))
     },
     [minHeight, minWidth, getHeightFromWidth],
@@ -137,6 +135,7 @@ export const AspectRatioInputNumber = ({
         setInternalWidth(clampedWidth)
         setInternalHeight(newHeight)
 
+        // Call callbacks
         onWidthChange(clampedWidth)
         onHeightChange(newHeight)
       } else {
@@ -252,15 +251,8 @@ export const AspectRatioInputNumber = ({
     [width, height, calculateAspectRatio, onAspectRatioChange],
   )
 
-  // Debug log for aspect ratio changes
-  useEffect(() => {
-    console.log('AspectRatioInputNumber props:', { width, height, aspectRatio, isLocked })
-  }, [width, height, aspectRatio, isLocked])
-
   // Update lock state and dimensions when aspectRatio changes
   useEffect(() => {
-    console.log('Aspect ratio changed to:', aspectRatio)
-
     if (aspectRatio !== undefined) {
       // When aspect ratio is set, lock it
       if (!isLocked) {
@@ -269,12 +261,6 @@ export const AspectRatioInputNumber = ({
 
       // Always update dimensions when aspect ratio changes
       const newHeight = getHeightFromWidth(width, aspectRatio)
-
-      console.log('Updating height based on aspect ratio:', {
-        width,
-        aspectRatio,
-        calculatedHeight: newHeight,
-      })
 
       // Update internal state AND parent state
       setInternalHeight(newHeight)
