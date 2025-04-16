@@ -59,6 +59,7 @@ export interface AsciiSettings {
     columns: number
     rows: number
     aspectRatio?: number
+    useImageAspectRatio: boolean
     colorMapping: ColorMappingType
   }
   animation: {
@@ -118,6 +119,7 @@ const DEFAULT_SETTINGS: AsciiSettings = {
     showUnderlyingImage: false,
     columns: 80,
     rows: 40,
+    useImageAspectRatio: false,
     colorMapping: 'brightness',
   },
   animation: {
@@ -681,7 +683,9 @@ export function AsciiArtGenerator() {
           },
           output: {
             ...prev.output,
-            aspectRatio,
+            aspectRatio: prev.output.useImageAspectRatio
+              ? aspectRatio
+              : prev.output.aspectRatio,
           },
         }))
 

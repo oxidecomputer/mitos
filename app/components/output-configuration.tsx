@@ -23,6 +23,7 @@ interface OutputConfigurationProps {
     columns: number
     rows: number
     aspectRatio?: number
+    useImageAspectRatio: boolean
     colorMapping: ColorMappingType
   }
   updateSettings: (
@@ -33,6 +34,7 @@ interface OutputConfigurationProps {
       columns: number
       rows: number
       aspectRatio?: number
+      useImageAspectRatio: boolean
       colorMapping: ColorMappingType
     }>,
   ) => void
@@ -137,6 +139,8 @@ export function OutputConfiguration({
         onWidthChange={(value) => updateSettings({ columns: value })}
         onHeightChange={(value) => updateSettings({ rows: value })}
         aspectRatio={settings.aspectRatio}
+        aspectRatioFromImg={settings.useImageAspectRatio}
+        onAspectRatioFromImgChange={(value) => updateSettings({ useImageAspectRatio: value })}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
         minWidth={20}
         maxWidth={240}

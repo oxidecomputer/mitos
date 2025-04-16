@@ -17,6 +17,8 @@ export interface AspectRatioInputNumberProps {
   height: number
   onWidthChange: (value: number) => void
   onHeightChange: (value: number) => void
+  aspectRatioFromImg?: boolean
+  onAspectRatioFromImgChange?: (value: boolean) => void
   aspectRatio?: number
   onAspectRatioChange: (value: number | undefined) => void
   minWidth?: number
@@ -32,6 +34,8 @@ export const AspectRatioInputNumber = ({
   height,
   onWidthChange,
   onHeightChange,
+  aspectRatioFromImg = false,
+  onAspectRatioFromImgChange,
   aspectRatio,
   onAspectRatioChange,
   minWidth = 20,
@@ -42,6 +46,7 @@ export const AspectRatioInputNumber = ({
 }: AspectRatioInputNumberProps) => {
   const [internalWidth, setInternalWidth] = useState(width)
   const [internalHeight, setInternalHeight] = useState(height)
+  const [useRatio, setUseRatio] = useState(aspectRatioFromImg)
   const [isLocked, setIsLocked] = useState(aspectRatio !== undefined)
 
   const calculateAspectRatio = (w: number, h: number) =>
@@ -78,6 +83,10 @@ export const AspectRatioInputNumber = ({
     setInternalWidth(width)
     setInternalHeight(height)
   }, [width, height])
+  
+  useEffect(() => {
+    setUseRatio(aspectRatioFromImg)
+  }, [aspectRatioFromImg])
 
   const handleWidthChange = useCallback(
     (newWidth: number) => {
@@ -236,27 +245,33 @@ export const AspectRatioInputNumber = ({
         Rows
       </InputNumber>
 
-      <div>
-        <InputSwitch checked={isLocked} onChange={handleLockToggle}>
-          Lock Aspect Ratio
-        </InputSwitch>
+      <InputSwitch checked={useRatio} onChange={(checked) => {
+        setUseRatio(checked);
+        if (onAspectRatioFromImgChange) {
+          onAspectRatioFromImgChange(checked);
+        }
+      }}>
+        Use Image Aspect Ratio
+      </InputSwitch>
+      <InputSwitch checked={isLocked} onChange={handleLockToggle}>
+        Lock Aspect Ratio
+      </InputSwitch>
 
-        {isLocked && (
-          <div className="mt-2 border-l py-1 pl-3 border-default">
-            <InputNumber
-              value={aspectRatio || 1}
-              onChange={handleAspectRatioChange}
-              min={0.1}
-              max={10}
-              step={0.01}
-              disabled={disabled}
-              showSlider={false}
-            >
-              Aspect Ratio
-            </InputNumber>
-          </div>
-        )}
-      </div>
+      {isLocked && (
+        <div className="mt-2 border-l py-1 pl-3 border-default">
+          <InputNumber
+            value={aspectRatio || 1}
+            onChange={handleAspectRatioChange}
+            min={0.1}
+            max={10}
+            step={0.01}
+            disabled={disabled}
+            showSlider={false}
+          >
+            Aspect Ratio
+          </InputNumber>
+        </div>
+      )}
     </>
   )
 }
