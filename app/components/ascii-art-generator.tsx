@@ -665,11 +665,14 @@ export function AsciiArtGenerator() {
       }
 
       // Helper to update both source and aspect ratio in a single batch update
-      const updateSourceAndAspectRatio = async (imageUrl: string, type: 'image' | 'gif') => {
+      const updateSourceAndAspectRatio = async (
+        imageUrl: string,
+        type: 'image' | 'gif',
+      ) => {
         const aspectRatio = await setAspectRatioFromImage(imageUrl)
-        
+
         // Update all settings at once to avoid race conditions
-        setSettings(prev => ({
+        setSettings((prev) => ({
           ...prev,
           source: {
             ...prev.source,
@@ -679,9 +682,9 @@ export function AsciiArtGenerator() {
           output: {
             ...prev.output,
             aspectRatio,
-          }
+          },
         }))
-        
+
         setShowCodeSidebar(false)
         return true
       }
