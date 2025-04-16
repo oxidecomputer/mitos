@@ -75,7 +75,7 @@ export function OutputConfiguration({
   updateSettings,
   sourceType,
 }: OutputConfigurationProps) {
-  const [selectedCharSet, setSelectedCharSet] = useState('light')
+  const [selectedCharSet, setSelectedCharSet] = useState('standard')
 
   const handleCharacterSetChange = (value: string) => {
     setSelectedCharSet(value)

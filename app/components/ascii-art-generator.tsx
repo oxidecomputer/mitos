@@ -113,8 +113,8 @@ const DEFAULT_SETTINGS: AsciiSettings = {
     ditheringAlgorithm: 'floydSteinberg',
   },
   output: {
-    characterSet: predefinedCharacterSets['light'],
     grid: 'both',
+    characterSet: predefinedCharacterSets['standard'],
     showUnderlyingImage: false,
     columns: 80,
     rows: 40,
