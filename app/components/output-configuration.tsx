@@ -40,6 +40,7 @@ interface OutputConfigurationProps {
 }
 
 export const predefinedCharacterSets = {
+  standard: ' .,-~:;=!*#$@',
   light: '=-:. ',
   boxes: '█▉▊▋▌▍▎▏',
   binaryBoxes: '▊⎕ ',
@@ -47,11 +48,11 @@ export const predefinedCharacterSets = {
   binaryDirection: '–| ',
   steps: ' .–=▂▄▆█',
   intersect: '└┧─┨┕┪┖┫┘┩┙┪━',
-  standard: ' .,-~:;=!*#$@',
   numbers: '0123456789 ',
 }
 
 const characterSets: CharacterSet[] = [
+  'standard',
   'light',
   'boxes',
   'binaryBoxes',
@@ -59,7 +60,6 @@ const characterSets: CharacterSet[] = [
   'binaryDirection',
   'steps',
   'intersect',
-  'standard',
   'numbers',
   'custom',
 ]
