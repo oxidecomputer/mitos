@@ -664,83 +664,64 @@ export function AsciiArtGenerator() {
         })
       }
 
+      // Helper to update both source and aspect ratio in a single batch update
+      const updateSourceAndAspectRatio = async (imageUrl: string, type: 'image' | 'gif') => {
+        const aspectRatio = await setAspectRatioFromImage(imageUrl)
+        
+        // Update all settings at once to avoid race conditions
+        setSettings(prev => ({
+          ...prev,
+          source: {
+            ...prev.source,
+            data: imageUrl,
+            type,
+          },
+          output: {
+            ...prev.output,
+            aspectRatio,
+          }
+        }))
+        
+        setShowCodeSidebar(false)
+        return true
+      }
+
       if (validGifTypes.includes(file.type)) {
         // It's a GIF
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
-          setAspectRatioFromImage(dataUrl).then((aspectRatio) => {
-            // First update the source with the new GIF
-            updateSettings('source', { data: dataUrl, type: 'gif' })
-            // Then update the aspect ratio in a separate call to ensure it triggers the effect
-            setTimeout(() => {
-              updateSettings('output', { aspectRatio })
-            }, 50)
-            setShowCodeSidebar(false)
-          })
+          return updateSourceAndAspectRatio(dataUrl, 'gif')
         } else {
           // Read the file to get dataUrl
           const reader = new FileReader()
           reader.onload = (e) => {
             const result = e.target?.result as string
-            setAspectRatioFromImage(result).then((aspectRatio) => {
-              // First update the source with the new GIF
-              updateSettings('source', { data: result, type: 'gif' })
-
-              // Then update the aspect ratio in a separate call with slight delay
-              // This ensures it happens after the source update is processed
-              setTimeout(() => {
-                updateSettings('output', { aspectRatio })
-              }, 50)
-
-              setShowCodeSidebar(false)
-            })
+            updateSourceAndAspectRatio(result, 'gif')
           }
           reader.readAsDataURL(file)
+          return true
         }
-        return true
       } else if (validImageTypes.includes(file.type)) {
         // It's a static image
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
-          setAspectRatioFromImage(dataUrl).then((aspectRatio) => {
-            // First update the source with the new image
-            updateSettings('source', { data: dataUrl, type: 'image' })
-
-            // Then update the aspect ratio in a separate call with slight delay
-            // This ensures it happens after the source update is processed
-            setTimeout(() => {
-              updateSettings('output', { aspectRatio })
-            }, 50)
-
-            setShowCodeSidebar(false)
-          })
+          return updateSourceAndAspectRatio(dataUrl, 'image')
         } else {
           // Read the file to get dataUrl
           const reader = new FileReader()
           reader.onload = (e) => {
             const result = e.target?.result as string
-            setAspectRatioFromImage(result).then((aspectRatio) => {
-              // First update the source with the new image
-              updateSettings('source', { data: result, type: 'image' })
-
-              // Then update the aspect ratio in a separate call with slight delay
-              // This ensures it happens after the source update is processed
-              setTimeout(() => {
-                updateSettings('output', { aspectRatio })
-              }, 50)
-
-              setShowCodeSidebar(false)
-            })
+            updateSourceAndAspectRatio(result, 'image')
           }
           reader.readAsDataURL(file)
+          return true
         }
-        return true
       } else {
         toast('Please upload an image (JPG, PNG, WEBP, AVIF) or a GIF file.')
         return false
       }
     },
-    [updateSettings, setShowCodeSidebar],
+    [setSettings, setShowCodeSidebar],
   )
 
   const handleDrag = (e: React.DragEvent) => {
