@@ -264,7 +264,11 @@ export const AspectRatioInputNumber = ({
       >
         Use Image Aspect Ratio
       </InputSwitch>
-      <InputSwitch checked={isLocked} onChange={handleLockToggle}>
+      <InputSwitch
+        checked={isLocked}
+        onChange={handleLockToggle}
+        disabled={disabled || useRatio}
+      >
         Lock Aspect Ratio
       </InputSwitch>
 
@@ -276,7 +280,7 @@ export const AspectRatioInputNumber = ({
             min={0.1}
             max={10}
             step={0.01}
-            disabled={disabled}
+            disabled={disabled || useRatio}
             showSlider={false}
           >
             Aspect Ratio
