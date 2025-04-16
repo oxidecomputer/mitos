@@ -83,7 +83,7 @@ export const AspectRatioInputNumber = ({
     setInternalWidth(width)
     setInternalHeight(height)
   }, [width, height])
-  
+
   useEffect(() => {
     setUseRatio(aspectRatioFromImg)
   }, [aspectRatioFromImg])
@@ -245,12 +245,15 @@ export const AspectRatioInputNumber = ({
         Rows
       </InputNumber>
 
-      <InputSwitch checked={useRatio} onChange={(checked) => {
-        setUseRatio(checked);
-        if (onAspectRatioFromImgChange) {
-          onAspectRatioFromImgChange(checked);
-        }
-      }}>
+      <InputSwitch
+        checked={useRatio}
+        onChange={(checked) => {
+          setUseRatio(checked)
+          if (onAspectRatioFromImgChange) {
+            onAspectRatioFromImgChange(checked)
+          }
+        }}
+      >
         Use Image Aspect Ratio
       </InputSwitch>
       <InputSwitch checked={isLocked} onChange={handleLockToggle}>

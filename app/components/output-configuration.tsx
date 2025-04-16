@@ -140,7 +140,9 @@ export function OutputConfiguration({
         onHeightChange={(value) => updateSettings({ rows: value })}
         aspectRatio={settings.aspectRatio}
         aspectRatioFromImg={settings.useImageAspectRatio}
-        onAspectRatioFromImgChange={(value) => updateSettings({ useImageAspectRatio: value })}
+        onAspectRatioFromImgChange={(value) =>
+          updateSettings({ useImageAspectRatio: value })
+        }
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
         minWidth={20}
         maxWidth={240}
