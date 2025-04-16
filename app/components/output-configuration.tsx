@@ -25,6 +25,7 @@ interface OutputConfigurationProps {
     aspectRatio?: number
     useImageAspectRatio: boolean
     colorMapping: ColorMappingType
+    sourceData?: string
   }
   updateSettings: (
     settings: Partial<{
@@ -39,6 +40,7 @@ interface OutputConfigurationProps {
     }>,
   ) => void
   sourceType: SourceType
+  sourceData?: string
 }
 
 export const predefinedCharacterSets = {
@@ -76,8 +78,10 @@ export function OutputConfiguration({
   settings,
   updateSettings,
   sourceType,
+  sourceData,
 }: OutputConfigurationProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
+  const imageSource = sourceType === 'image' ? (sourceData || settings.sourceData) : null
 
   const handleCharacterSetChange = (value: string) => {
     setSelectedCharSet(value)
@@ -140,9 +144,18 @@ export function OutputConfiguration({
         onHeightChange={(value) => updateSettings({ rows: value })}
         aspectRatio={settings.aspectRatio}
         aspectRatioFromImg={settings.useImageAspectRatio}
-        onAspectRatioFromImgChange={(value) =>
-          updateSettings({ useImageAspectRatio: value })
-        }
+        onAspectRatioFromImgChange={(value) => {
+          updateSettings({ useImageAspectRatio: value });
+          if (value && imageSource && sourceType === 'image') {
+            // When toggling on, recalculate aspect ratio from the existing image
+            const img = new Image();
+            img.onload = () => {
+              const aspectRatio = img.width / img.height;
+              updateSettings({ aspectRatio });
+            };
+            img.src = imageSource;
+          }
+        }}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
         minWidth={20}
         maxWidth={240}

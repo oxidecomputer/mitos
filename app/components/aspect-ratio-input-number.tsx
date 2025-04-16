@@ -86,11 +86,15 @@ export const AspectRatioInputNumber = ({
 
   useEffect(() => {
     setUseRatio(aspectRatioFromImg)
-    if (aspectRatioFromImg && !isLocked) {
-      setIsLocked(true)
-      onAspectRatioChange(calculateAspectRatio(width, height))
+    if (aspectRatioFromImg) {
+      if (!isLocked) {
+        setIsLocked(true)
+      }
+      if (aspectRatio === undefined) {
+        onAspectRatioChange(calculateAspectRatio(width, height))
+      }
     }
-  }, [aspectRatioFromImg, isLocked, width, height, onAspectRatioChange])
+  }, [aspectRatioFromImg, isLocked, width, height, onAspectRatioChange, aspectRatio])
 
   const handleWidthChange = useCallback(
     (newWidth: number) => {
