@@ -81,7 +81,7 @@ export function OutputConfiguration({
   sourceData,
 }: OutputConfigurationProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
-  const imageSource = sourceType === 'image' ? (sourceData || settings.sourceData) : null
+  const imageSource = sourceType === 'image' ? sourceData || settings.sourceData : null
 
   const handleCharacterSetChange = (value: string) => {
     setSelectedCharSet(value)
@@ -145,15 +145,15 @@ export function OutputConfiguration({
         aspectRatio={settings.aspectRatio}
         aspectRatioFromImg={settings.useImageAspectRatio}
         onAspectRatioFromImgChange={(value) => {
-          updateSettings({ useImageAspectRatio: value });
+          updateSettings({ useImageAspectRatio: value })
           if (value && imageSource && sourceType === 'image') {
             // When toggling on, recalculate aspect ratio from the existing image
-            const img = new Image();
+            const img = new Image()
             img.onload = () => {
-              const aspectRatio = img.width / img.height;
-              updateSettings({ aspectRatio });
-            };
-            img.src = imageSource;
+              const aspectRatio = img.width / img.height
+              updateSettings({ aspectRatio })
+            }
+            img.src = imageSource
           }
         }}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
