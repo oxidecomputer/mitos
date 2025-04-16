@@ -47,7 +47,7 @@ export const predefinedCharacterSets = {
   binaryDirection: '–| ',
   steps: ' .–=▂▄▆█',
   intersect: '└┧─┨┕┪┖┫┘┩┙┪━',
-  standard: '.,-~:;=!*#$@',
+  standard: ' .,-~:;=!*#$@',
   numbers: '0123456789 ',
 }
 
