@@ -649,7 +649,7 @@ export function AsciiArtGenerator() {
   )
 
   const processFile = useCallback(
-    (file: File, dataUrl?: string) => {
+    (file: File, dataUrl?: string): boolean => {
       const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
       const validGifTypes = ['image/gif']
 
@@ -697,7 +697,8 @@ export function AsciiArtGenerator() {
         // It's a GIF
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
-          return updateSourceAndAspectRatio(dataUrl, 'gif')
+          updateSourceAndAspectRatio(dataUrl, 'gif')
+          return true
         } else {
           // Read the file to get dataUrl
           const reader = new FileReader()
@@ -712,7 +713,8 @@ export function AsciiArtGenerator() {
         // It's a static image
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
-          return updateSourceAndAspectRatio(dataUrl, 'image')
+          updateSourceAndAspectRatio(dataUrl, 'image')
+          return true
         } else {
           // Read the file to get dataUrl
           const reader = new FileReader()
@@ -783,10 +785,10 @@ export function AsciiArtGenerator() {
 
             {/* Output Configuration */}
             <OutputConfiguration
-              settings={{ ...settings.output, sourceData: settings.source.data }}
+              settings={{ ...settings.output, sourceData: settings.source.data || undefined }}
               updateSettings={(changes) => updateSettings('output', changes)}
               sourceType={settings.source.type}
-              sourceData={settings.source.data}
+              sourceData={settings.source.data || undefined}
             />
 
             {/* Animation Options (for animated content) */}
