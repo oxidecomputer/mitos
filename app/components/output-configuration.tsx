@@ -23,6 +23,7 @@ interface OutputConfigurationProps {
     columns: number
     rows: number
     aspectRatio?: number
+    useImageAspectRatio: boolean
     colorMapping: ColorMappingType
   }
   updateSettings: (
@@ -33,10 +34,12 @@ interface OutputConfigurationProps {
       columns: number
       rows: number
       aspectRatio?: number
+      useImageAspectRatio: boolean
       colorMapping: ColorMappingType
     }>,
   ) => void
   sourceType: SourceType
+  sourceImageDimensions?: { width: number; height: number }
 }
 
 export const predefinedCharacterSets = {
@@ -74,6 +77,7 @@ export function OutputConfiguration({
   settings,
   updateSettings,
   sourceType,
+  sourceImageDimensions,
 }: OutputConfigurationProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
 
@@ -137,11 +141,23 @@ export function OutputConfiguration({
         onWidthChange={(value) => updateSettings({ columns: value })}
         onHeightChange={(value) => updateSettings({ rows: value })}
         aspectRatio={settings.aspectRatio}
+        aspectRatioFromImg={settings.useImageAspectRatio}
+        onAspectRatioFromImgChange={(value) => {
+          updateSettings({ useImageAspectRatio: value })
+          if (value && (sourceType === 'image' || sourceType === 'gif')) {
+            if (sourceImageDimensions) {
+              // Use stored dimensions if available
+              const aspectRatio = sourceImageDimensions.width / sourceImageDimensions.height
+              updateSettings({ aspectRatio })
+            }
+          }
+        }}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
         minWidth={20}
         maxWidth={240}
         minHeight={10}
         maxHeight={120}
+        sourceType={sourceType}
       />
 
       <InputSelect<GridType>

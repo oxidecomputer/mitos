@@ -43,6 +43,7 @@ export interface AsciiSettings {
     type: SourceType
     data: string | null
     code: string
+    imageDimensions?: { width: number; height: number }
   }
   preprocessing: {
     brightness: number
@@ -60,6 +61,7 @@ export interface AsciiSettings {
     columns: number
     rows: number
     aspectRatio?: number
+    useImageAspectRatio: boolean
     colorMapping: ColorMappingType
   }
   animation: {
@@ -592,10 +594,52 @@ export function AsciiArtGenerator() {
   )
 
   const processFile = useCallback(
-    (file: File, dataUrl?: string) => {
+    (file: File, dataUrl?: string): boolean => {
       const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
       const validGifTypes = ['image/gif']
       const validJsonType = 'application/json'
+
+      const setAspectRatioFromImage = (
+        imageUrl: string,
+      ): Promise<{ aspectRatio: number; width: number; height: number }> => {
+        return new Promise((resolve) => {
+          const img = new Image()
+          img.onload = () => {
+            // Calculate the image aspect ratio
+            const aspectRatio = img.width / img.height
+            resolve({ aspectRatio, width: img.width, height: img.height })
+          }
+          img.src = imageUrl
+        })
+      }
+
+      // Helper to update both source and aspect ratio in a single batch update
+      const updateSourceAndAspectRatio = async (
+        imageUrl: string,
+        type: 'image' | 'gif',
+      ) => {
+        const { aspectRatio, width, height } = await setAspectRatioFromImage(imageUrl)
+
+        // Update all settings at once to avoid race conditions
+        setSettings((prev) => ({
+          ...prev,
+          source: {
+            ...prev.source,
+            data: imageUrl,
+            type,
+            imageDimensions: { width, height }, // Store dimensions with source
+          },
+          output: {
+            ...prev.output,
+            aspectRatio: prev.output.useImageAspectRatio
+              ? aspectRatio
+              : prev.output.aspectRatio,
+          },
+        }))
+
+        setShowCodeSidebar(false)
+        return true
+      }
 
       if (file.type === validJsonType || file.name.endsWith('.json')) {
         const reader = new FileReader()
@@ -605,46 +649,30 @@ export function AsciiArtGenerator() {
         }
         reader.readAsText(file)
         return true
-      } else if (validGifTypes.includes(file.type)) {
-        // It's a GIF
+      } else if (validGifTypes.includes(file.type) || validImageTypes.includes(file.type)) {
+        // Determine type ('gif' or 'image')
+        const sourceType = validGifTypes.includes(file.type) ? 'gif' : 'image'
+
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
-          updateSettings('source', { data: dataUrl, type: 'gif' })
-          setShowCodeSidebar(false)
+          updateSourceAndAspectRatio(dataUrl, sourceType)
+          return true
         } else {
           // Read the file to get dataUrl
           const reader = new FileReader()
           reader.onload = (e) => {
             const result = e.target?.result as string
-            updateSettings('source', { data: result, type: 'gif' })
-            setShowCodeSidebar(false)
+            updateSourceAndAspectRatio(result, sourceType)
           }
           reader.readAsDataURL(file)
+          return true
         }
-        return true
-      } else if (validImageTypes.includes(file.type)) {
-        // It's a static image
-        if (dataUrl) {
-          // If we already have the dataUrl (from paste preview)
-          updateSettings('source', { data: dataUrl, type: 'image' })
-          setShowCodeSidebar(false)
-        } else {
-          // Read the file to get dataUrl
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            const result = e.target?.result as string
-            updateSettings('source', { data: result, type: 'image' })
-            setShowCodeSidebar(false)
-          }
-          reader.readAsDataURL(file)
-        }
-        return true
       } else {
         toast('Please upload an image (JPG, PNG, WEBP, AVIF) or a GIF file.')
         return false
       }
     },
-    [updateSettings, setShowCodeSidebar],
+    [setSettings, setShowCodeSidebar],
   )
 
   const handleDrag = (e: React.DragEvent) => {
@@ -741,6 +769,7 @@ export function AsciiArtGenerator() {
               settings={settings.output}
               updateSettings={(changes) => updateSettings('output', changes)}
               sourceType={settings.source.type}
+              sourceImageDimensions={settings.source.imageDimensions}
             />
 
             {/* Animation Options (for animated content) */}

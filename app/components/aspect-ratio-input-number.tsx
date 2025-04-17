@@ -9,7 +9,9 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { InputNumber, InputSwitch } from '~/lib/ui/src'
 
-// Constants for character dimensions
+import { SourceType } from './ascii-art-generator'
+
+// Asssuming output is using "GT America Mono"
 export const CHAR_WIDTH = 7.45
 export const CHAR_HEIGHT = 15
 
@@ -18,6 +20,8 @@ export interface AspectRatioInputNumberProps {
   height: number
   onWidthChange: (value: number) => void
   onHeightChange: (value: number) => void
+  aspectRatioFromImg?: boolean
+  onAspectRatioFromImgChange?: (value: boolean) => void
   aspectRatio?: number
   onAspectRatioChange: (value: number | undefined) => void
   minWidth?: number
@@ -26,13 +30,24 @@ export interface AspectRatioInputNumberProps {
   maxHeight?: number
   disabled?: boolean
   className?: string
+  sourceType: SourceType
 }
+
+const calculateAspectRatio = (w: number, h: number) => (w * CHAR_WIDTH) / (h * CHAR_HEIGHT)
+const getHeightFromWidth = (w: number, ratio: number) =>
+  Math.round((w * CHAR_WIDTH) / (ratio * CHAR_HEIGHT))
+const getWidthFromHeight = (h: number, ratio: number) =>
+  Math.round((ratio * h * CHAR_HEIGHT) / CHAR_WIDTH)
+
+const clamp = (val: number, min: number, max: number) => Math.min(max, Math.max(min, val))
 
 export const AspectRatioInputNumber = ({
   width,
   height,
   onWidthChange,
   onHeightChange,
+  aspectRatioFromImg = false,
+  onAspectRatioFromImgChange,
   aspectRatio,
   onAspectRatioChange,
   minWidth = 20,
@@ -40,179 +55,171 @@ export const AspectRatioInputNumber = ({
   minHeight = 10,
   maxHeight = 120,
   disabled = false,
+  sourceType,
 }: AspectRatioInputNumberProps) => {
-  const [internalWidth, setInternalWidth] = useState(width)
-  const [internalHeight, setInternalHeight] = useState(height)
-  const [lastUpdated, setLastUpdated] = useState<'width' | 'height' | null>('width')
   const [isLocked, setIsLocked] = useState(aspectRatio !== undefined)
 
-  // Helper functions for aspect ratio calculations
-  const getHeightFromWidth = useCallback(
-    (w: number, ratio: number) => {
-      const newHeight = Math.round((w * CHAR_WIDTH) / (ratio * CHAR_HEIGHT))
-      return Math.min(maxHeight, Math.max(minHeight, newHeight))
-    },
-    [minHeight, maxHeight],
-  )
+  // Calculate valid min/max dimension ranges when aspect ratio is locked
+  const dimensionRanges = useCallback(() => {
+    if (!aspectRatio || !isLocked) {
+      return { minWidth, maxWidth, minHeight, maxHeight }
+    }
 
-  const getWidthFromHeight = useCallback(
-    (h: number, ratio: number) => {
-      const newWidth = Math.round((ratio * h * CHAR_HEIGHT) / CHAR_WIDTH)
-      return Math.min(maxWidth, Math.max(minWidth, newWidth))
-    },
-    [minWidth, maxWidth],
-  )
+    return {
+      minWidth: clamp(getWidthFromHeight(minHeight, aspectRatio), minWidth, maxWidth),
+      maxWidth: clamp(getWidthFromHeight(maxHeight, aspectRatio), minWidth, maxWidth),
+      minHeight: clamp(getHeightFromWidth(minWidth, aspectRatio), minHeight, maxHeight),
+      maxHeight: clamp(getHeightFromWidth(maxWidth, aspectRatio), minHeight, maxHeight),
+    }
+  }, [aspectRatio, isLocked, minWidth, maxWidth, minHeight, maxHeight])
 
-  const calculateAspectRatio = useCallback((w: number, h: number) => {
-    return (w * CHAR_WIDTH) / (h * CHAR_HEIGHT)
-  }, [])
-
-  // Sync internal state with props
-  useEffect(() => {
-    setInternalWidth(width)
-    setInternalHeight(height)
-  }, [width, height])
-
-  // Update handler for width changes
+  // When width changes and ratio is locked, update height
   const handleWidthChange = useCallback(
     (newWidth: number) => {
-      setLastUpdated('width')
-      setInternalWidth(newWidth)
+      const ranges = dimensionRanges()
+      const clampedWidth = clamp(newWidth, ranges.minWidth, ranges.maxWidth)
+
+      onWidthChange(clampedWidth)
 
       if (isLocked && aspectRatio) {
-        const newHeight = getHeightFromWidth(newWidth, aspectRatio)
-        setInternalHeight(newHeight)
-
-        // Call both callbacks to update parent state
-        onWidthChange(newWidth)
+        const newHeight = clamp(
+          getHeightFromWidth(clampedWidth, aspectRatio),
+          ranges.minHeight,
+          ranges.maxHeight,
+        )
         onHeightChange(newHeight)
-      } else {
-        onWidthChange(newWidth)
       }
     },
-    [isLocked, aspectRatio, getHeightFromWidth, onWidthChange, onHeightChange],
+    [isLocked, aspectRatio, dimensionRanges, onWidthChange, onHeightChange],
   )
 
-  // Update handler for height changes
+  // When height changes and ratio is locked, update width
   const handleHeightChange = useCallback(
     (newHeight: number) => {
-      setLastUpdated('height')
-      setInternalHeight(newHeight)
+      const ranges = dimensionRanges()
+      const clampedHeight = clamp(newHeight, ranges.minHeight, ranges.maxHeight)
+
+      onHeightChange(clampedHeight)
 
       if (isLocked && aspectRatio) {
-        const newWidth = getWidthFromHeight(newHeight, aspectRatio)
-        setInternalWidth(newWidth)
-
-        // Call both callbacks to update parent state
-        onHeightChange(newHeight)
+        const newWidth = clamp(
+          getWidthFromHeight(clampedHeight, aspectRatio),
+          ranges.minWidth,
+          ranges.maxWidth,
+        )
         onWidthChange(newWidth)
-      } else {
-        onHeightChange(newHeight)
       }
     },
-    [isLocked, aspectRatio, getWidthFromHeight, onHeightChange, onWidthChange],
+    [isLocked, aspectRatio, dimensionRanges, onHeightChange, onWidthChange],
   )
 
-  // Handle aspect ratio changes
+  // When ratio changes directly, adjust dimensions while keeping width stable
   const handleAspectRatioChange = useCallback(
     (newRatio: number) => {
       onAspectRatioChange(newRatio)
 
-      let newWidth = internalWidth
-      let newHeight = internalHeight
-
-      if (lastUpdated === 'width' || !lastUpdated) {
-        newHeight = getHeightFromWidth(internalWidth, newRatio)
-        setInternalHeight(newHeight)
-      } else {
-        newWidth = getWidthFromHeight(internalHeight, newRatio)
-        setInternalWidth(newWidth)
-      }
-
-      // Propagate both changes to parent
-      onWidthChange(newWidth)
+      // When ratio changes, adjust height based on current width
+      const newHeight = clamp(getHeightFromWidth(width, newRatio), minHeight, maxHeight)
       onHeightChange(newHeight)
     },
-    [
-      internalWidth,
-      internalHeight,
-      lastUpdated,
-      getHeightFromWidth,
-      getWidthFromHeight,
-      onAspectRatioChange,
-      onWidthChange,
-      onHeightChange,
-    ],
+    [width, onAspectRatioChange, onHeightChange, minHeight, maxHeight],
   )
 
-  // Handle lock toggle
   const handleLockToggle = useCallback(
     (checked: boolean) => {
       setIsLocked(checked)
-
       if (checked) {
-        const currentRatio = calculateAspectRatio(width, height)
-        onAspectRatioChange(currentRatio)
+        // When locking, calculate and set aspect ratio based on current dimensions
+        onAspectRatioChange(calculateAspectRatio(width, height))
       } else {
+        // When unlocking, clear the aspect ratio
         onAspectRatioChange(undefined)
       }
     },
-    [width, height, calculateAspectRatio, onAspectRatioChange],
+    [width, height, onAspectRatioChange],
   )
 
-  // Initialize dimensions based on aspect ratio if needed
   useEffect(() => {
-    if (isLocked && aspectRatio && !lastUpdated) {
-      const newHeight = getHeightFromWidth(internalWidth, aspectRatio)
-      setInternalHeight(newHeight)
-      setLastUpdated('width')
+    if (aspectRatioFromImg && sourceType !== 'code' && !aspectRatio) {
+      // Set aspect ratio from image dimensions when enabled
+      onAspectRatioChange(calculateAspectRatio(width, height))
     }
-  }, [isLocked, aspectRatio, lastUpdated, internalWidth, getHeightFromWidth])
+  }, [aspectRatioFromImg, sourceType, aspectRatio, width, height, onAspectRatioChange])
+
+  // Syncing dimensions when aspect ratio changes externally
+  useEffect(() => {
+    if (isLocked && aspectRatio) {
+      const ranges = dimensionRanges()
+      const newHeight = clamp(
+        getHeightFromWidth(width, aspectRatio),
+        ranges.minHeight,
+        ranges.maxHeight,
+      )
+
+      // Avoid update loops with small floating point differences
+      if (Math.abs(newHeight - height) > 0.01) {
+        onHeightChange(newHeight)
+      }
+    }
+  }, [aspectRatio, isLocked, width, height, dimensionRanges, onHeightChange])
+
+  const ranges = dimensionRanges()
 
   return (
     <>
       <InputNumber
-        value={internalWidth}
+        value={width}
         onChange={handleWidthChange}
-        min={minWidth}
-        max={maxWidth}
+        min={ranges.minWidth}
+        max={ranges.maxWidth}
         step={1}
         disabled={disabled}
       >
         Columns
       </InputNumber>
       <InputNumber
-        value={internalHeight}
+        value={height}
         onChange={handleHeightChange}
-        min={minHeight}
-        max={maxHeight}
+        min={ranges.minHeight}
+        max={ranges.maxHeight}
         step={1}
         disabled={disabled}
       >
         Rows
       </InputNumber>
 
-      <div>
-        <InputSwitch checked={isLocked} onChange={handleLockToggle}>
-          Lock Aspect Ratio
-        </InputSwitch>
+      <InputSwitch checked={isLocked} onChange={handleLockToggle} disabled={disabled}>
+        Lock Aspect Ratio
+      </InputSwitch>
 
-        {isLocked && (
-          <div className="dedent">
-            <InputNumber
-              value={aspectRatio || 1}
-              onChange={handleAspectRatioChange}
-              min={0.1}
-              max={10}
-              step={0.01}
-              disabled={disabled}
-              showSlider={false}
+      {isLocked && (
+        <div className="mt-2 flex flex-col gap-2 border-l py-1 pl-3 border-default">
+          <InputNumber
+            value={aspectRatio || 1}
+            onChange={handleAspectRatioChange}
+            min={0.1}
+            max={10}
+            step={0.01}
+            disabled={disabled || aspectRatioFromImg}
+            showSlider={false}
+          >
+            Aspect Ratio
+          </InputNumber>
+
+          {sourceType !== 'code' && (
+            <InputSwitch
+              checked={aspectRatioFromImg}
+              onChange={(checked) => {
+                if (onAspectRatioFromImgChange) {
+                  onAspectRatioFromImgChange(checked)
+                }
+              }}
             >
-              Aspect Ratio
-            </InputNumber>
-          </div>
-        )}
-      </div>
+              Use Image Ratio
+            </InputSwitch>
+          )}
+        </div>
+      )}
     </>
   )
 }
