@@ -775,13 +775,9 @@ export function AsciiArtGenerator() {
 
             {/* Output Configuration */}
             <OutputConfiguration
-              settings={{
-                ...settings.output,
-                sourceData: settings.source.data || undefined,
-              }}
+              settings={settings.output}
               updateSettings={(changes) => updateSettings('output', changes)}
               sourceType={settings.source.type}
-              sourceData={settings.source.data || undefined}
               sourceImageDimensions={settings.source.imageDimensions}
             />
 

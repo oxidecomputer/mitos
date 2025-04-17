@@ -25,7 +25,6 @@ interface OutputConfigurationProps {
     aspectRatio?: number
     useImageAspectRatio: boolean
     colorMapping: ColorMappingType
-    sourceData?: string
   }
   updateSettings: (
     settings: Partial<{
@@ -40,7 +39,6 @@ interface OutputConfigurationProps {
     }>,
   ) => void
   sourceType: SourceType
-  sourceData?: string
   sourceImageDimensions?: { width: number; height: number }
 }
 
