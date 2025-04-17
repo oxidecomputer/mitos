@@ -18,12 +18,9 @@ import type { SourceType } from './ascii-art-generator'
 import CodeEditor from './code-editor'
 
 interface CodeSidebarProps {
+  pendingCode: string
+  setPendingCode: (code: string) => void
   isOpen: boolean
-  settings: {
-    type: SourceType
-    data: string | null
-    code: string
-  }
   updateSettings: (
     settings: Partial<{
       type: SourceType
@@ -33,8 +30,12 @@ interface CodeSidebarProps {
   ) => void
 }
 
-export function CodeSidebar({ isOpen, settings, updateSettings }: CodeSidebarProps) {
-  const [pendingCode, setPendingCode] = useState(settings.code)
+export function CodeSidebar({
+  isOpen,
+  pendingCode,
+  setPendingCode,
+  updateSettings,
+}: CodeSidebarProps) {
   const [width, setWidth] = useState(400) // Default width of 400px
   const sidebarRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)

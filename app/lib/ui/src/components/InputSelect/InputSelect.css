@@ -28,7 +28,7 @@
 }
 
 .ui-select label {
-  color: var(--mt-secondary);
+  color: var(--mt-text-secondary);
   font-family: var(--mt-font-label);
   font-size: var(--mt-font-size-label);
 }
@@ -55,4 +55,8 @@
 .ui-select:disabled select {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.ui-select .ui-select__option-disabled {
+  color: color-mix(in srgb, var(--mt-text-secondary) 60%, transparent);
 }

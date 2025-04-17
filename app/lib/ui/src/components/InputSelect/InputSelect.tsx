@@ -9,7 +9,7 @@
 import './InputSelect.css'
 
 export interface InputSelectProps<T> {
-  value: T
+  value: T | ''
   onChange: (value: T) => void
   options: T[]
   labelize?: (value: T) => string
@@ -38,6 +38,7 @@ export const InputSelect = <T extends string | number>({
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
         disabled={disabled}
+        className={value === '' ? 'ui-select__option-disabled' : ''}
       >
         {placeholder && (
           <option value="" disabled>
