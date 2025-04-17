@@ -5,10 +5,12 @@
  *
  * Copyright Oxide Computer Company
  */
+import { FFmpeg } from '@ffmpeg/ffmpeg'
+import { fetchFile, toBlobURL } from '@ffmpeg/util'
 import { saveAs } from 'file-saver'
 import html2canvas from 'html2canvas-pro'
 import JSZip from 'jszip'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
@@ -20,7 +22,7 @@ import { type SourceType } from './ascii-art-generator'
 import { getContent, type AnimationController } from './ascii-preview'
 import { Container } from './container'
 
-export type ExportFormat = 'frames' | 'png' | 'svg'
+export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4' | 'gif'
 export type ExportScale = '1x' | '2x' | '3x' | '4x'
 
 interface ExportOptionsProps {
@@ -49,14 +51,82 @@ export function ExportOptions({
     sourceType === 'code' ? 'frames' : 'png',
   )
   const [exportScale, setExportScale] = useState<ExportScale>('2x')
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false)
+  const ffmpegRef = useRef<FFmpeg | null>(null)
 
   useEffect(() => {
-    if (sourceType === 'code') {
+    const loadFFmpeg = async () => {
+      try {
+        if (!ffmpegRef.current) {
+          toast.loading('Loading video processing library...', { id: 'ffmpeg-load' })
+
+          const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm'
+          const ffmpeg = new FFmpeg()
+
+          ffmpeg.on('log', ({ message }) => {
+            if (message && message.includes('frame=')) {
+              toast.message(message, { id: 'ffmpeg-load' })
+            }
+          })
+
+          ffmpeg.on('progress', ({ progress }) => {
+            toast.loading(`Encoding: ${Math.round(progress * 100)}%`, {
+              id: 'video-export',
+            })
+          })
+
+          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript')
+          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+
+          // Load with a timeout to detect hanging
+          const loadPromise = ffmpeg.load({
+            coreURL,
+            wasmURL,
+          })
+
+          // Create a timeout promise
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Loading ffmpeg timed out')), 30000)
+          })
+
+          // Race the loading against the timeout
+          await Promise.race([loadPromise, timeoutPromise])
+
+          ffmpegRef.current = ffmpeg
+          setFfmpegLoaded(true)
+          toast.success('Video processing library loaded!', { id: 'ffmpeg-load' })
+        }
+      } catch (error) {
+        console.error('Error loading ffmpeg:', error)
+        toast.error(
+          `Failed to load video processing: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          {
+            id: 'ffmpeg-load',
+            duration: 5000,
+          },
+        )
+        // Reset loading state so user can try again
+        setFfmpegLoaded(false)
+      }
+    }
+
+    if ((exportFormat === 'mp4' || exportFormat === 'gif') && !ffmpegLoaded) {
+      loadFFmpeg()
+    }
+  }, [exportFormat, ffmpegLoaded])
+
+  useEffect(() => {
+    const isAnimated =
+      (sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') &&
+      animationLength > 1
+
+    if (isAnimated) {
       setExportFormat('frames')
-    } else if (exportFormat === 'frames') {
+    } else {
       setExportFormat('png')
     }
-  }, [sourceType, exportFormat])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceType])
 
   const exportContent = async () => {
     if (!program) return
@@ -82,7 +152,12 @@ export function ExportOptions({
       if (totalFrames === 1) {
         await exportSingleFrame()
       } else {
-        await exportAnimationFrames(totalFrames, currentFrame, wasPlaying)
+        await exportAnimationFrames(
+          totalFrames,
+          currentFrame,
+          wasPlaying,
+          exportFormat !== 'mp4',
+        )
       }
     } catch (error) {
       console.error('Error exporting frames:', error)
@@ -106,7 +181,7 @@ export function ExportOptions({
   }
 
   const exportAsPng = async () => {
-    const canvas = await captureFrame()
+    const canvas = await captureFrame(true)
     if (!canvas) return
 
     canvas.toBlob(
@@ -268,12 +343,90 @@ export function ExportOptions({
     })
   }
 
+  const exportAsVideo = async (frames: Blob[]) => {
+    if (!ffmpegLoaded || !ffmpegRef.current) {
+      toast.error('Video processing library not loaded')
+      return
+    }
+
+    try {
+      const ffmpeg = ffmpegRef.current
+      toast.loading('Processing video...', { id: 'video-export' })
+
+      // Write each frame to the virtual file system
+      for (let i = 0; i < frames.length; i++) {
+        const frameName = `frame_${String(i).padStart(4, '0')}.png`
+        const frameData = await fetchFile(frames[i])
+        await ffmpeg.writeFile(frameName, frameData)
+
+        if (i % 10 === 0 || i === frames.length - 1) {
+          toast.loading(
+            `Preparing frames: ${Math.round(((i + 1) / frames.length) * 100)}%`,
+            {
+              id: 'video-export',
+            },
+          )
+        }
+      }
+
+      // Generate the video based on selected format
+      const fps = Math.min(30, Math.max(10, animationController?.getState().fps || 24))
+      const outputFilename = `output.${exportFormat}`
+
+      toast.loading('Encoding video...', { id: 'video-export' })
+
+      if (exportFormat === 'gif') {
+        await ffmpeg.exec([
+          '-framerate',
+          `${fps}`,
+          '-pattern_type',
+          'glob',
+          '-i',
+          'frame_*.png',
+          '-vf',
+          'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+          '-f',
+          'gif',
+          outputFilename,
+        ])
+      } else {
+        await ffmpeg.exec([
+          '-framerate',
+          `${fps}`,
+          '-pattern_type',
+          'glob',
+          '-i',
+          'frame_*.png',
+          '-vf',
+          'format=yuv420p',
+          '-c:v',
+          'libx264',
+          outputFilename,
+        ])
+      }
+
+      // Read the output file
+      const data = await ffmpeg.readFile(outputFilename)
+      const blob = new Blob([data instanceof Uint8Array ? data.buffer : data], {
+        type: exportFormat === 'mp4' ? 'video/mp4' : 'image/gif',
+      })
+
+      // Save the video
+      saveAs(blob, `ascii-animation.${exportFormat}`)
+      toast.success('Video export complete!', { id: 'video-export' })
+    } catch (error) {
+      console.error('Error encoding video:', error)
+      toast.error('Failed to create video', { id: 'video-export' })
+    }
+  }
+
   const exportAnimationFrames = async (
     totalFrames: number,
     currentFrame: number,
     wasPlaying: boolean,
+    transparent: boolean,
   ) => {
-    const zip = new JSZip()
+    const frames: Blob[] = []
 
     for (let i = 0; i < totalFrames; i++) {
       if (animationController) {
@@ -283,7 +436,7 @@ export function ExportOptions({
       // Allow DOM to update
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      const canvas = await captureFrame()
+      const canvas = await captureFrame(transparent)
       if (!canvas) continue
 
       // Convert canvas to blob and add to zip
@@ -291,11 +444,11 @@ export function ExportOptions({
         canvas.toBlob((b) => resolve(b as Blob), 'image/png', 1.0),
       )
 
-      zip.file(`frame_${String(i).padStart(4, '0')}.png`, blob)
+      frames.push(blob)
 
       if (i % 5 === 0 || i === totalFrames - 1) {
-        toast.loading(`Exporting frames: ${Math.round(((i + 1) / totalFrames) * 100)}%`, {
-          id: 'export-progress',
+        toast.loading(`Capturing frames: ${Math.round(((i + 1) / totalFrames) * 100)}%`, {
+          id: 'video-export',
         })
       }
     }
@@ -308,14 +461,24 @@ export function ExportOptions({
       }
     }
 
-    const zipBlob = await zip.generateAsync({ type: 'blob' })
-    saveAs(zipBlob, 'ascii-animation-frames.zip')
+    // Either export as video or as frame zip
+    if (exportFormat === 'mp4' || exportFormat === 'gif') {
+      await exportAsVideo(frames)
+    } else {
+      // Original frames export code
+      const zip = new JSZip()
+      frames.forEach((blob, i) => {
+        zip.file(`frame_${String(i).padStart(4, '0')}.png`, blob)
+      })
 
-    toast.success('Export complete!', { id: 'export-progress' })
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      saveAs(zipBlob, 'ascii-animation-frames.zip')
+      toast.success('Export complete!', { id: 'export-progress' })
+    }
   }
 
   // The ASCII is HTML so we need some way to turn it into an image
-  const captureFrame = async () => {
+  const captureFrame = async (transparent: boolean) => {
     const asciiParent = document.querySelector('.ascii-animation')?.parentElement
     if (!asciiParent) return null
 
@@ -326,7 +489,7 @@ export function ExportOptions({
     const scaleValue = parseInt(exportScale.replace('x', ''))
 
     return html2canvas(containerElement as HTMLElement, {
-      backgroundColor: 'transparent',
+      backgroundColor: transparent ? 'transparent' : 'white',
       scale: scaleValue,
       logging: false,
       allowTaint: true,
@@ -347,16 +510,6 @@ export function ExportOptions({
     })
   }
 
-  useEffect(() => {
-    const isAnimated =
-      sourceType === 'code' || sourceType === 'gif' || sourceType === 'video'
-    if (isAnimated && animationLength > 1) {
-      setExportFormat('frames')
-    } else {
-      setExportFormat('svg')
-    }
-  }, [sourceType, animationLength])
-
   // Copy with cmd+c
   useHotkeys('meta+c', () => copyText(), { preventDefault: true }, [])
 
@@ -367,18 +520,35 @@ export function ExportOptions({
     <Container>
       <InputSelect
         value={exportFormat}
-        onChange={(value) => setExportFormat(value as ExportFormat)}
+        onChange={(value) => {
+          setExportFormat(value as ExportFormat)
+        }}
         options={
-          (sourceType === 'code' || sourceType === 'gif') && animationLength > 1
-            ? (['frames'] as ExportFormat[])
+          (sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') &&
+          animationLength > 1
+            ? (['mp4', 'gif', 'frames'] as ExportFormat[])
             : (['svg', 'png'] as ExportFormat[])
         }
-        labelize={(format) => (format === 'frames' ? 'PNGs' : format.toUpperCase())}
+        labelize={(format) => {
+          switch (format) {
+            case 'frames':
+              return 'PNGs'
+            case 'mp4':
+            case 'gif':
+              return format.toUpperCase()
+            default:
+              return format.toUpperCase()
+          }
+        }}
         disabled={isExporting}
       >
         Format
       </InputSelect>
-      {exportFormat !== 'svg' && (
+
+      {(exportFormat === 'png' ||
+        exportFormat === 'frames' ||
+        exportFormat === 'mp4' ||
+        exportFormat === 'gif') && (
         <InputSelect
           value={exportScale}
           onChange={(value) => setExportScale(value as ExportScale)}
@@ -388,16 +558,23 @@ export function ExportOptions({
           Quality
         </InputSelect>
       )}
+
       <div className="space-y-2">
         <InputButton
           variant="secondary"
           className="mt-2 w-full"
           onClick={exportContent}
-          disabled={isExporting || disabled}
+          disabled={
+            isExporting ||
+            disabled ||
+            ((exportFormat === 'mp4' || exportFormat === 'gif') && !ffmpegLoaded)
+          }
         >
-          {sourceType === 'code' || sourceType === 'gif' || sourceType === 'video'
-            ? `Export ${exportFormat === 'frames' ? 'Frames' : 'Frame'}`
-            : 'Export Image'}
+          {exportFormat === 'mp4' || exportFormat === 'gif'
+            ? `Export as ${exportFormat.toUpperCase()}`
+            : sourceType === 'code' || sourceType === 'gif' || sourceType === 'video'
+              ? `Export ${exportFormat === 'frames' ? 'Frames' : 'Frame'}`
+              : 'Export Image'}
         </InputButton>
 
         <div className="flex gap-2">
