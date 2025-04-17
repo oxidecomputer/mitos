@@ -791,7 +791,6 @@ export function AsciiArtGenerator() {
             <a
               href="https://oxide.computer"
               target="_blank"
-              rel="noreferrer"
               className="flex items-center gap-2 font-mono uppercase text-quaternary [font-size:12px]"
             >
               /*
