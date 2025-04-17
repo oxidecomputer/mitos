@@ -604,6 +604,7 @@ export function AsciiArtGenerator() {
           handleLoadProject(result)
         }
         reader.readAsText(file)
+        return true
       } else if (validGifTypes.includes(file.type)) {
         // It's a GIF
         if (dataUrl) {

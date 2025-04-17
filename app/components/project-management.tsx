@@ -6,7 +6,7 @@
  * Copyright Oxide Computer Company
  */
 import type React from 'react'
-import { useState, type Dispatch, type SetStateAction } from 'react'
+import { type Dispatch, type SetStateAction } from 'react'
 import { toast } from 'sonner'
 
 import { InputButton } from '~/lib/ui/src'
