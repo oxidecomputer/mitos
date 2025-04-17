@@ -103,4 +103,7 @@
     text-decoration: underline;
     text-decoration-color: color-mix(in srgb, currentColor 60%, transparent);
   }
+  .dedent {
+    @apply mt-2 flex flex-col gap-2 border-l py-1 pl-3 border-default;
+  }
 }

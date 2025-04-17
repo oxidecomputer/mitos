@@ -6,30 +6,63 @@
  * Copyright Oxide Computer Company
  */
 import type React from 'react'
-import { useState } from 'react'
+import { type Dispatch, type SetStateAction } from 'react'
 import { toast } from 'sonner'
 
 import { InputButton } from '~/lib/ui/src'
+import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 import { InputText } from '~/lib/ui/src/components/InputText/InputText'
+import { TEMPLATES, TemplateType } from '~/templates'
 
-import type { AsciiSettings } from './ascii-art-generator'
+import { type AsciiSettings } from './ascii-art-generator'
 import { Container } from './container'
 
 interface ProjectManagementProps {
   settings: AsciiSettings
-  updateSettings: (settings: Partial<AsciiSettings>) => void
+  setSettings: Dispatch<SetStateAction<AsciiSettings>>
+  onCodeProjectLoaded?: (code: string) => void
+  projectName: string
+  setProjectName: Dispatch<SetStateAction<string>>
+  templateType: TemplateType | ''
+  setTemplateType: Dispatch<SetStateAction<TemplateType | ''>>
+  handleLoadProjectInput: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
-export function ProjectManagement({ settings, updateSettings }: ProjectManagementProps) {
-  const [projectName, setProjectName] = useState('My ASCII Project')
+export function ProjectManagement({
+  projectName,
+  setProjectName,
+  templateType,
+  setTemplateType,
+  settings,
+  setSettings,
+  handleLoadProjectInput,
+}: ProjectManagementProps) {
+  const handleTemplateChange = (template: TemplateType) => {
+    setTemplateType(template)
+
+    if (template !== 'custom' && TEMPLATES[template]) {
+      // Apply template settings
+      setSettings(TEMPLATES[template] as AsciiSettings)
+      // Update project name
+      setProjectName(TEMPLATES[template].meta.name)
+      toast(`Applied ${TEMPLATES[template].meta.name} template`)
+    }
+  }
 
   const handleSaveProject = () => {
     try {
       const projectData = {
         name: projectName,
-        settings: settings,
+        settings: {
+          ...settings,
+          source: {
+            ...settings.source,
+            data: '', // dont save the image data
+          },
+        },
       }
-      const json = JSON.stringify(projectData)
+      const json = JSON.stringify(projectData, null, 2)
+
       const blob = new Blob([json], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
 
@@ -47,51 +80,38 @@ export function ProjectManagement({ settings, updateSettings }: ProjectManagemen
     }
   }
 
-  const handleLoadProject = (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      const file = e.target.files?.[0]
-      if (!file) return
-
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        try {
-          const json = event.target?.result as string
-          const projectData = JSON.parse(json)
-          setProjectName(projectData.name || 'Imported Project')
-          updateSettings(projectData.settings)
-
-          console.log(projectData)
-
-          toast(`${projectData.name} has been loaded successfully.`)
-        } catch (_error) {
-          toast('The selected file is not a valid project file')
-        }
-      }
-      reader.readAsText(file)
-    } catch (error) {
-      toast(error instanceof Error ? error.message : 'Unknown error')
-    }
-  }
-
   return (
     <Container>
-      <InputText
-        value={projectName}
-        onChange={setProjectName}
-        placeholder="Enter project name"
-      />
+      <InputSelect<TemplateType>
+        value={templateType}
+        onChange={handleTemplateChange}
+        options={Object.keys(TEMPLATES) as TemplateType[]}
+        placeholder="Select or save template"
+      >
+        Template
+      </InputSelect>
+
+      {templateType === 'custom' && (
+        <div className="dedent">
+          <InputText
+            value={projectName}
+            onChange={setProjectName}
+            placeholder="Enter project name"
+          />
+          <InputButton variant="secondary" onClick={handleSaveProject}>
+            Save
+          </InputButton>
+        </div>
+      )}
 
       <div className="flex gap-2">
-        <InputButton variant="secondary" onClick={handleSaveProject}>
-          Save
-        </InputButton>
         <InputButton variant="secondary">
           Load
           <input
             type="file"
             className="absolute inset-0 z-10 opacity-0"
             accept=".json"
-            onChange={handleLoadProject}
+            onChange={handleLoadProjectInput}
           />
         </InputButton>
       </div>

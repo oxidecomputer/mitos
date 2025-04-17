@@ -93,7 +93,7 @@ export function PreprocessingControls({
       </InputSwitch>
 
       {settings.dithering && (
-        <div className="mt-2 border-l py-1 pl-3 border-default">
+        <div className="dedent">
           <InputSelect
             value={settings.ditheringAlgorithm}
             onChange={(value) =>
