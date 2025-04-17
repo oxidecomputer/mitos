@@ -93,29 +93,31 @@ export function PreprocessingControls({
       </InputSwitch>
 
       {settings.dithering && (
-        <InputSelect
-          value={settings.ditheringAlgorithm}
-          onChange={(value) =>
-            updateSettings({ ditheringAlgorithm: value as DitheringAlgorithm })
-          }
-          options={['floydSteinberg', 'atkinson', 'ordered', 'bayer']}
-          labelize={(algorithm) => {
-            switch (algorithm) {
-              case 'floydSteinberg':
-                return 'Floyd-Steinberg'
-              case 'atkinson':
-                return 'Atkinson'
-              case 'ordered':
-                return 'Ordered'
-              case 'bayer':
-                return 'Bayer'
-              default:
-                return algorithm
+        <div className="mt-2 border-l py-1 pl-3 border-default">
+          <InputSelect
+            value={settings.ditheringAlgorithm}
+            onChange={(value) =>
+              updateSettings({ ditheringAlgorithm: value as DitheringAlgorithm })
             }
-          }}
-        >
-          Dithering Algorithm
-        </InputSelect>
+            options={['floydSteinberg', 'atkinson', 'ordered', 'bayer']}
+            labelize={(algorithm) => {
+              switch (algorithm) {
+                case 'floydSteinberg':
+                  return 'Floyd-Steinberg'
+                case 'atkinson':
+                  return 'Atkinson'
+                case 'ordered':
+                  return 'Ordered'
+                case 'bayer':
+                  return 'Bayer'
+                default:
+                  return algorithm
+              }
+            }}
+          >
+            Dithering Algorithm
+          </InputSelect>
+        </div>
       )}
     </Container>
   )
