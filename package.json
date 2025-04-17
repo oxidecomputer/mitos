@@ -19,6 +19,8 @@
     "@codemirror/language": "^6.11.0",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.36.4",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@oxide/design-system": "^2.5.0",
     "@uiw/react-codemirror": "^4.23.10",
