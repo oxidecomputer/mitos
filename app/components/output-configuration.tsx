@@ -41,6 +41,7 @@ interface OutputConfigurationProps {
   ) => void
   sourceType: SourceType
   sourceData?: string
+  sourceImageDimensions?: { width: number; height: number }
 }
 
 export const predefinedCharacterSets = {
@@ -78,10 +79,9 @@ export function OutputConfiguration({
   settings,
   updateSettings,
   sourceType,
-  sourceData,
+  sourceImageDimensions,
 }: OutputConfigurationProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
-  const imageSource = sourceType === 'image' ? sourceData || settings.sourceData : null
 
   const handleCharacterSetChange = (value: string) => {
     setSelectedCharSet(value)
@@ -146,14 +146,12 @@ export function OutputConfiguration({
         aspectRatioFromImg={settings.useImageAspectRatio}
         onAspectRatioFromImgChange={(value) => {
           updateSettings({ useImageAspectRatio: value })
-          if (value && imageSource && sourceType === 'image') {
-            // When toggling on, recalculate aspect ratio from the existing image
-            const img = new Image()
-            img.onload = () => {
-              const aspectRatio = img.width / img.height
+          if (value && (sourceType === 'image' || sourceType === 'gif')) {
+            if (sourceImageDimensions) {
+              // Use stored dimensions if available
+              const aspectRatio = sourceImageDimensions.width / sourceImageDimensions.height
               updateSettings({ aspectRatio })
             }
-            img.src = imageSource
           }
         }}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
@@ -161,6 +159,7 @@ export function OutputConfiguration({
         maxWidth={240}
         minHeight={10}
         maxHeight={120}
+        sourceType={sourceType}
       />
 
       <InputSelect<GridType>

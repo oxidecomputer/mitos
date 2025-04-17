@@ -42,6 +42,7 @@ export interface AsciiSettings {
     type: SourceType
     data: string | null
     code: string
+    imageDimensions?: { width: number; height: number }
   }
   preprocessing: {
     brightness: number
@@ -654,13 +655,15 @@ export function AsciiArtGenerator() {
       const validGifTypes = ['image/gif']
 
       // Helper to set aspect ratio from an image
-      const setAspectRatioFromImage = (imageUrl: string): Promise<number> => {
+      const setAspectRatioFromImage = (
+        imageUrl: string,
+      ): Promise<{ aspectRatio: number; width: number; height: number }> => {
         return new Promise((resolve) => {
           const img = new Image()
           img.onload = () => {
             // Calculate the image aspect ratio
             const aspectRatio = img.width / img.height
-            resolve(aspectRatio)
+            resolve({ aspectRatio, width: img.width, height: img.height })
           }
           img.src = imageUrl
         })
@@ -671,7 +674,7 @@ export function AsciiArtGenerator() {
         imageUrl: string,
         type: 'image' | 'gif',
       ) => {
-        const aspectRatio = await setAspectRatioFromImage(imageUrl)
+        const { aspectRatio, width, height } = await setAspectRatioFromImage(imageUrl)
 
         // Update all settings at once to avoid race conditions
         setSettings((prev) => ({
@@ -680,6 +683,7 @@ export function AsciiArtGenerator() {
             ...prev.source,
             data: imageUrl,
             type,
+            imageDimensions: { width, height }, // Store dimensions with source
           },
           output: {
             ...prev.output,
@@ -693,34 +697,20 @@ export function AsciiArtGenerator() {
         return true
       }
 
-      if (validGifTypes.includes(file.type)) {
-        // It's a GIF
+      if (validGifTypes.includes(file.type) || validImageTypes.includes(file.type)) {
+        // Determine type ('gif' or 'image')
+        const sourceType = validGifTypes.includes(file.type) ? 'gif' : 'image'
+
         if (dataUrl) {
           // If we already have the dataUrl (from paste preview)
-          updateSourceAndAspectRatio(dataUrl, 'gif')
+          updateSourceAndAspectRatio(dataUrl, sourceType)
           return true
         } else {
           // Read the file to get dataUrl
           const reader = new FileReader()
           reader.onload = (e) => {
             const result = e.target?.result as string
-            updateSourceAndAspectRatio(result, 'gif')
-          }
-          reader.readAsDataURL(file)
-          return true
-        }
-      } else if (validImageTypes.includes(file.type)) {
-        // It's a static image
-        if (dataUrl) {
-          // If we already have the dataUrl (from paste preview)
-          updateSourceAndAspectRatio(dataUrl, 'image')
-          return true
-        } else {
-          // Read the file to get dataUrl
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            const result = e.target?.result as string
-            updateSourceAndAspectRatio(result, 'image')
+            updateSourceAndAspectRatio(result, sourceType)
           }
           reader.readAsDataURL(file)
           return true
@@ -792,6 +782,7 @@ export function AsciiArtGenerator() {
               updateSettings={(changes) => updateSettings('output', changes)}
               sourceType={settings.source.type}
               sourceData={settings.source.data || undefined}
+              sourceImageDimensions={settings.source.imageDimensions}
             />
 
             {/* Animation Options (for animated content) */}
