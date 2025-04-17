@@ -108,7 +108,7 @@ export function OutputConfiguration({
             Character Set
           </InputSelect>
 
-          <div className="mt-2 border-l py-1 pl-3 border-default">
+          <div className="dedent">
             <InputText
               value={settings.characterSet}
               onChange={handleCustomCharacterSetChange}

@@ -12,12 +12,8 @@ import { toast } from 'sonner'
 
 import { AsciiPreview, type AnimationController } from '~/components/ascii-preview'
 import { ExportOptions } from '~/components/export-options'
-import {
-  OutputConfiguration,
-  predefinedCharacterSets,
-} from '~/components/output-configuration'
+import { OutputConfiguration } from '~/components/output-configuration'
 import { PreprocessingControls } from '~/components/preprocessing-controls'
-// import { ProjectManagement } from '~/components/project-management'
 import { SourceSelector } from '~/components/source-selector'
 import type { Data, Program } from '~/lib/animation'
 import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-program'
@@ -29,15 +25,20 @@ import {
   type CachedMediaData,
 } from '~/lib/image-processor'
 import { cn } from '~/lib/utils'
+import { DEFAULT_SETTINGS, TemplateType } from '~/templates'
 
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
+import { ProjectManagement } from './project-management'
 
 export type SourceType = 'image' | 'code' | 'gif' | 'video'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
 export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
 
 export interface AsciiSettings {
+  meta: {
+    name: string
+  }
   source: {
     type: SourceType
     data: string | null
@@ -69,66 +70,6 @@ export interface AsciiSettings {
   }
 }
 
-const DEFAULT_CODE = `/**
-@author ertdfgcvb
-@url https://play.ertdfgcvb.xyz/#/src/basics/coordinates_xy
-*/
-
-const density = 'Ñ@#W$9876543210?!abc;:+=-,._ ';
-
-// Renders each cell
-function main(coord, context, cursor, buffer) {
-  // To generate output, return a single character
-  // or an object with a "char" field, for example {char: 'x'}
-  const {cols, frame} = context;
-  const {x, y} = coord;
-
-  // Calculate an index into the density string
-  const sign = y % 2 * 2 - 1;
-  const index = (cols + y + x * sign + frame) % density.length;
-
-  return density[index];
-}
-
-// Optional: Runs once at startup
-function boot(context, buffer, userData) {}
-
-// Optional: Runs at the start of each frame
-function pre(context, cursor, buffer, userData) {}
-
-// Optional: Runs after each frame is complete
-function post(context, cursor, buffer, userData) {}`
-
-const DEFAULT_SETTINGS: AsciiSettings = {
-  source: {
-    type: 'image',
-    data: null,
-    code: DEFAULT_CODE,
-  },
-  preprocessing: {
-    brightness: 0,
-    whitePoint: 255,
-    blackPoint: 0,
-    blur: 0,
-    invert: false,
-    dithering: false,
-    ditheringAlgorithm: 'floydSteinberg',
-  },
-  output: {
-    characterSet: predefinedCharacterSets['standard'],
-    grid: 'none',
-    showUnderlyingImage: false,
-    columns: 80,
-    rows: 40,
-    useImageAspectRatio: false,
-    colorMapping: 'brightness',
-  },
-  animation: {
-    animationLength: 100,
-    frameRate: 30,
-  },
-}
-
 export function AsciiArtGenerator() {
   // Core state
   const [settings, setSettings] = useState<AsciiSettings>(DEFAULT_SETTINGS)
@@ -136,6 +77,9 @@ export function AsciiArtGenerator() {
   const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null)
   const [animationController, setAnimationController] = useState<AnimationController>(null)
   const [dragActive, setDragActive] = useState(false)
+  const [pendingCode, setPendingCode] = useState(settings.source.code)
+  const [projectName, setProjectName] = useState('')
+  const [templateType, setTemplateType] = useState<TemplateType | ''>('')
 
   // Processing state
   const [isExporting, setIsExporting] = useState(false)
@@ -653,8 +597,8 @@ export function AsciiArtGenerator() {
     (file: File, dataUrl?: string): boolean => {
       const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
       const validGifTypes = ['image/gif']
+      const validJsonType = 'application/json'
 
-      // Helper to set aspect ratio from an image
       const setAspectRatioFromImage = (
         imageUrl: string,
       ): Promise<{ aspectRatio: number; width: number; height: number }> => {
@@ -697,7 +641,15 @@ export function AsciiArtGenerator() {
         return true
       }
 
-      if (validGifTypes.includes(file.type) || validImageTypes.includes(file.type)) {
+      if (file.type === validJsonType || file.name.endsWith('.json')) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const result = e.target?.result as string
+          handleLoadProject(result)
+        }
+        reader.readAsText(file)
+        return true
+      } else if (validGifTypes.includes(file.type) || validImageTypes.includes(file.type)) {
         // Determine type ('gif' or 'image')
         const sourceType = validGifTypes.includes(file.type) ? 'gif' : 'image'
 
@@ -740,6 +692,45 @@ export function AsciiArtGenerator() {
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       processFile(e.dataTransfer.files[0])
+    }
+  }
+
+  const handleCodeProjectLoaded = useCallback((code: string) => {
+    setPendingCode(code)
+    setShowCodeSidebar(true)
+  }, [])
+
+  const handleLoadProjectInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+        processFile(e.target.files[0])
+      }
+    },
+    [processFile],
+  )
+
+  const handleLoadProject = (json: string) => {
+    console.log(json)
+    try {
+      const projectData = JSON.parse(json)
+      setProjectName(projectData.name || 'Imported Project')
+
+      if (projectData.settings) {
+        setSettings(projectData.settings as AsciiSettings)
+
+        // If the imported project is a code project, show the code sidebar
+        if (projectData.settings.source.type === 'code') {
+          // Pass this information up to the parent
+          handleCodeProjectLoaded(projectData.settings.source.code)
+        }
+      }
+
+      // Set template type to custom since we loaded a saved project
+      setTemplateType('custom')
+
+      toast(`${projectData.name} has been loaded successfully.`)
+    } catch (_error) {
+      toast('The selected file is not a valid project file')
     }
   }
 
@@ -812,9 +803,18 @@ export function AsciiArtGenerator() {
               disabled={!program}
             />
 
-            {/* <hr /> */}
+            <hr />
+
             {/* Project Management */}
-            {/* <ProjectManagement settings={settings} updateSettings={updateSettings} /> */}
+            <ProjectManagement
+              projectName={projectName}
+              setProjectName={setProjectName}
+              templateType={templateType}
+              setTemplateType={setTemplateType}
+              settings={settings}
+              setSettings={setSettings}
+              handleLoadProjectInput={handleLoadProjectInput}
+            />
           </div>
           <div className="flex grow items-end p-3 pb-2">
             <a
@@ -864,7 +864,8 @@ export function AsciiArtGenerator() {
 
           {/* Code Sidebar */}
           <CodeSidebar
-            settings={settings.source}
+            pendingCode={pendingCode}
+            setPendingCode={setPendingCode}
             updateSettings={(changes) => updateSettings('source', changes)}
             isOpen={showCodeSidebar}
           />
