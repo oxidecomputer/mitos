@@ -60,6 +60,7 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
     showUnderlyingImage: false,
     columns: 80,
     rows: 40,
+    useImageAspectRatio: false,
     colorMapping: 'brightness',
   },
   animation: {
