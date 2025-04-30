@@ -815,6 +815,7 @@ export function AsciiArtGenerator() {
                 height: settings.output.rows,
               }}
               disabled={!program}
+              exportSettings={settings.export}
             />
 
             <hr />

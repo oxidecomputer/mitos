@@ -35,6 +35,11 @@ interface AssetExportProps {
   dimensions: { width: number; height: number }
   gridType?: 'none' | 'horizontal' | 'vertical' | 'both'
   disabled: boolean
+  exportSettings: {
+    textColor: string
+    backgroundColor: string
+    padding: number
+  }
 }
 
 export function AssetExport({
@@ -46,6 +51,7 @@ export function AssetExport({
   setIsExporting,
   dimensions,
   disabled,
+  exportSettings,
 }: AssetExportProps) {
   const [exportFormat, setExportFormat] = useState<ExportFormat>(
     sourceType === 'code' ? 'frames' : 'png',
@@ -205,6 +211,7 @@ export function AssetExport({
       const fontSize = 12
       const cellHeight = fontSize * 1.2
       const svgHeight = height * cellHeight
+      const paddedSvgHeight = svgHeight + exportSettings.padding * 2
 
       const testSpan = document.createElement('span')
       testSpan.innerText = 'X'.repeat(10)
@@ -218,14 +225,15 @@ export function AssetExport({
 
       const measuredCellWidth = actualCharWidth
       const svgWidth = width * measuredCellWidth
+      const paddedSvgWidth = svgWidth + exportSettings.padding * 2
 
-      let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">\n`
+      let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${paddedSvgWidth}" height="${paddedSvgHeight}" viewBox="0 0 ${paddedSvgWidth} ${paddedSvgHeight}">\n`
       svgContent += '  <style>\n'
       svgContent += `    .ascii-text { font-family: GT America Mono, monospace; font-size: ${fontSize}px; letter-spacing: 0; white-space: pre; }\n`
       svgContent +=
         '    .grid-line { stroke: #666666; stroke-width: 0.5; stroke-opacity: 0.5; }\n'
       svgContent += '  </style>\n'
-      svgContent += '  <rect width="100%" height="100%" fill="transparent"/>\n'
+      svgContent += `  <rect width="100%" height="100%" fill="${exportSettings.backgroundColor}"/>\n`
 
       const gridElement = document.querySelector('.grid-overlay')
       const gridType = gridElement?.getAttribute('data-grid-type') || 'none'
@@ -236,27 +244,27 @@ export function AssetExport({
 
         if (gridType === 'horizontal' || gridType === 'both') {
           for (let i = 1; i < height; i++) {
-            const y = i * cellHeight
-            svgContent += `    <line class="grid-line" x1="0" y1="${y}" x2="${svgWidth}" y2="${y}" />\n`
+            const y = i * cellHeight + exportSettings.padding
+            svgContent += `    <line class="grid-line" x1="${exportSettings.padding}" y1="${y}" x2="${svgWidth + exportSettings.padding}" y2="${y}" />\n`
           }
         }
 
         if (gridType === 'vertical' || gridType === 'both') {
           for (let i = 1; i < width; i++) {
-            const x = i * measuredCellWidth
-            svgContent += `    <line class="grid-line" x1="${x}" y1="0" x2="${x}" y2="${svgHeight}" />\n`
+            const x = i * measuredCellWidth + exportSettings.padding
+            svgContent += `    <line class="grid-line" x1="${x}" y1="${exportSettings.padding}" x2="${x}" y2="${svgHeight + exportSettings.padding}" />\n`
           }
         }
 
         svgContent += '  </g>\n'
       }
 
-      svgContent += `  <text x="0" y="${fontSize}" class="ascii-text">\n`
+      svgContent += `  <text x="${exportSettings.padding}" y="${exportSettings.padding + fontSize}" class="ascii-text">\n`
 
       formattedText.forEach((line, index) => {
         // Replace regular spaces with non-breaking spaces to preserve spacing
         const processedLine = line.replace(/ /g, '\u00A0') // Unicode non-breaking space
-        svgContent += `    <tspan x="0" dy="${index === 0 ? 0 : cellHeight}">${escapeXml(processedLine)}</tspan>\n`
+        svgContent += `    <tspan x="${exportSettings.padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}">${escapeXml(processedLine)}</tspan>\n`
       })
 
       svgContent += '  </text>\n'
