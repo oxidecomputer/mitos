@@ -48,10 +48,6 @@ export default function createRenderer() {
       if (lastChild) element.removeChild(lastChild)
     }
 
-    // Set default text color to black for white background
-    element.style.color = 'black'
-    element.style.backgroundColor = 'transparent'
-
     // A bit of a cumbersome render-loop…
     // A few notes: the fastest way I found to render the image
     // is by manually write the markup into the parent node via .innerHTML;

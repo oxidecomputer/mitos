@@ -31,6 +31,9 @@ interface AsciiPreviewProps {
   settings: {
     animationLength: number
     frameRate: number
+    textColor: string
+    backgroundColor: string
+    padding: number
   }
   animationController: AnimationController
   setAnimationController: (controller: AnimationController) => void
@@ -212,7 +215,9 @@ export function AsciiPreview({
         <div
           className="duration-50 relative transform-gpu transition-transform ease-out"
           style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
+            transform: isExporting
+              ? 'none'
+              : `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
             transformOrigin: 'center center',
           }}
         >
@@ -235,10 +240,18 @@ export function AsciiPreview({
               maxFrames={settings.animationLength}
               animationController={animationController}
               setAnimationController={setAnimationController}
+              textColor={settings.textColor}
+              backgroundColor={settings.backgroundColor}
+              padding={settings.padding}
             />
 
             {gridType !== 'none' && program && (
-              <GridOverlay grid={gridType} cols={cols} rows={rows} />
+              <GridOverlay
+                grid={gridType}
+                cols={cols}
+                rows={rows}
+                padding={settings.padding}
+              />
             )}
           </div>
         </div>

@@ -31,8 +31,6 @@ export interface Settings {
   allowSelect: boolean
   restoreState: boolean
   renderer?: string
-  color?: string
-  backgroundColor?: string
   fontWeight?: string
   onFrameUpdate?: (frame: number) => void
   maxFrames?: number
@@ -68,9 +66,6 @@ interface Cursor {
 
 export interface Cell {
   char: string
-  color?: string
-  backgroundColor?: string
-  fontWeight?: string
 }
 
 export interface Coord {
@@ -224,13 +219,6 @@ export function createAnimation(
     // A cell with no value at all is just a space
     EMPTY_CELL = ' '
 
-    // Default cell style inserted in case of undefined / null
-    DEFAULT_CELL_STYLE = Object.freeze({
-      color: settings.color,
-      backgroundColor: settings.backgroundColor,
-      fontWeight: settings.fontWeight,
-    })
-
     // Buffer needed for the final DOM rendering,
     // each array entry represents a cell.
     buffer = []
@@ -311,7 +299,7 @@ export function createAnimation(
         // Set a reasonable upper limit
         buffer.length = newLength
         for (let i = 0; i < buffer.length; i++) {
-          buffer[i] = { ...DEFAULT_CELL_STYLE, char: EMPTY_CELL }
+          buffer[i] = { char: EMPTY_CELL }
         }
       } else {
         console.error(`Invalid buffer dimensions: ${context.cols} x ${context.rows}`)
@@ -321,7 +309,7 @@ export function createAnimation(
         const safeLength = cols * rows
         buffer.length = safeLength
         for (let i = 0; i < buffer.length; i++) {
-          buffer[i] = { ...DEFAULT_CELL_STYLE, char: EMPTY_CELL }
+          buffer[i] = { char: EMPTY_CELL }
         }
       }
     }

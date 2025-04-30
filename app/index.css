@@ -67,9 +67,6 @@
   pre {
     @apply font-mono;
   }
-  pre span {
-    @apply text-raise;
-  }
   .ui-switch label,
   .ui-number label,
   .ui-text label,

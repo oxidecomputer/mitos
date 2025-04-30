@@ -6,7 +6,7 @@
  * Copyright Oxide Computer Company
  */
 import { AsciiSettings } from './components/ascii-art-generator'
-import { predefinedCharacterSets } from './components/output-configuration'
+import { predefinedCharacterSets } from './components/output-options'
 
 export const DEFAULT_CODE = `/**
 @author ertdfgcvb
@@ -62,6 +62,11 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
     rows: 40,
     useImageAspectRatio: false,
     colorMapping: 'brightness',
+  },
+  export: {
+    textColor: '#d7d8d9',
+    backgroundColor: '#080f11',
+    padding: 12,
   },
   animation: {
     animationLength: 100,

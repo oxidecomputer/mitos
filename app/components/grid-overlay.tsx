@@ -13,9 +13,10 @@ interface GridOverlayProps {
   grid: GridType
   cols: number
   rows: number
+  padding: number
 }
 
-export function GridOverlay({ grid, cols, rows }: GridOverlayProps) {
+export function GridOverlay({ grid, cols, rows, padding }: GridOverlayProps) {
   const gridRef = useRef<HTMLDivElement>(null)
 
   const viewBoxSize = 1000
@@ -43,8 +44,9 @@ export function GridOverlay({ grid, cols, rows }: GridOverlayProps) {
   return (
     <div
       ref={gridRef}
-      className="grid-overlay pointer-events-none absolute inset-0 z-10 text-quaternary"
+      className="grid-overlay pointer-events-none absolute z-10 text-white"
       data-grid-type={grid}
+      style={{ left: padding, right: padding, bottom: padding, top: padding }}
     >
       <svg
         width="100%"
@@ -55,6 +57,7 @@ export function GridOverlay({ grid, cols, rows }: GridOverlayProps) {
           position: 'absolute',
           top: 0,
           left: 0,
+          opacity: 0.4,
         }}
         preserveAspectRatio="none"
       >
