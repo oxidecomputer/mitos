@@ -81,7 +81,6 @@ export default function createRenderer() {
       if (rowNeedsUpdate === false) continue
 
       let html = '' // Accumulates the markup
-      let prevCell = { char: '' } // defaultCell
       let tagIsOpen = false
 
       for (let i = 0; i < cols; i++) {
@@ -90,30 +89,7 @@ export default function createRenderer() {
 
         const currCell = buffer[idx]
 
-        // If there is a change in style a new span has to be inserted
-        if (!isSameCellStyle(currCell, prevCell)) {
-          // Close the previous tag
-          if (tagIsOpen) html += '</span>'
-
-          const c = currCell.color === context.settings.color ? null : currCell.color
-          const b =
-            currCell.backgroundColor === context.settings.backgroundColor
-              ? null
-              : currCell.backgroundColor
-          const w =
-            currCell.fontWeight === context.settings.fontWeight ? null : currCell.fontWeight
-
-          // Accumulate the CSS inline attribute.
-          let css = ''
-          if (c) css += 'color:' + c + ';'
-          if (b) css += 'background:' + b + ';'
-          if (w) css += 'font-weight:' + w + ';'
-          if (css) css = ' style="' + css + '"'
-          html += '<span' + css + '>'
-          tagIsOpen = true
-        }
         html += currCell.char || ' '
-        prevCell = currCell
       }
       if (tagIsOpen) {
         html += '</span>'
@@ -132,16 +108,6 @@ export default function createRenderer() {
     if (typeof cellA !== 'object') return false
     if (typeof cellB !== 'object') return false
     if (cellA?.char !== cellB?.char) return false
-    if (cellA?.fontWeight !== cellB?.fontWeight) return false
-    if (cellA?.color !== cellB?.color) return false
-    if (cellA?.backgroundColor !== cellB?.backgroundColor) return false
-    return true
-  }
-
-  function isSameCellStyle(cellA: Cell, cellB: Cell): boolean {
-    if (cellA?.fontWeight !== cellB?.fontWeight) return false
-    if (cellA?.color !== cellB?.color) return false
-    if (cellA?.backgroundColor !== cellB?.backgroundColor) return false
     return true
   }
 

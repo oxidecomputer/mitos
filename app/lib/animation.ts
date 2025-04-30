@@ -154,7 +154,6 @@ export function createAnimation(
   const renderer = createRenderer()
   const fps: FPSType = new FPS()
   let EMPTY_CELL: string
-  let DEFAULT_CELL_STYLE: Readonly<Partial<Cell>>
 
   createPointer()
   prepareFonts()

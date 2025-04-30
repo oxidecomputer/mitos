@@ -20,9 +20,6 @@ export interface Data {
 
 export const emptyCell: Cell = {
   char: ' ',
-  color: '#000000', // Default to black text for visibility on white background
-  backgroundColor: undefined,
-  fontWeight: undefined,
 }
 
 export const renderFromData = (data: Data, coord: Coord): Cell => {
@@ -35,9 +32,6 @@ export const renderFromData = (data: Data, coord: Coord): Cell => {
   if (cell) {
     return {
       char: cell.char || ' ',
-      color: cell.color || '#000000', // Default to black if not specified
-      backgroundColor: cell.backgroundColor,
-      fontWeight: cell.fontWeight,
     }
   } else {
     return emptyCell

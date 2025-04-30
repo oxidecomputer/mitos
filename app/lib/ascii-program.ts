@@ -24,8 +24,6 @@ export async function createImageAsciiProgram(
       fps: frameRate,
       cols: w,
       rows: h,
-      color: '#000000',
-      backgroundColor: '#ffffff',
     },
 
     boot: (_context, _buffer, userData) => {
@@ -102,8 +100,6 @@ export async function createCodeAsciiProgram(
       fps: frameRate,
       cols: w,
       rows: h,
-      color: '#000000',
-      backgroundColor: '#ffffff',
     },
 
     boot: (_context, _buffer, userData) => {
