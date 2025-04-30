@@ -11,9 +11,10 @@ import * as R from 'remeda'
 import { toast } from 'sonner'
 
 import { AsciiPreview, type AnimationController } from '~/components/ascii-preview'
+import { AssetExport } from '~/components/asset-export'
 import { ExportOptions } from '~/components/export-options'
-import { OutputConfiguration } from '~/components/output-configuration'
-import { PreprocessingControls } from '~/components/preprocessing-controls'
+import { OutputOptions } from '~/components/output-options'
+import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
 import type { Data, Program } from '~/lib/animation'
 import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-program'
@@ -63,6 +64,11 @@ export interface AsciiSettings {
     aspectRatio?: number
     useImageAspectRatio: boolean
     colorMapping: ColorMappingType
+  }
+  export: {
+    textColor: string
+    backgroundColor: string
+    padding: number
   }
   animation: {
     animationLength: number
@@ -756,7 +762,7 @@ export function AsciiArtGenerator() {
             {/* Preprocessing (for non-code sources) */}
             {settings.source.type !== 'code' && (
               <>
-                <PreprocessingControls
+                <PreprocessingOptions
                   settings={settings.preprocessing}
                   updateSettings={(changes) => updateSettings('preprocessing', changes)}
                 />
@@ -764,8 +770,8 @@ export function AsciiArtGenerator() {
               </>
             )}
 
-            {/* Output Configuration */}
-            <OutputConfiguration
+            {/* Output Options */}
+            <OutputOptions
               settings={settings.output}
               updateSettings={(changes) => updateSettings('output', changes)}
               sourceType={settings.source.type}
@@ -790,6 +796,14 @@ export function AsciiArtGenerator() {
 
             {/* Export Options */}
             <ExportOptions
+              settings={settings.export}
+              updateSettings={(changes) => updateSettings('export', changes)}
+            />
+
+            <hr />
+
+            {/* Asset Export */}
+            <AssetExport
               program={program}
               sourceType={settings.source.type}
               animationController={animationController}
@@ -801,6 +815,7 @@ export function AsciiArtGenerator() {
                 height: settings.output.rows,
               }}
               disabled={!program}
+              exportSettings={settings.export}
             />
 
             <hr />
@@ -854,7 +869,7 @@ export function AsciiArtGenerator() {
               gridType={settings.output.grid}
               showUnderlyingImage={settings.output.showUnderlyingImage}
               underlyingImageUrl={processedImageUrl || settings.source.data}
-              settings={settings.animation}
+              settings={{ ...settings.animation, ...settings.export }}
               animationController={animationController}
               setAnimationController={setAnimationController}
               isExporting={isExporting}

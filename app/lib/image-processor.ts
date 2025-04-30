@@ -147,7 +147,6 @@ function createFallbackResponse(settings: AsciiSettings): ProcessingResult {
     for (let y = 0; y < height; y++) {
       data[x][y] = {
         char: '?',
-        color: '#000000',
       }
     }
   }
@@ -324,7 +323,6 @@ function convertPixelsToAscii(
 
       data[x][y] = {
         char,
-        color: '#000000',
       }
     }
   }

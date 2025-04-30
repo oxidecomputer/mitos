@@ -27,9 +27,10 @@
 .ui-text {
   font-size: var(--mt-font-size-base);
   font-family: var(--mt-font-base);
-  gap: var(----mt-font-size-base);
   display: flex;
   flex-direction: column;
+  align-items: start;
+  gap: var(--mt-spacing-xs);
 }
 
 .ui-text label {

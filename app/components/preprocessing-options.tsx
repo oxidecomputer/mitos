@@ -12,7 +12,7 @@ import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
 import { Container } from './container'
 
-interface PreprocessingControlsProps {
+interface PreprocessingOptionsProps {
   settings: {
     brightness: number
     whitePoint: number
@@ -35,10 +35,10 @@ interface PreprocessingControlsProps {
   ) => void
 }
 
-export function PreprocessingControls({
+export function PreprocessingOptions({
   settings,
   updateSettings,
-}: PreprocessingControlsProps) {
+}: PreprocessingOptionsProps) {
   return (
     <Container>
       <InputNumber

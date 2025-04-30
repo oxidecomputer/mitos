@@ -15,7 +15,7 @@ import type { ColorMappingType, GridType, SourceType } from './ascii-art-generat
 import { AspectRatioInputNumber } from './aspect-ratio-input-number'
 import { Container } from './container'
 
-interface OutputConfigurationProps {
+interface OutputOptionsProps {
   settings: {
     characterSet: string
     grid: GridType
@@ -73,12 +73,12 @@ const gridOptions: GridType[] = ['none', 'horizontal', 'vertical', 'both']
 
 const colorMappingOptions: ColorMappingType[] = ['brightness', 'hue', 'saturation']
 
-export function OutputConfiguration({
+export function OutputOptions({
   settings,
   updateSettings,
   sourceType,
   sourceImageDimensions,
-}: OutputConfigurationProps) {
+}: OutputOptionsProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
 
   const handleCharacterSetChange = (value: string) => {
