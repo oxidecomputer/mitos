@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 import { createAnimation, type Program } from '~/lib/animation'
 
@@ -20,6 +20,7 @@ export default function AsciiAnimation({
   textColor,
   backgroundColor,
   padding,
+  children,
 }: {
   program: Program
   onFrameUpdate?: (frame: number) => void
@@ -29,6 +30,7 @@ export default function AsciiAnimation({
   textColor: string
   backgroundColor: string
   padding: number
+  children: ReactNode
 }) {
   const asciiEl = useRef<HTMLPreElement>(null)
   const controllerRef = useRef(animationController)
@@ -116,13 +118,14 @@ export default function AsciiAnimation({
     >
       <pre
         ref={asciiEl}
-        className="pointer-events-none relative m-0 select-none whitespace-pre p-0 font-mono leading-[1.2]"
+        className="z-1 pointer-events-none relative m-0 select-none whitespace-pre p-0 font-mono leading-[1.2]"
         style={{
           fontFamily: '"GT America Mono",monospace',
           fontSize: '12px',
           color: textColor,
         }}
       />
+      {children}
     </div>
   )
 }
