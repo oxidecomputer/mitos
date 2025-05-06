@@ -221,17 +221,6 @@ export function AsciiPreview({
             transformOrigin: 'center center',
           }}
         >
-          {/* Show underlying image if enabled */}
-          {showUnderlyingImage && underlyingImageUrl && program && (
-            <div className="absolute inset-0 z-0">
-              <img
-                src={underlyingImageUrl || '/placeholder.svg'}
-                alt="Source image"
-                className="h-full w-full object-fill [image-rendering:pixelated]"
-              />
-            </div>
-          )}
-
           {/* ASCII animation */}
           <div className="relative z-20 [font-size:0px]">
             <AsciiAnimation
@@ -243,7 +232,18 @@ export function AsciiPreview({
               textColor={settings.textColor}
               backgroundColor={settings.backgroundColor}
               padding={settings.padding}
-            />
+            >
+              {/* Show underlying image if enabled */}
+              {showUnderlyingImage && underlyingImageUrl && !isExporting && program && (
+                <div className="absolute inset-0 z-0">
+                  <img
+                    src={underlyingImageUrl}
+                    alt="Source image"
+                    className="h-full w-full object-fill [image-rendering:pixelated]"
+                  />
+                </div>
+              )}
+            </AsciiAnimation>
 
             {gridType !== 'none' && program && (
               <GridOverlay
