@@ -38,7 +38,15 @@ export const predefinedColorSets = {
   purple: ['#be95eb', '#382d43'],
 }
 
-const characterSets: ColorSet[] = ['default', 'green', 'yellow', 'red', 'blue', 'purple']
+const characterSets: ColorSet[] = [
+  'default',
+  'green',
+  'yellow',
+  'red',
+  'blue',
+  'purple',
+  'custom',
+]
 
 type ColorSet = keyof typeof predefinedColorSets | 'custom'
 
@@ -50,8 +58,15 @@ export function ExportOptions({ settings, updateSettings }: ExportOptionsProps) 
     setSelectedColorSet(value)
     if (value === 'custom') return
 
-    const [textColor, backgroundColor] =
+    let [textColor, backgroundColor] =
       predefinedColorSets[value as keyof typeof predefinedColorSets]
+
+    if (flipped) {
+      const temp = textColor
+      textColor = backgroundColor
+      backgroundColor = temp
+    }
+
     updateSettings({
       textColor,
       backgroundColor,
@@ -68,10 +83,18 @@ export function ExportOptions({ settings, updateSettings }: ExportOptionsProps) 
 
   const handleFlipColors = (checked: boolean) => {
     setFlipped(checked)
+
+    const newTextColor = settings.backgroundColor
+    const newBackgroundColor = settings.textColor
+
     updateSettings({
-      textColor: settings.backgroundColor,
-      backgroundColor: settings.textColor,
+      textColor: newTextColor,
+      backgroundColor: newBackgroundColor,
     })
+
+    if (selectedColorSet !== 'custom') {
+      setSelectedColorSet(selectedColorSet)
+    }
   }
 
   return (
