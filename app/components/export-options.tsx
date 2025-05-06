@@ -84,12 +84,9 @@ export function ExportOptions({ settings, updateSettings }: ExportOptionsProps) 
   const handleFlipColors = (checked: boolean) => {
     setFlipped(checked)
 
-    const newTextColor = settings.backgroundColor
-    const newBackgroundColor = settings.textColor
-
     updateSettings({
-      textColor: newTextColor,
-      backgroundColor: newBackgroundColor,
+      textColor: settings.textColor,
+      backgroundColor: settings.backgroundColor,
     })
 
     if (selectedColorSet !== 'custom') {
