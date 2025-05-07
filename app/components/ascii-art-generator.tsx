@@ -96,6 +96,29 @@ export function AsciiArtGenerator() {
   const lastProcessedSettings = useRef<AsciiSettings | null>(null)
   const isInitialMount = useRef(true)
 
+  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    // Trigger the warning dialog when the user closes or navigates the tab
+    event.preventDefault()
+  }
+
+  useEffect(() => {
+    // Check if the user has loaded some media or modified the code
+    const isSourceDirty =
+      (settings.source.type !== 'code' && settings.source.data !== null) ||
+      pendingCode !== DEFAULT_SETTINGS.source.code
+
+    if (isSourceDirty) {
+      window.addEventListener('beforeunload', handleBeforeUnload)
+    } else {
+      // Remove when not needed to minimize the effect on performance
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [settings, pendingCode])
+
   useEffect(() => {
     // Skip processing on initial mount
     if (isInitialMount.current) {
