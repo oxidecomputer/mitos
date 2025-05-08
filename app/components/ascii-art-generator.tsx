@@ -109,9 +109,6 @@ export function AsciiArtGenerator() {
 
     if (isSourceDirty) {
       window.addEventListener('beforeunload', handleBeforeUnload)
-    } else {
-      // Remove when not needed to minimize the effect on performance
-      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
 
     return () => {
