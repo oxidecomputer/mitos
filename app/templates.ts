@@ -91,7 +91,7 @@ export const TEMPLATES = {
   numbers: {
     ...DEFAULT_SETTINGS,
     source: { type: 'code', data: null, code: numbers },
-    output: { ...DEFAULT_SETTINGS, columns: 88, rows: 9, grid: 'both' },
+    output: { ...DEFAULT_SETTINGS, columns: 98, rows: 9, grid: 'both' },
     animation: {
       animationLength: 1,
       frameRate: 1,
