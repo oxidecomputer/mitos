@@ -12,23 +12,21 @@ import { numbers } from './scripts/numbers'
 
 export const DEFAULT_CODE = `/**
 @author ertdfgcvb
-@url https://play.ertdfgcvb.xyz/#/src/basics/coordinates_xy
+@url https://play.ertdfgcvb.xyz/#/src/basics/time_milliseconds
 */
 
-const density = 'Ñ@#W$9876543210?!abc;:+=-,._ ';
+const pattern = 'ABCxyz01═|+:. '; //~ text
+const speed = 1; //~ number 0-10 step=0.5
+const amplitude = 18; //~ number 1-50
 
 // Renders each cell
 function main(coord, context, cursor, buffer) {
-  // To generate output, return a single character
-  // or an object with a "char" field, for example {char: 'x'}
-  const {cols, frame} = context;
-  const {x, y} = coord;
-
-  // Calculate an index into the density string
-  const sign = y % 2 * 2 - 1;
-  const index = (cols + y + x * sign + frame) % density.length;
-
-  return density[index];
+  const t = context.time * 0.0001 * speed
+  const x = coord.x
+  const y = coord.y
+  const o = Math.sin(y * Math.sin(t) * 0.2 + x * 0.04 + t) * amplitude
+  const i = Math.round(Math.abs(x + y + o)) % pattern.length
+  return pattern[i]
 }
 
 // Optional: Runs once at startup
@@ -81,6 +79,7 @@ export const TEMPLATES = {
   custom: { ...DEFAULT_SETTINGS, meta: { name: 'Custom Project' } },
   clock: {
     ...DEFAULT_SETTINGS,
+    meta: { name: 'Clock' },
     source: { type: 'code', data: null, code: clock },
     output: { ...DEFAULT_SETTINGS, columns: 61, rows: 9, grid: 'both' },
     animation: {
@@ -90,6 +89,7 @@ export const TEMPLATES = {
   },
   numbers: {
     ...DEFAULT_SETTINGS,
+    meta: { name: 'Numbers' },
     source: { type: 'code', data: null, code: numbers },
     output: { ...DEFAULT_SETTINGS, columns: 98, rows: 9, grid: 'both' },
     animation: {
