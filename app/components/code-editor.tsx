@@ -119,7 +119,7 @@ const highlightStyle = HighlightStyle.define([
 
 const theme = EditorView.theme({
   '.cm-content': {
-    paddingTop: '56px',
+    paddingTop: '16px',
     paddingBottom: '44px',
     caretColor: oxideDark.cursor,
   },
@@ -127,7 +127,7 @@ const theme = EditorView.theme({
     backgroundColor: 'var(--base-neutral-300)',
   },
   '&': {
-    height: '100vh',
+    height: '100%',
     fontSize: '12px',
     backgroundColor: oxideDark.background,
     color: oxideDark.foreground,
@@ -197,6 +197,7 @@ export default function CodeEditor({ value, onChange, editorViewRef }: CodeEdito
         indentOnInput: true,
         history: true,
       }}
+      className="h-full flex-grow"
       onCreateEditor={(view) => {
         if (editorViewRef) {
           editorViewRef.current = view

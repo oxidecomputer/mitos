@@ -47,7 +47,7 @@ export function ProjectManagement({
       if (onCodeProjectLoaded && TEMPLATES[template].source.code) {
         onCodeProjectLoaded(TEMPLATES[template].source.code)
       }
-      toast(`Applied ${TEMPLATES[template].meta.name} template`)
+      toast(`Applied "${TEMPLATES[template].meta.name}" template`)
     }
   }
 

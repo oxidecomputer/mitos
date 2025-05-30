@@ -6,7 +6,10 @@
  * Copyright Oxide Computer Company
  */
 
-export const numbers = `// Pixel font definition - each number as 9 rows, 8 columns
+export const numbers = `// What is rendered
+const string = '1234567890' //~ text
+
+// Pixel font definition - each number as 9 rows, 8 columns
 const pixelFont = [
   [
     ' 111111 ',
@@ -119,9 +122,6 @@ const pixelFont = [
     ' 111111 ',
   ],
 ]
-
-// What is rendered
-const string = '1234567890'
 
 // Font dimensions and scaling
 const FONT_WIDTH = 8
