@@ -7,6 +7,8 @@
  */
 import { AsciiSettings } from './components/ascii-art-generator'
 import { predefinedCharacterSets } from './components/output-options'
+import { clock } from './scripts/clock'
+import { numbers } from './scripts/numbers'
 
 export const DEFAULT_CODE = `/**
 @author ertdfgcvb
@@ -77,6 +79,24 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
 export const TEMPLATES = {
   default: DEFAULT_SETTINGS,
   custom: { ...DEFAULT_SETTINGS, meta: { name: 'Custom Project' } },
+  clock: {
+    ...DEFAULT_SETTINGS,
+    source: { type: 'code', data: null, code: clock },
+    output: { ...DEFAULT_SETTINGS, columns: 61, rows: 9, grid: 'both' },
+    animation: {
+      animationLength: 900,
+      frameRate: 15,
+    },
+  },
+  numbers: {
+    ...DEFAULT_SETTINGS,
+    source: { type: 'code', data: null, code: numbers },
+    output: { ...DEFAULT_SETTINGS, columns: 88, rows: 9, grid: 'both' },
+    animation: {
+      animationLength: 1,
+      frameRate: 1,
+    },
+  },
 }
 
 export type TemplateType = keyof typeof TEMPLATES

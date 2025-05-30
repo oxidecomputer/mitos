@@ -256,7 +256,7 @@ export function AsciiPreview({
           </div>
         </div>
       </div>
-      {(sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') && (
+      {(sourceType === 'code' || sourceType === 'gif') && settings.animationLength > 1 && (
         <FrameSlider
           frame={frame}
           totalFrames={settings.animationLength}

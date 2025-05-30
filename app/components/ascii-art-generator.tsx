@@ -32,7 +32,7 @@ import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
 import { ProjectManagement } from './project-management'
 
-export type SourceType = 'image' | 'code' | 'gif' | 'video'
+export type SourceType = 'image' | 'code' | 'gif'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
 export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
 
@@ -849,6 +849,7 @@ export function AsciiArtGenerator() {
               settings={settings}
               setSettings={setSettings}
               handleLoadProjectInput={handleLoadProjectInput}
+              onCodeProjectLoaded={(code) => setPendingCode(code)}
             />
           </div>
           <div className="flex grow items-end p-3 pb-2">

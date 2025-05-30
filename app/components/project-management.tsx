@@ -36,15 +36,17 @@ export function ProjectManagement({
   settings,
   setSettings,
   handleLoadProjectInput,
+  onCodeProjectLoaded,
 }: ProjectManagementProps) {
   const handleTemplateChange = (template: TemplateType) => {
     setTemplateType(template)
 
     if (template !== 'custom' && TEMPLATES[template]) {
-      // Apply template settings
       setSettings(TEMPLATES[template] as AsciiSettings)
-      // Update project name
       setProjectName(TEMPLATES[template].meta.name)
+      if (onCodeProjectLoaded && TEMPLATES[template].source.code) {
+        onCodeProjectLoaded(TEMPLATES[template].source.code)
+      }
       toast(`Applied ${TEMPLATES[template].meta.name} template`)
     }
   }
