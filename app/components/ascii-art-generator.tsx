@@ -185,7 +185,6 @@ export function AsciiArtGenerator() {
           }
           break
         case 'gif':
-        case 'video':
           if (source.data) {
             await processAnimatedSource(source.type, source.data, columns, rows, settings)
           }
@@ -225,7 +224,7 @@ export function AsciiArtGenerator() {
   }
 
   const processAnimatedSource = async (
-    sourceType: 'gif' | 'video',
+    sourceType: 'gif',
     sourceData: string,
     columns: number,
     rows: number,
@@ -799,9 +798,7 @@ export function AsciiArtGenerator() {
             />
 
             {/* Animation Options (for animated content) */}
-            {(settings.source.type === 'code' ||
-              settings.source.type === 'gif' ||
-              settings.source.type === 'video') && (
+            {(settings.source.type === 'code' || settings.source.type === 'gif') && (
               <>
                 <hr />
                 <AnimationOptions

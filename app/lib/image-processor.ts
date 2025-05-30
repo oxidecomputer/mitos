@@ -11,7 +11,7 @@ import type { Data } from './types'
 
 // Types
 export interface CachedMediaData {
-  type: 'gif' | 'video'
+  type: 'gif'
   sourceUrl: string
   rawFrames: MediaFrame[]
   processedFrames?: {

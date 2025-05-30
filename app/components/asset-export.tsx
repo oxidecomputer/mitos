@@ -123,8 +123,7 @@ export function AssetExport({
 
   useEffect(() => {
     const isAnimated =
-      (sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') &&
-      animationLength > 1
+      (sourceType === 'code' || sourceType === 'gif') && animationLength > 1
 
     if (isAnimated) {
       setExportFormat('frames')
@@ -138,8 +137,7 @@ export function AssetExport({
     if (!program) return
 
     const isAnimated =
-      (sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') &&
-      animationController
+      (sourceType === 'code' || sourceType === 'gif') && animationController
     const totalFrames = isAnimated ? animationLength : 1
     try {
       setIsExporting(true)
@@ -526,8 +524,7 @@ export function AssetExport({
           setExportFormat(value as ExportFormat)
         }}
         options={
-          (sourceType === 'code' || sourceType === 'gif' || sourceType === 'video') &&
-          animationLength > 1
+          (sourceType === 'code' || sourceType === 'gif') && animationLength > 1
             ? (['mp4', 'gif', 'frames'] as ExportFormat[])
             : (['svg', 'png'] as ExportFormat[])
         }
@@ -574,7 +571,7 @@ export function AssetExport({
         >
           {exportFormat === 'mp4' || exportFormat === 'gif'
             ? `Export as ${exportFormat.toUpperCase()}`
-            : sourceType === 'code' || sourceType === 'gif' || sourceType === 'video'
+            : sourceType === 'code' || sourceType === 'gif'
               ? `Export ${exportFormat === 'frames' ? 'Frames' : 'Frame'}`
               : 'Export Image'}
         </InputButton>
