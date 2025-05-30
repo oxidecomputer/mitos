@@ -153,10 +153,6 @@ export function OutputOptions({
           }
         }}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
-        minWidth={20}
-        maxWidth={240}
-        minHeight={10}
-        maxHeight={120}
         sourceType={sourceType}
       />
 

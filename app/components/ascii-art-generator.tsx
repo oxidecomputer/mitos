@@ -32,7 +32,7 @@ import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
 import { ProjectManagement } from './project-management'
 
-export type SourceType = 'image' | 'code' | 'gif' | 'video'
+export type SourceType = 'image' | 'code' | 'gif'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
 export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
 
@@ -185,7 +185,6 @@ export function AsciiArtGenerator() {
           }
           break
         case 'gif':
-        case 'video':
           if (source.data) {
             await processAnimatedSource(source.type, source.data, columns, rows, settings)
           }
@@ -225,7 +224,7 @@ export function AsciiArtGenerator() {
   }
 
   const processAnimatedSource = async (
-    sourceType: 'gif' | 'video',
+    sourceType: 'gif',
     sourceData: string,
     columns: number,
     rows: number,
@@ -799,9 +798,7 @@ export function AsciiArtGenerator() {
             />
 
             {/* Animation Options (for animated content) */}
-            {(settings.source.type === 'code' ||
-              settings.source.type === 'gif' ||
-              settings.source.type === 'video') && (
+            {(settings.source.type === 'code' || settings.source.type === 'gif') && (
               <>
                 <hr />
                 <AnimationOptions
@@ -849,6 +846,7 @@ export function AsciiArtGenerator() {
               settings={settings}
               setSettings={setSettings}
               handleLoadProjectInput={handleLoadProjectInput}
+              onCodeProjectLoaded={(code) => setPendingCode(code)}
             />
           </div>
           <div className="flex grow items-end p-3 pb-2">

@@ -29,7 +29,7 @@ export function AnimationOptions({
   updateSettings,
   sourceType = 'code',
 }: AnimationOptionsProps) {
-  const isMediaSource = sourceType === 'gif' || sourceType === 'video'
+  const isMediaSource = sourceType === 'gif'
 
   return (
     <Container>

@@ -50,14 +50,15 @@ export const AspectRatioInputNumber = ({
   onAspectRatioFromImgChange,
   aspectRatio,
   onAspectRatioChange,
-  minWidth = 20,
-  maxWidth = 240,
-  minHeight = 10,
-  maxHeight = 120,
   disabled = false,
   sourceType,
 }: AspectRatioInputNumberProps) => {
   const [isLocked, setIsLocked] = useState(aspectRatio !== undefined)
+
+  const minWidth = 8
+  const maxWidth = 240
+  const minHeight = 4
+  const maxHeight = 120
 
   // Calculate valid min/max dimension ranges when aspect ratio is locked
   const dimensionRanges = useCallback(() => {
