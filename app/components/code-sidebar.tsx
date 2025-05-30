@@ -163,7 +163,6 @@ export function CodeSidebar({
     if (!control) return
 
     const lines = pendingCode.split('\n')
-    const line = lines[control.line]
 
     // Format the new value based on type
     let formattedValue: string
