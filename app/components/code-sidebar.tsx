@@ -175,17 +175,25 @@ export function CodeSidebar({
       formattedValue = `'${newValue}'`
     }
 
-    // Replace the value in the line
-    const newLine =
-      line.substring(0, control.startPos) + formattedValue + line.substring(control.endPos)
+    // Calculate the exact character positions in the document
+    const lineStart = lines
+      .slice(0, control.line)
+      .reduce((acc, line) => acc + line.length + 1, 0)
+    const changeStart = lineStart + control.startPos
+    const changeEnd = lineStart + control.endPos
 
-    lines[control.line] = newLine
-    const newCode = lines.join('\n')
-    setPendingCode(newCode)
+    // Only update the specific value, not the entire document
+    // If we update the whole document with `setPendingCode`
+    // we get a scroll jump
+    if (editorViewRef.current) {
+      const transaction = editorViewRef.current.state.update({
+        changes: { from: changeStart, to: changeEnd, insert: formattedValue },
+      })
+      editorViewRef.current.dispatch(transaction)
 
-    // Auto-run if enabled
-    if (autoRun) {
-      updateSettings({ data: null, code: newCode, type: 'code' })
+      if (autoRun) {
+        updateSettings({ data: null, code: transaction.state.doc.toString(), type: 'code' })
+      }
     }
   }
 
