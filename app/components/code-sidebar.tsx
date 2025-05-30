@@ -300,11 +300,12 @@ export function CodeSidebar({
               className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase text-secondary hover:bg-hover"
             >
               Controls
-              <button className="-m-1 px-1 text-quaternary hover:bg-hover">
-                <DirectionDownIcon
-                  className={cn('transition-transform', controlsOpen ? '' : 'rotate-180')}
-                />
-              </button>
+              <DirectionDownIcon
+                className={cn(
+                  'transition-transform text-quaternary',
+                  controlsOpen ? '' : 'rotate-180',
+                )}
+              />
             </button>
             {controlsOpen && (
               <>
