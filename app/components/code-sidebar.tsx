@@ -308,7 +308,7 @@ export function CodeSidebar({
             </LinkButton>
           </div>
 
-          <div className="flex-1 overflow-scroll">
+          <div className="flex-1 overflow-auto">
             <CodeEditor
               value={pendingCode}
               onChange={handleCodeChange}
