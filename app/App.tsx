@@ -18,7 +18,8 @@ function App() {
           className: '!bg-raise !rounded-md !elevation-2 !border-default !text-default',
         }}
         offset={12}
-        position="top-right"
+        position="top-center"
+        duration={2000}
       />
     </main>
   )

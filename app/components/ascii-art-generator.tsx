@@ -6,6 +6,7 @@
  * Copyright Oxide Computer Company
  */
 import { decompressFrames, ParsedFrame, ParsedGif, parseGIF } from 'gifuct-js'
+import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as R from 'remeda'
 import { toast } from 'sonner'
@@ -92,6 +93,7 @@ export function AsciiArtGenerator() {
   const [_isProcessing, setIsProcessing] = useState(false)
   const [cachedMedia, setCachedMedia] = useState<CachedMediaData | null>(null)
   const [showCodeSidebar, setShowCodeSidebar] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(true)
 
   const lastProcessedSettings = useRef<AsciiSettings | null>(null)
   const isInitialMount = useRef(true)
@@ -768,99 +770,150 @@ export function AsciiArtGenerator() {
       onDrop={handleDrop}
     >
       {/* Sidebar */}
-      <div className="left-0 top-0 flex h-full w-64 transform flex-col overflow-hidden border-r bg-raise border-default">
-        {/* Source Selection Tabs */}
-        <SourceSelector
-          settings={settings.source}
-          showCodeSidebar={showCodeSidebar}
-          setShowCodeSidebar={setShowCodeSidebar}
-          processFile={processFile}
-        />
-        <div className="flex grow flex-col justify-between overflow-auto">
-          <div className="space-y-6 py-4">
-            {/* Preprocessing (for non-code sources) */}
-            {settings.source.type !== 'code' && (
-              <>
-                <PreprocessingOptions
-                  settings={settings.preprocessing}
-                  updateSettings={(changes) => updateSettings('preprocessing', changes)}
-                />
-                <hr />
-              </>
-            )}
-
-            {/* Output Options */}
-            <OutputOptions
-              settings={settings.output}
-              updateSettings={(changes) => updateSettings('output', changes)}
-              sourceType={settings.source.type}
-              sourceImageDimensions={settings.source.imageDimensions}
-            />
-
-            {/* Animation Options (for animated content) */}
-            {(settings.source.type === 'code' || settings.source.type === 'gif') && (
-              <>
-                <hr />
-                <AnimationOptions
-                  settings={settings.animation}
-                  updateSettings={(changes) => updateSettings('animation', changes)}
-                  sourceType={settings.source.type}
-                />
-              </>
-            )}
-
-            <hr />
-
-            {/* Export Options */}
-            <ExportOptions
-              settings={settings.export}
-              updateSettings={(changes) => updateSettings('export', changes)}
-            />
-
-            <hr />
-
-            {/* Asset Export */}
-            <AssetExport
-              program={program}
-              sourceType={settings.source.type}
-              animationController={animationController}
-              animationLength={settings.animation.animationLength}
-              isExporting={isExporting}
-              setIsExporting={setIsExporting}
-              dimensions={{
-                width: settings.output.columns,
-                height: settings.output.rows,
-              }}
-              disabled={!program}
-              exportSettings={settings.export}
-            />
-
-            <hr />
-
-            {/* Project Management */}
-            <ProjectManagement
-              projectName={projectName}
-              setProjectName={setProjectName}
-              templateType={templateType}
-              setTemplateType={setTemplateType}
-              settings={settings}
-              setSettings={setSettings}
-              handleLoadProjectInput={handleLoadProjectInput}
-              onCodeProjectLoaded={(code) => setPendingCode(code)}
-            />
+      <motion.div
+        initial={false}
+        animate={{ width: showSidebar ? 256 : 0 }}
+        transition={{ type: 'spring', duration: 0.5, bounce: 0 }}
+        className="left-0 top-0 transform overflow-hidden border-r bg-raise border-default"
+        style={{ minWidth: 0 }}
+      >
+        <motion.div
+          animate={{ opacity: showSidebar ? 1 : 0 }}
+          transition={{ duration: showSidebar ? 0.3 : 0.1 }}
+          className="pointer-events-auto flex h-full flex-col"
+          style={{
+            width: 256,
+            pointerEvents: showSidebar ? 'auto' : 'none',
+          }}
+        >
+          <div className="flex items-center justify-center rounded px-4 py-3 text-center font-mono text-default [font-size:12px] [&>*]:border-y [&>*]:border-r [&>*]:px-1 [&>*]:py-0.5 [&>*]:border-default">
+            <div className="rounded-l border-l">M</div>
+            <div>I</div>
+            <div>T</div>
+            <div>O</div>
+            <div className="rounded-r">S</div>
           </div>
-          <div className="flex grow items-end p-3 pb-2">
-            <a
-              href="https://oxide.computer"
-              target="_blank"
-              className="flex items-center gap-2 font-mono uppercase text-quaternary [font-size:12px]"
-            >
-              /*
-              <div className="link-with-underline text-secondary">Made by Oxide</div>
-              */
-            </a>
+
+          <hr />
+
+          {/* Source Selection Tabs */}
+          <SourceSelector
+            settings={settings.source}
+            showCodeSidebar={showCodeSidebar}
+            setShowCodeSidebar={setShowCodeSidebar}
+            processFile={processFile}
+          />
+          <div className="flex grow flex-col justify-between overflow-auto">
+            <div className="space-y-6 py-4">
+              {/* Preprocessing (for non-code sources) */}
+              {settings.source.type !== 'code' && (
+                <>
+                  <PreprocessingOptions
+                    settings={settings.preprocessing}
+                    updateSettings={(changes) => updateSettings('preprocessing', changes)}
+                  />
+                  <hr />
+                </>
+              )}
+
+              {/* Output Options */}
+              <OutputOptions
+                settings={settings.output}
+                updateSettings={(changes) => updateSettings('output', changes)}
+                sourceType={settings.source.type}
+                sourceImageDimensions={settings.source.imageDimensions}
+              />
+
+              {/* Animation Options (for animated content) */}
+              {(settings.source.type === 'code' || settings.source.type === 'gif') && (
+                <>
+                  <hr />
+                  <AnimationOptions
+                    settings={settings.animation}
+                    updateSettings={(changes) => updateSettings('animation', changes)}
+                    sourceType={settings.source.type}
+                  />
+                </>
+              )}
+
+              <hr />
+
+              {/* Export Options */}
+              <ExportOptions
+                settings={settings.export}
+                updateSettings={(changes) => updateSettings('export', changes)}
+              />
+
+              <hr />
+
+              {/* Asset Export */}
+              <AssetExport
+                program={program}
+                sourceType={settings.source.type}
+                animationController={animationController}
+                animationLength={settings.animation.animationLength}
+                isExporting={isExporting}
+                setIsExporting={setIsExporting}
+                dimensions={{
+                  width: settings.output.columns,
+                  height: settings.output.rows,
+                }}
+                disabled={!program}
+                exportSettings={settings.export}
+              />
+
+              <hr />
+
+              {/* Project Management */}
+              <ProjectManagement
+                projectName={projectName}
+                setProjectName={setProjectName}
+                templateType={templateType}
+                setTemplateType={setTemplateType}
+                settings={settings}
+                setSettings={setSettings}
+                handleLoadProjectInput={handleLoadProjectInput}
+                onCodeProjectLoaded={(code) => setPendingCode(code)}
+              />
+            </div>
+            <div className="flex grow items-end p-3 pb-2">
+              <a
+                href="https://oxide.computer"
+                target="_blank"
+                className="flex items-center gap-2 font-mono uppercase text-quaternary [font-size:12px]"
+              >
+                /*
+                <div className="link-with-underline text-secondary">Made by Oxide</div>
+                */
+              </a>
+            </div>
           </div>
-        </div>
+        </motion.div>
+      </motion.div>
+
+      <div className="absolute left-4 top-3 z-30">
+        <button
+          className={cn(
+            '-m-2 rounded border p-2 transition-transform bg-default hover:bg-hover',
+            showSidebar ? 'border-transparent' : 'border-[--mt-border]',
+          )}
+          onClick={() => setShowSidebar(!showSidebar)}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M1 0.75C1 0.335786 1.33579 0 1.75 0H10.25C10.6642 0 11 0.335786 11 0.75V11.25C11 11.6642 10.6642 12 10.25 12H1.75C1.33579 12 1 11.6642 1 11.25V0.75ZM7.25 1.5H9C9.27614 1.5 9.5 1.72386 9.5 2V10C9.5 10.2761 9.27614 10.5 9 10.5H7.25V1.5ZM6.25 1.5H4V10.5H6.25V1.5Z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Main Content Area */}

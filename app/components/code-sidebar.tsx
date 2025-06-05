@@ -8,6 +8,7 @@
 import { redo, undo } from '@codemirror/commands'
 import { EditorView } from '@codemirror/view'
 import { DirectionDownIcon, Info12Icon } from '@oxide/design-system/icons/react'
+import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
@@ -117,6 +118,7 @@ export function CodeSidebar({
   const [width, setWidth] = useState(400) // Default width of 400px
   const sidebarRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
+  const [isResizing, setIsResizing] = useState(false)
   const editorViewRef = useRef<EditorView | null>(null)
   const [controlsOpen, setControlsOpen] = useState(true)
   const [autoRun, setAutoRun] = useState(true)
@@ -149,6 +151,7 @@ export function CodeSidebar({
 
   const stopResize = useCallback(() => {
     isDragging.current = false
+    setIsResizing(false)
     document.removeEventListener('mousemove', handleMouseMove)
     document.removeEventListener('mouseup', stopResize)
   }, [handleMouseMove])
@@ -237,6 +240,7 @@ export function CodeSidebar({
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault()
     isDragging.current = true
+    setIsResizing(true)
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', stopResize)
   }
@@ -260,77 +264,90 @@ export function CodeSidebar({
     [pendingCode],
   )
 
-  if (!isOpen) return null
-
   return (
-    <div
+    <motion.div
       ref={sidebarRef}
+      initial={false}
+      animate={{ width: isOpen ? width : 0 }}
+      transition={
+        isResizing ? { duration: 0 } : { type: 'spring', duration: 0.5, bounce: 0 }
+      }
       className="bg-background relative overflow-hidden border-l border-default"
-      style={{ width: `${width}px` }}
+      style={{ minWidth: 0 }}
     >
-      <div
-        className="absolute -left-2 top-0 z-10 h-full w-4 cursor-ew-resize"
-        onMouseDown={startResize}
-      />
+      <motion.div
+        animate={{ opacity: isOpen ? 1 : 0 }}
+        transition={{ duration: isOpen ? 0.3 : 0.1 }}
+        style={{
+          width: `${width}px`,
+          pointerEvents: isOpen ? 'auto' : 'none',
+        }}
+        className="h-full"
+      >
+        <div
+          className="absolute -left-2 top-0 z-10 h-full w-4 cursor-ew-resize"
+          onMouseDown={startResize}
+        />
 
-      <div className="flex h-full flex-col">
-        <div className="flex gap-2 border-b px-4 py-3 border-default">
-          <InputButton onClick={handleCodeRun}>Run</InputButton>
-          <InputButton variant="secondary" onClick={handleUndo}>
-            Undo
-          </InputButton>
-          <InputButton variant="secondary" onClick={handleRedo}>
-            Redo
-          </InputButton>
-          <LinkButton
-            to="https://play.ertdfgcvb.xyz/abc.html"
-            inline
-            icon
-            variant="secondary"
-          >
-            <Info12Icon className="text-secondary" />
-          </LinkButton>
-        </div>
-
-        <div className="flex-1 overflow-scroll">
-          <CodeEditor
-            value={pendingCode}
-            onChange={handleCodeChange}
-            editorViewRef={editorViewRef}
-          />
-        </div>
-
-        {controlVariables.length > 0 && (
-          <div className="border-t border-default">
-            <button
-              onClick={() => setControlsOpen(!controlsOpen)}
-              className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase text-secondary hover:bg-hover"
+        <div className="flex h-full flex-col">
+          <div className="flex gap-2 border-b px-4 py-3 border-default">
+            <InputButton onClick={handleCodeRun}>Run</InputButton>
+            <InputButton variant="secondary" onClick={handleUndo}>
+              Undo
+            </InputButton>
+            <InputButton variant="secondary" onClick={handleRedo}>
+              Redo
+            </InputButton>
+            <LinkButton
+              to="https://play.ertdfgcvb.xyz/abc.html"
+              inline
+              icon
+              variant="secondary"
             >
-              Controls
-              <DirectionDownIcon
-                className={cn(
-                  'transition-transform text-quaternary',
-                  controlsOpen ? '' : 'rotate-180',
-                )}
-              />
-            </button>
-            {controlsOpen && (
-              <>
-                <div className="space-y-3 border-t px-4 py-3 border-default">
-                  {controlVariables.map((control) => (
-                    <div key={control.name}>{renderControl(control)}</div>
-                  ))}
-                </div>
-                <div className="border-t px-4 py-2 border-default">
-                  <InputSwitch checked={autoRun} onChange={setAutoRun}>
-                    Auto Run
-                  </InputSwitch>
-                </div>
-              </>
-            )}
+              <Info12Icon className="text-secondary" />
+            </LinkButton>
           </div>
-        )}
-      </div>
-    </div>
+
+          <div className="flex-1 overflow-scroll">
+            <CodeEditor
+              value={pendingCode}
+              onChange={handleCodeChange}
+              editorViewRef={editorViewRef}
+            />
+          </div>
+
+          {controlVariables.length > 0 && (
+            <div className="border-t border-default">
+              <button
+                onClick={() => setControlsOpen(!controlsOpen)}
+                className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase text-secondary hover:bg-hover"
+              >
+                Controls
+                <DirectionDownIcon
+                  className={cn(
+                    'transition-transform text-quaternary',
+                    controlsOpen ? '' : 'rotate-180',
+                  )}
+                />
+              </button>
+              {controlsOpen && (
+                <>
+                  <div className="space-y-3 border-t px-4 py-3 border-default">
+                    {controlVariables.map((control) => (
+                      <div key={control.name}>{renderControl(control)}</div>
+                    ))}
+                  </div>
+                  <div className="border-t px-4 py-2 border-default">
+                    <InputSwitch checked={autoRun} onChange={setAutoRun}>
+                      Auto Run
+                    </InputSwitch>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   )
 }
