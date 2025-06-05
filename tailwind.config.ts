@@ -9,6 +9,7 @@
 import {
   colorUtilities,
   elevationUtilities,
+  textUtilities,
 } from '@oxide/design-system/styles/tailwind-tokens.ts'
 import type { Config } from 'tailwindcss'
 import plugin from 'tailwindcss/plugin'
@@ -37,6 +38,7 @@ const config: Config = {
   plugins: [
     plugin(({ addUtilities }) => {
       addUtilities(colorUtilities)
+      addUtilities(textUtilities)
       addUtilities(elevationUtilities)
     }),
   ],

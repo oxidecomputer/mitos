@@ -27,7 +27,7 @@ import {
   type CachedMediaData,
 } from '~/lib/image-processor'
 import { cn } from '~/lib/utils'
-import { DEFAULT_SETTINGS, TemplateType } from '~/templates'
+import { DEFAULT_SETTINGS, exampleImage, TEMPLATES, TemplateType } from '~/templates'
 
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
@@ -620,53 +620,50 @@ export function AsciiArtGenerator() {
     [animationController],
   )
 
+  const setAspectRatioFromImage = (
+    imageUrl: string,
+  ): Promise<{ aspectRatio: number; width: number; height: number }> => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        // Calculate the image aspect ratio
+        const aspectRatio = img.width / img.height
+        resolve({ aspectRatio, width: img.width, height: img.height })
+      }
+      img.src = imageUrl
+    })
+  }
+
+  // Helper to update both source and aspect ratio in a single batch update
+  const updateSourceAndAspectRatio = async (imageUrl: string, type: 'image' | 'gif') => {
+    const { aspectRatio, width, height } = await setAspectRatioFromImage(imageUrl)
+
+    // Update all settings at once to avoid race conditions
+    setSettings((prev) => ({
+      ...prev,
+      source: {
+        ...prev.source,
+        data: imageUrl,
+        type,
+        imageDimensions: { width, height }, // Store dimensions with source
+      },
+      output: {
+        ...prev.output,
+        aspectRatio: prev.output.useImageAspectRatio
+          ? aspectRatio
+          : prev.output.aspectRatio,
+      },
+    }))
+
+    setShowCodeSidebar(false)
+    return true
+  }
+
   const processFile = useCallback(
     (file: File, dataUrl?: string): boolean => {
       const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
       const validGifTypes = ['image/gif']
       const validJsonType = 'application/json'
-
-      const setAspectRatioFromImage = (
-        imageUrl: string,
-      ): Promise<{ aspectRatio: number; width: number; height: number }> => {
-        return new Promise((resolve) => {
-          const img = new Image()
-          img.onload = () => {
-            // Calculate the image aspect ratio
-            const aspectRatio = img.width / img.height
-            resolve({ aspectRatio, width: img.width, height: img.height })
-          }
-          img.src = imageUrl
-        })
-      }
-
-      // Helper to update both source and aspect ratio in a single batch update
-      const updateSourceAndAspectRatio = async (
-        imageUrl: string,
-        type: 'image' | 'gif',
-      ) => {
-        const { aspectRatio, width, height } = await setAspectRatioFromImage(imageUrl)
-
-        // Update all settings at once to avoid race conditions
-        setSettings((prev) => ({
-          ...prev,
-          source: {
-            ...prev.source,
-            data: imageUrl,
-            type,
-            imageDimensions: { width, height }, // Store dimensions with source
-          },
-          output: {
-            ...prev.output,
-            aspectRatio: prev.output.useImageAspectRatio
-              ? aspectRatio
-              : prev.output.aspectRatio,
-          },
-        }))
-
-        setShowCodeSidebar(false)
-        return true
-      }
 
       if (file.type === validJsonType || file.name.endsWith('.json')) {
         const reader = new FileReader()
@@ -699,7 +696,7 @@ export function AsciiArtGenerator() {
         return false
       }
     },
-    [setSettings, setShowCodeSidebar],
+    [updateSourceAndAspectRatio],
   )
 
   const handleDrag = (e: React.DragEvent) => {
@@ -735,6 +732,33 @@ export function AsciiArtGenerator() {
     },
     [processFile],
   )
+
+  const handleExampleScriptClick = useCallback(() => {
+    // Open code sidebar and load the clock example
+    setShowCodeSidebar(true)
+    const defaultTemplate = TEMPLATES.default
+    setPendingCode(defaultTemplate.source.code)
+    updateSettings('source', {
+      type: 'code',
+      data: null,
+      code: defaultTemplate.source.code,
+    })
+    updateSettings('output', defaultTemplate.output)
+    updateSettings('animation', defaultTemplate.animation)
+  }, [updateSettings])
+
+  const handleTemplateChange = (template: TemplateType) => {
+    setTemplateType(template)
+
+    if (template !== 'custom' && TEMPLATES[template]) {
+      setSettings(TEMPLATES[template] as AsciiSettings)
+      setProjectName(TEMPLATES[template].meta.name)
+      if (TEMPLATES[template].source.code) {
+        setPendingCode(TEMPLATES[template].source.code)
+      }
+      toast(`Applied "${TEMPLATES[template].meta.name}" template`)
+    }
+  }
 
   const handleLoadProject = (json: string) => {
     console.log(json)
@@ -869,11 +893,9 @@ export function AsciiArtGenerator() {
                 projectName={projectName}
                 setProjectName={setProjectName}
                 templateType={templateType}
-                setTemplateType={setTemplateType}
                 settings={settings}
-                setSettings={setSettings}
                 handleLoadProjectInput={handleLoadProjectInput}
-                onCodeProjectLoaded={(code) => setPendingCode(code)}
+                handleTemplateChange={handleTemplateChange}
               />
             </div>
             <div className="flex grow items-end p-3 pb-2">
@@ -944,6 +966,8 @@ export function AsciiArtGenerator() {
               animationController={animationController}
               setAnimationController={setAnimationController}
               isExporting={isExporting}
+              onExampleScriptClick={handleExampleScriptClick}
+              onExampleImageClick={() => updateSourceAndAspectRatio(exampleImage, 'image')}
             />
           </div>
 
