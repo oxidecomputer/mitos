@@ -65,7 +65,7 @@ const DemoCard = ({
     <div className="mr-3 inline-flex items-center justify-center rounded p-2 text-accent bg-accent-secondary">
       {icon}
     </div>
-    <div className="text-default text-sans-md">{title}</div>
+    <div className="text-sans-md text-default">{title}</div>
   </button>
 )
 
@@ -297,7 +297,7 @@ export function AsciiPreview({
             >
               {/* Show underlying image if enabled */}
               {showUnderlyingImage && underlyingImageUrl && !isExporting && program && (
-                <div className="absolute inset-0 z-0">
+                <div className="pointer-events-none absolute inset-0 z-0">
                   <img
                     src={underlyingImageUrl}
                     alt="Source image"

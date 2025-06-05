@@ -118,7 +118,7 @@ export default function AsciiAnimation({
     >
       <pre
         ref={asciiEl}
-        className="z-1 pointer-events-none relative m-0 select-none whitespace-pre p-0 font-mono leading-[1.2]"
+        className="pointer-events-none relative z-10 m-0 select-none whitespace-pre p-0 font-mono leading-[1.2]"
         style={{
           fontFamily: '"GT America Mono",monospace',
           fontSize: '12px',
