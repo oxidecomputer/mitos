@@ -944,7 +944,7 @@ export function AsciiArtGenerator() {
           {/* ASCII Preview */}
           <div
             className={cn(
-              'relative flex-grow overflow-hidden',
+              'relative flex-1 overflow-hidden',
               dragActive ? 'bg-secondary' : 'bg-default',
             )}
           >
