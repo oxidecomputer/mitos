@@ -10,7 +10,8 @@ import {
   DirectionRightIcon,
   Resize16Icon,
 } from '@oxide/design-system/icons/react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import useResizeObserver from '@react-hook/resize-observer'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 import type { createAnimation, Program } from '~/lib/animation'
@@ -42,6 +43,19 @@ interface AsciiPreviewProps {
 
 export type AnimationController = ReturnType<typeof createAnimation> | null
 
+const useSize = (target: HTMLDivElement | null) => {
+  const [size, setSize] = useState<DOMRect | undefined>()
+
+  useLayoutEffect(() => {
+    if (target) {
+      setSize(target.getBoundingClientRect())
+    }
+  }, [target])
+
+  useResizeObserver(target, (entry) => setSize(entry.contentRect))
+  return size
+}
+
 export function AsciiPreview({
   program,
   dimensions,
@@ -54,7 +68,7 @@ export function AsciiPreview({
   setAnimationController,
   isExporting,
 }: AsciiPreviewProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const [zoomLevel, setZoomLevel] = useState(1)
   const [frame, setFrame] = useState(0)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -62,6 +76,8 @@ export function AsciiPreview({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [autoFit, setAutoFit] = useState(false)
   const prevDimensionsRef = useRef(dimensions)
+
+  const containerSize = useSize(container)
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     setAutoFit(false)
@@ -115,22 +131,19 @@ export function AsciiPreview({
   }, [isDragging, dragStart, handleMouseMove, handleMouseUp])
 
   useEffect(() => {
-    if (autoFit && containerRef.current && program) {
-      const container = containerRef.current
-      const containerWidth = container.clientWidth
-      const containerHeight = container.clientHeight
-
+    if (autoFit && program && containerSize) {
       const pixelWidth = dimensions.width * CHAR_WIDTH
       const pixelHeight = dimensions.height * CHAR_HEIGHT
 
-      const scaleX = containerWidth / pixelWidth
-      const scaleY = containerHeight / pixelHeight
+      const scaleX = containerSize.width / pixelWidth
+      const scaleY = containerSize.height / pixelHeight
+
       const newZoom = Math.min(scaleX, scaleY) * 0.9 // 90% to leave some margin
 
       setZoomLevel(newZoom)
       setPosition({ x: 0, y: 0 })
     }
-  }, [autoFit, dimensions, program])
+  }, [autoFit, dimensions, program, containerSize])
 
   useEffect(() => {
     if (
@@ -162,7 +175,7 @@ export function AsciiPreview({
     <div className="relative flex h-full w-full flex-col">
       {/* Zoom controls */}
       {program && (
-        <div className="absolute left-2 top-2 z-30 flex items-center gap-1 rounded-md border p-2 bg-raise border-default">
+        <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded-md border p-2 bg-raise border-default">
           <InputNumber
             showSlider={false}
             value={zoomLevel}
@@ -195,7 +208,7 @@ export function AsciiPreview({
       )}
       {/* ASCII preview container */}
       <div
-        ref={containerRef}
+        ref={setContainer}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
