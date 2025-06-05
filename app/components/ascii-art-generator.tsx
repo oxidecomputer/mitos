@@ -916,7 +916,7 @@ export function AsciiArtGenerator() {
       <div className="absolute left-4 top-3 z-30">
         <button
           className={cn(
-            '-m-2 rounded border p-2 transition-transform bg-default hover:bg-hover',
+            '-m-2 rounded border p-2 transition-transform bg-raise hover:bg-hover',
             showSidebar ? 'border-transparent' : 'border-[--mt-border]',
           )}
           onClick={() => setShowSidebar(!showSidebar)}
