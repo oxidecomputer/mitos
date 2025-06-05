@@ -62,6 +62,7 @@
     @apply inline-block;
   }
   body {
+    color-scheme: dark;
     @apply text-default bg-default;
   }
   pre {
