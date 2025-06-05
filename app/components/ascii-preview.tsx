@@ -6,8 +6,11 @@
  * Copyright Oxide Computer Company
  */
 import {
+  Action16Icon,
   AutoRestart12Icon,
   DirectionRightIcon,
+  DocumentApi16Icon,
+  Folder16Icon,
   Resize16Icon,
 } from '@oxide/design-system/icons/react'
 import useResizeObserver from '@react-hook/resize-observer'
@@ -39,9 +42,32 @@ interface AsciiPreviewProps {
   animationController: AnimationController
   setAnimationController: (controller: AnimationController) => void
   isExporting: boolean
+  onUploadClick?: () => void
+  onExampleScriptClick?: () => void
+  onExampleImageClick?: () => void
 }
 
 export type AnimationController = ReturnType<typeof createAnimation> | null
+
+const DemoCard = ({
+  icon,
+  title,
+  onClick,
+}: {
+  icon: React.ReactNode
+  title: string
+  onClick?: () => void
+}) => (
+  <button
+    className="flex w-[20rem] items-center rounded border p-3 text-left transition-colors bg-raise border-secondary elevation-1 hover:bg-[var(--base-neutral-100)]"
+    onClick={onClick}
+  >
+    <div className="mr-3 inline-flex items-center justify-center rounded p-2 text-accent bg-accent-secondary">
+      {icon}
+    </div>
+    <div className="text-default text-sans-md">{title}</div>
+  </button>
+)
 
 const useSize = (target: HTMLDivElement | null) => {
   const [size, setSize] = useState<DOMRect | undefined>()
@@ -67,6 +93,8 @@ export function AsciiPreview({
   animationController,
   setAnimationController,
   isExporting,
+  onExampleScriptClick,
+  onExampleImageClick,
 }: AsciiPreviewProps) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -160,10 +188,31 @@ export function AsciiPreview({
 
   if (!program) {
     return (
-      <div className="flex h-full flex-col items-center justify-center p-8">
-        <p className="text-widest font-mono text-[13px] uppercase text-tertiary">
-          Upload or paste an image to see the ASCII preview
-        </p>
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="flex flex-col gap-3 p-8">
+          <DemoCard
+            icon={<Folder16Icon className="text-accent-secondary" />}
+            title="Upload image or GIF"
+            onClick={() => {
+              const fileInput = document.querySelector(
+                'input[type="file"]',
+              ) as HTMLInputElement
+              if (fileInput) {
+                fileInput.click()
+              }
+            }}
+          />
+          <DemoCard
+            icon={<DocumentApi16Icon className="text-accent-secondary" />}
+            title="Run example script"
+            onClick={onExampleScriptClick}
+          />
+          <DemoCard
+            icon={<Action16Icon className="text-accent-secondary" />}
+            title="Use example image"
+            onClick={onExampleImageClick}
+          />
+        </div>
       </div>
     )
   }
@@ -248,7 +297,7 @@ export function AsciiPreview({
             >
               {/* Show underlying image if enabled */}
               {showUnderlyingImage && underlyingImageUrl && !isExporting && program && (
-                <div className="absolute inset-0 z-0">
+                <div className="pointer-events-none absolute inset-0 z-0">
                   <img
                     src={underlyingImageUrl}
                     alt="Source image"

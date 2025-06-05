@@ -19,38 +19,21 @@ import { Container } from './container'
 
 interface ProjectManagementProps {
   settings: AsciiSettings
-  setSettings: Dispatch<SetStateAction<AsciiSettings>>
-  onCodeProjectLoaded?: (code: string) => void
   projectName: string
   setProjectName: Dispatch<SetStateAction<string>>
   templateType: TemplateType | ''
-  setTemplateType: Dispatch<SetStateAction<TemplateType | ''>>
   handleLoadProjectInput: (e: React.ChangeEvent<HTMLInputElement>) => void
+  handleTemplateChange: (template: TemplateType) => void
 }
 
 export function ProjectManagement({
   projectName,
   setProjectName,
   templateType,
-  setTemplateType,
   settings,
-  setSettings,
   handleLoadProjectInput,
-  onCodeProjectLoaded,
+  handleTemplateChange,
 }: ProjectManagementProps) {
-  const handleTemplateChange = (template: TemplateType) => {
-    setTemplateType(template)
-
-    if (template !== 'custom' && TEMPLATES[template]) {
-      setSettings(TEMPLATES[template] as AsciiSettings)
-      setProjectName(TEMPLATES[template].meta.name)
-      if (onCodeProjectLoaded && TEMPLATES[template].source.code) {
-        onCodeProjectLoaded(TEMPLATES[template].source.code)
-      }
-      toast(`Applied "${TEMPLATES[template].meta.name}" template`)
-    }
-  }
-
   const handleSaveProject = () => {
     try {
       const projectData = {
