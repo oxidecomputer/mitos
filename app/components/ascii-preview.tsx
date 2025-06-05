@@ -65,7 +65,7 @@ const DemoCard = ({
     <div className="mr-3 inline-flex items-center justify-center rounded p-2 text-accent bg-accent-secondary">
       {icon}
     </div>
-    <div className="text-sans-md text-default">{title}</div>
+    <div className="text-default text-sans-md">{title}</div>
   </button>
 )
 
