@@ -6,7 +6,7 @@
  * Copyright Oxide Computer Company
  */
 
-export const coins = `const speed = 0.4 //~ number 0-10 step=0.25
+export const coins = `const speed = 0.4; //~ number 0-10 step=0.25
 const scale = 0.4;
 
 const coin1 = {
