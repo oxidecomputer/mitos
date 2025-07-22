@@ -6,21 +6,21 @@
  * Copyright Oxide Computer Company
  */
 
-export const coins = `const speed = 0.4 //~ number 0-10 step=0.25
+export const coins = `const speed = 0.4; //~ number 0-10 step=0.25
 const scale = 0.4;
 
 const coin1 = {
-  position: { x: 0.7, y: 0.5, z: -2 },
-  radius: 1.25, //~ number 0-10 step=0.25
-  height: 0.15,
-  rotationSpeed: 0.02,
+  position: { x: 0.7, y: 0.5, z: -2 }, //~ number
+  radius: 0.8, //~ number 0-5 step=0.1
+  height: 0.15, //~ number 0-1 step=0.05
+  rotationSpeed: 2, //~ number 0-4 step=0.01
 };
 
 const coin2 = {
-  position: { x: -1, y: -1, z: -2 },
-  radius: 3,
-  height: 0.15,
-  rotationSpeed: 0.005,
+  position: { x: -1, y: -1, z: -2 }, //~ number
+  radius: 2, //~ number 0-5 step=0.1
+  height: 0.15, //~ number 0-1 step=0.05
+  rotationSpeed: 0.5, //~ number 0-4 step=0.01
 };
 
 let rot1;
@@ -136,13 +136,8 @@ function pre(context) {
   aspectRatio = context.cols / context.rows / 2;
 
   // Calculate rotation based on frame number for deterministic animation
-  const frameRotation1 = context.frame * coin1.rotationSpeed * speed;
-  const frameRotation2 = context.frame * coin2.rotationSpeed * speed;
-
-  // Scale radius based on columns for consistent visual size
-  const radiusScale = context.cols / 144; // 144 is the default cols from settings
-  coin1.radius = 1.25 * radiusScale;
-  coin2.radius = 2 * radiusScale;
+  const frameRotation1 = context.frame * coin1.rotationSpeed / 100 * speed;
+  const frameRotation2 = context.frame * coin2.rotationSpeed / 100 * speed;
 
   // Pre-compute rotation matrices
   const phi1 = 0.25 * Math.PI + 2.0 * frameRotation1;
