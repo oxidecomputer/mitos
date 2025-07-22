@@ -122,6 +122,12 @@ export function CodeSidebar({
   const editorViewRef = useRef<EditorView | null>(null)
   const [controlsOpen, setControlsOpen] = useState(true)
   const [autoRun, setAutoRun] = useState(true)
+  const updateTimeoutRef = useRef<number>(null)
+
+  // Get current editor content instead of relying on pendingCode state
+  const getCurrentEditorContent = useCallback(() => {
+    return editorViewRef.current?.state.doc.toString() || pendingCode
+  }, [pendingCode])
 
   const handleUndo = () => {
     if (editorViewRef.current) {
@@ -156,23 +162,40 @@ export function CodeSidebar({
     document.removeEventListener('mouseup', stopResize)
   }, [handleMouseMove])
 
-  const controlVariables = useMemo(() => parseControlVariables(pendingCode), [pendingCode])
+  const controlVariables = useMemo(
+    () => parseControlVariables(getCurrentEditorContent()),
+    [getCurrentEditorContent, pendingCode],
+  )
 
   const updateControlVariable = (
     controlName: string,
     newValue: string | number | boolean,
   ) => {
-    const control = controlVariables.find((c) => c.name === controlName)
+    if (!editorViewRef.current) return
+
+    // Get the current editor content to ensure we have the latest state
+    const currentContent = editorViewRef.current.state.doc.toString()
+    const currentControls = parseControlVariables(currentContent)
+    const control = currentControls.find((c) => c.name === controlName)
+
     if (!control) return
 
-    const lines = pendingCode.split('\n')
+    const lines = currentContent.split('\n')
 
     // Format the new value based on type
     let formattedValue: string
     if (control.type === 'boolean') {
       formattedValue = String(newValue)
     } else if (control.type === 'number') {
-      formattedValue = String(newValue)
+      // Round to appropriate decimal places based on step value to avoid floating point precision issues
+      let roundedValue = newValue as number
+      if (control.step && control.step < 1) {
+        const decimalPlaces = Math.abs(Math.floor(Math.log10(control.step)))
+        roundedValue =
+          Math.round((newValue as number) * Math.pow(10, decimalPlaces)) /
+          Math.pow(10, decimalPlaces)
+      }
+      formattedValue = String(roundedValue)
     } else {
       formattedValue = `'${newValue}'`
     }
@@ -184,18 +207,26 @@ export function CodeSidebar({
     const changeStart = lineStart + control.startPos
     const changeEnd = lineStart + control.endPos
 
-    // Only update the specific value, not the entire document
-    // If we update the whole document with `setPendingCode`
-    // we get a scroll jump
-    if (editorViewRef.current) {
-      const transaction = editorViewRef.current.state.update({
-        changes: { from: changeStart, to: changeEnd, insert: formattedValue },
-      })
-      editorViewRef.current.dispatch(transaction)
+    // Clear any pending timeout to prevent overlapping updates
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current)
+    }
 
-      if (autoRun) {
-        updateSettings({ data: null, code: transaction.state.doc.toString(), type: 'code' })
-      }
+    // Apply the change to the editor
+    const transaction = editorViewRef.current.state.update({
+      changes: { from: changeStart, to: changeEnd, insert: formattedValue },
+    })
+    editorViewRef.current.dispatch(transaction)
+
+    // Update pendingCode state to keep it in sync
+    const newContent = transaction.state.doc.toString()
+    setPendingCode(newContent)
+
+    // Debounce auto-run updates to prevent too rapid execution
+    if (autoRun) {
+      updateTimeoutRef.current = setTimeout(() => {
+        updateSettings({ data: null, code: newContent, type: 'code' })
+      }, 100) // 100ms debounce
     }
   }
 
@@ -249,6 +280,10 @@ export function CodeSidebar({
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', stopResize)
+      // Clean up any pending timeout
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current)
+      }
     }
   }, [handleMouseMove, stopResize])
 

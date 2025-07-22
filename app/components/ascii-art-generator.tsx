@@ -103,6 +103,37 @@ export function AsciiArtGenerator() {
     event.preventDefault()
   }
 
+  // Helper function to load a template
+  const loadTemplate = useCallback((template: TemplateType) => {
+    setTemplateType(template)
+    setSettings(TEMPLATES[template] as AsciiSettings)
+    setProjectName(TEMPLATES[template].meta.name)
+
+    if (TEMPLATES[template].source.code) {
+      setPendingCode(TEMPLATES[template].source.code)
+    }
+
+    toast(`Applied "${TEMPLATES[template].meta.name}" template`)
+
+    // Remove template parameter from URL after loading template
+    const url = new URL(window.location.href)
+    url.searchParams.delete('template')
+    window.history.replaceState({}, '', url.toString())
+  }, [])
+
+  // Load template from URL parameter on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const templateParam = urlParams.get('template')
+
+    if (templateParam && templateParam in TEMPLATES) {
+      const template = templateParam as TemplateType
+      loadTemplate(template)
+    }
+    // only need to run on load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     // Check if the user has loaded some media or modified the code
     const isSourceDirty =
@@ -748,15 +779,10 @@ export function AsciiArtGenerator() {
   }, [updateSettings])
 
   const handleTemplateChange = (template: TemplateType) => {
-    setTemplateType(template)
-
     if (template !== 'custom' && TEMPLATES[template]) {
-      setSettings(TEMPLATES[template] as AsciiSettings)
-      setProjectName(TEMPLATES[template].meta.name)
-      if (TEMPLATES[template].source.code) {
-        setPendingCode(TEMPLATES[template].source.code)
-      }
-      toast(`Applied "${TEMPLATES[template].meta.name}" template`)
+      loadTemplate(template)
+    } else if (template === 'custom') {
+      setTemplateType(template)
     }
   }
 
