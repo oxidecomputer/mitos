@@ -104,22 +104,29 @@ export function AsciiArtGenerator() {
   }
 
   // Helper function to load a template
-  const loadTemplate = useCallback((template: TemplateType) => {
-    setTemplateType(template)
-    setSettings(TEMPLATES[template] as AsciiSettings)
-    setProjectName(TEMPLATES[template].meta.name)
+  const loadTemplate = useCallback(
+    (template: TemplateType) => {
+      setTemplateType(template)
+      setSettings(TEMPLATES[template] as AsciiSettings)
+      setProjectName(TEMPLATES[template].meta.name)
 
-    if (TEMPLATES[template].source.code) {
-      setPendingCode(TEMPLATES[template].source.code)
-    }
+      if (TEMPLATES[template].source.code) {
+        setPendingCode(TEMPLATES[template].source.code)
+        // Auto-open code sidebar if it's not already open and template has code
+        if (!showCodeSidebar) {
+          setShowCodeSidebar(true)
+        }
+      }
 
-    toast(`Applied "${TEMPLATES[template].meta.name}" template`)
+      toast(`Applied "${TEMPLATES[template].meta.name}" template`)
 
-    // Remove template parameter from URL after loading template
-    const url = new URL(window.location.href)
-    url.searchParams.delete('template')
-    window.history.replaceState({}, '', url.toString())
-  }, [])
+      // Remove template parameter from URL after loading template
+      const url = new URL(window.location.href)
+      url.searchParams.delete('template')
+      window.history.replaceState({}, '', url.toString())
+    },
+    [showCodeSidebar],
+  )
 
   // Load template from URL parameter on mount
   useEffect(() => {
@@ -865,7 +872,6 @@ export function AsciiArtGenerator() {
                   <hr />
                 </>
               )}
-
               {/* Output Options */}
               <OutputOptions
                 settings={settings.output}
@@ -873,7 +879,6 @@ export function AsciiArtGenerator() {
                 sourceType={settings.source.type}
                 sourceImageDimensions={settings.source.imageDimensions}
               />
-
               {/* Animation Options (for animated content) */}
               {(settings.source.type === 'code' || settings.source.type === 'gif') && (
                 <>
@@ -885,17 +890,13 @@ export function AsciiArtGenerator() {
                   />
                 </>
               )}
-
               <hr />
-
               {/* Export Options */}
               <ExportOptions
                 settings={settings.export}
                 updateSettings={(changes) => updateSettings('export', changes)}
               />
-
               <hr />
-
               {/* Asset Export */}
               <AssetExport
                 program={program}
@@ -911,9 +912,7 @@ export function AsciiArtGenerator() {
                 disabled={!program}
                 exportSettings={settings.export}
               />
-
               <hr />
-
               {/* Project Management */}
               <ProjectManagement
                 projectName={projectName}
