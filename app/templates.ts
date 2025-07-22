@@ -8,6 +8,7 @@
 import { AsciiSettings } from './components/ascii-art-generator'
 import { predefinedCharacterSets } from './components/output-options'
 import { clock } from './scripts/clock'
+import { coins } from './scripts/coins'
 import { numbers } from './scripts/numbers'
 
 export const DEFAULT_CODE = `/**
@@ -95,6 +96,16 @@ export const TEMPLATES = {
     animation: {
       animationLength: 1,
       frameRate: 1,
+    },
+  },
+  coins: {
+    ...DEFAULT_SETTINGS,
+    meta: { name: 'Coins' },
+    source: { type: 'code', data: null, code: coins },
+    output: { ...DEFAULT_SETTINGS, columns: 120, rows: 40, grid: 'none' },
+    animation: {
+      animationLength: 100,
+      frameRate: 30,
     },
   },
 }
