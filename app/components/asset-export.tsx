@@ -25,6 +25,7 @@ import {
   calculateAspectRatio,
   calculateContentDimensions,
   calculateExportDimensions,
+  CHAR_WIDTH,
 } from './dimension-utils'
 
 export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4' | 'gif'
@@ -236,10 +237,12 @@ export function AssetExport({
       const { width, height } = dimensions
       const formattedText = getContent(dimensions)?.split('\n') || []
 
+      const padding = exportSettings.padding * CHAR_WIDTH
+
       const fontSize = 12
       const cellHeight = fontSize * 1.2
       const svgHeight = height * cellHeight
-      const paddedSvgHeight = svgHeight + exportSettings.padding * 2
+      const paddedSvgHeight = svgHeight + padding * 2
 
       const testSpan = document.createElement('span')
       testSpan.innerText = 'X'.repeat(10)
@@ -253,7 +256,7 @@ export function AssetExport({
 
       const measuredCellWidth = actualCharWidth
       const svgWidth = width * measuredCellWidth
-      const paddedSvgWidth = svgWidth + exportSettings.padding * 2
+      const paddedSvgWidth = svgWidth + padding * 2
 
       let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${paddedSvgWidth}" height="${paddedSvgHeight}" viewBox="0 0 ${paddedSvgWidth} ${paddedSvgHeight}">\n`
       svgContent += '  <style>\n'
@@ -272,27 +275,27 @@ export function AssetExport({
 
         if (gridType === 'horizontal' || gridType === 'both') {
           for (let i = 1; i < height; i++) {
-            const y = i * cellHeight + exportSettings.padding
-            svgContent += `    <line class="grid-line" x1="${exportSettings.padding}" y1="${y}" x2="${svgWidth + exportSettings.padding}" y2="${y}" />\n`
+            const y = i * cellHeight + padding
+            svgContent += `    <line class="grid-line" x1="${padding}" y1="${y}" x2="${svgWidth + padding}" y2="${y}" />\n`
           }
         }
 
         if (gridType === 'vertical' || gridType === 'both') {
           for (let i = 1; i < width; i++) {
-            const x = i * measuredCellWidth + exportSettings.padding
-            svgContent += `    <line class="grid-line" x1="${x}" y1="${exportSettings.padding}" x2="${x}" y2="${svgHeight + exportSettings.padding}" />\n`
+            const x = i * measuredCellWidth + padding
+            svgContent += `    <line class="grid-line" x1="${x}" y1="${padding}" x2="${x}" y2="${svgHeight + padding}" />\n`
           }
         }
 
         svgContent += '  </g>\n'
       }
 
-      svgContent += `  <text x="${exportSettings.padding}" y="${exportSettings.padding + fontSize}" class="ascii-text">\n`
+      svgContent += `  <text x="${padding}" y="${padding + fontSize}" class="ascii-text">\n`
 
       formattedText.forEach((line, index) => {
         // Replace regular spaces with non-breaking spaces to preserve spacing
         const processedLine = line.replace(/ /g, '\u00A0') // Unicode non-breaking space
-        svgContent += `    <tspan x="${exportSettings.padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}">${escapeXml(processedLine)}</tspan>\n`
+        svgContent += `    <tspan x="${padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}">${escapeXml(processedLine)}</tspan>\n`
       })
 
       svgContent += '  </text>\n'
