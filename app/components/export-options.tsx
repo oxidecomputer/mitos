@@ -135,7 +135,7 @@ export function ExportOptions({ settings, updateSettings }: ExportOptionsProps) 
       </div>
       <InputNumber
         min={0}
-        max={100}
+        max={20}
         value={settings.padding}
         onChange={(val) => updateSettings({ padding: val })}
       >
