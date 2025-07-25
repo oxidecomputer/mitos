@@ -506,7 +506,7 @@ export function AssetExport({
 
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       saveAs(zipBlob, 'ascii-animation-frames.zip')
-      toast.success('Export complete!', { id: 'export-progress' })
+      toast.success('Export complete!', { id: 'video-export' })
     }
   }
 
