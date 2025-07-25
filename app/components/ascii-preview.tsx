@@ -22,7 +22,7 @@ import { InputButton, InputNumber } from '~/lib/ui/src'
 
 import AsciiAnimation from './ascii-animation'
 import type { GridType, SourceType } from './ascii-art-generator'
-import { CHAR_HEIGHT, CHAR_WIDTH } from './aspect-ratio-input-number'
+import { calculateContentDimensions } from './dimension-utils'
 import { GridOverlay } from './grid-overlay'
 
 interface AsciiPreviewProps {
@@ -160,18 +160,20 @@ export function AsciiPreview({
 
   useEffect(() => {
     if (autoFit && program && containerSize) {
-      const pixelWidth = dimensions.width * CHAR_WIDTH
-      const pixelHeight = dimensions.height * CHAR_HEIGHT
+      const { totalWidth, totalHeight } = calculateContentDimensions(
+        dimensions,
+        settings.padding,
+      )
 
-      const scaleX = containerSize.width / pixelWidth
-      const scaleY = containerSize.height / pixelHeight
+      const scaleX = containerSize.width / totalWidth
+      const scaleY = containerSize.height / totalHeight
 
       const newZoom = Math.min(scaleX, scaleY) * 0.9 // 90% to leave some margin
 
       setZoomLevel(newZoom)
       setPosition({ x: 0, y: 0 })
     }
-  }, [autoFit, dimensions, program, containerSize])
+  }, [autoFit, dimensions, program, containerSize, settings.padding])
 
   useEffect(() => {
     if (
@@ -219,6 +221,11 @@ export function AsciiPreview({
 
   const cols = dimensions.width
   const rows = dimensions.height
+
+  const paddingPixels = calculateContentDimensions(
+    dimensions,
+    settings.padding,
+  ).paddingPixels
 
   return (
     <div className="relative flex h-full w-full flex-col">
@@ -293,11 +300,14 @@ export function AsciiPreview({
               setAnimationController={setAnimationController}
               textColor={settings.textColor}
               backgroundColor={settings.backgroundColor}
-              padding={settings.padding}
+              padding={paddingPixels}
             >
               {/* Show underlying image if enabled */}
               {showUnderlyingImage && underlyingImageUrl && !isExporting && program && (
-                <div className="pointer-events-none absolute inset-0 z-0">
+                <div
+                  className="pointer-events-none absolute inset-0 z-0"
+                  style={{ padding: paddingPixels }}
+                >
                   <img
                     src={underlyingImageUrl}
                     alt="Source image"
@@ -312,7 +322,9 @@ export function AsciiPreview({
                 grid={gridType}
                 cols={cols}
                 rows={rows}
-                padding={settings.padding}
+                padding={
+                  calculateContentDimensions(dimensions, settings.padding).paddingPixels
+                }
               />
             )}
           </div>

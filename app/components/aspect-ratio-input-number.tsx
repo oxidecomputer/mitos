@@ -10,10 +10,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { InputNumber, InputSwitch } from '~/lib/ui/src'
 
 import { SourceType } from './ascii-art-generator'
-
-// Asssuming output is using "GT America Mono"
-export const CHAR_WIDTH = 7.45
-export const CHAR_HEIGHT = 15
+import { CHAR_HEIGHT, CHAR_WIDTH } from './dimension-utils'
 
 export interface AspectRatioInputNumberProps {
   width: number

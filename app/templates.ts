@@ -67,7 +67,7 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
   export: {
     textColor: '#d7d8d9',
     backgroundColor: '#080f11',
-    padding: 12,
+    padding: 2,
   },
   animation: {
     animationLength: 100,

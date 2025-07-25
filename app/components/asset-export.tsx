@@ -15,15 +15,25 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
 import type { Program } from '~/lib/animation'
-import { InputButton } from '~/lib/ui/src'
+import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
 import { type SourceType } from './ascii-art-generator'
 import { getContent, type AnimationController } from './ascii-preview'
 import { Container } from './container'
+import {
+  calculateAspectRatio,
+  calculateContentDimensions,
+  calculateExportDimensions,
+  CHAR_WIDTH,
+} from './dimension-utils'
 
 export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4' | 'gif'
-export type ExportScale = '1x' | '2x' | '3x' | '4x' | '5x' | '6x' | '7x' | '8x'
+
+interface ExportDimensions {
+  width: number
+  height: number
+}
 
 interface AssetExportProps {
   program: Program | null
@@ -56,9 +66,30 @@ export function AssetExport({
   const [exportFormat, setExportFormat] = useState<ExportFormat>(
     sourceType === 'code' ? 'frames' : 'png',
   )
-  const [exportScale, setExportScale] = useState<ExportScale>('2x')
+  const [exportDimensions, setExportDimensions] = useState<ExportDimensions>({
+    width: 1920,
+    height: 1080,
+  })
+
+  const [trimEnabled, setTrimEnabled] = useState(false)
+  const [trimX, setTrimX] = useState(0)
+  const [trimY, setTrimY] = useState(0)
+
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false)
   const ffmpegRef = useRef<FFmpeg | null>(null)
+
+  // Set export height based on character dimensions including padding
+  useEffect(() => {
+    const { totalWidth, totalHeight } = calculateContentDimensions(
+      dimensions,
+      exportSettings.padding,
+    )
+    const aspectRatio = calculateAspectRatio(totalWidth, totalHeight)
+    setExportDimensions((prev) => ({
+      ...prev,
+      height: Math.round(prev.width * aspectRatio),
+    }))
+  }, [dimensions, exportSettings.padding])
 
   useEffect(() => {
     const loadFFmpeg = async () => {
@@ -206,10 +237,12 @@ export function AssetExport({
       const { width, height } = dimensions
       const formattedText = getContent(dimensions)?.split('\n') || []
 
+      const padding = exportSettings.padding * CHAR_WIDTH
+
       const fontSize = 12
       const cellHeight = fontSize * 1.2
       const svgHeight = height * cellHeight
-      const paddedSvgHeight = svgHeight + exportSettings.padding * 2
+      const paddedSvgHeight = svgHeight + padding * 2
 
       const testSpan = document.createElement('span')
       testSpan.innerText = 'X'.repeat(10)
@@ -223,7 +256,7 @@ export function AssetExport({
 
       const measuredCellWidth = actualCharWidth
       const svgWidth = width * measuredCellWidth
-      const paddedSvgWidth = svgWidth + exportSettings.padding * 2
+      const paddedSvgWidth = svgWidth + padding * 2
 
       let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${paddedSvgWidth}" height="${paddedSvgHeight}" viewBox="0 0 ${paddedSvgWidth} ${paddedSvgHeight}">\n`
       svgContent += '  <style>\n'
@@ -242,27 +275,27 @@ export function AssetExport({
 
         if (gridType === 'horizontal' || gridType === 'both') {
           for (let i = 1; i < height; i++) {
-            const y = i * cellHeight + exportSettings.padding
-            svgContent += `    <line class="grid-line" x1="${exportSettings.padding}" y1="${y}" x2="${svgWidth + exportSettings.padding}" y2="${y}" />\n`
+            const y = i * cellHeight + padding
+            svgContent += `    <line class="grid-line" x1="${padding}" y1="${y}" x2="${svgWidth + padding}" y2="${y}" />\n`
           }
         }
 
         if (gridType === 'vertical' || gridType === 'both') {
           for (let i = 1; i < width; i++) {
-            const x = i * measuredCellWidth + exportSettings.padding
-            svgContent += `    <line class="grid-line" x1="${x}" y1="${exportSettings.padding}" x2="${x}" y2="${svgHeight + exportSettings.padding}" />\n`
+            const x = i * measuredCellWidth + padding
+            svgContent += `    <line class="grid-line" x1="${x}" y1="${padding}" x2="${x}" y2="${svgHeight + padding}" />\n`
           }
         }
 
         svgContent += '  </g>\n'
       }
 
-      svgContent += `  <text x="${exportSettings.padding}" y="${exportSettings.padding + fontSize}" class="ascii-text">\n`
+      svgContent += `  <text x="${padding}" y="${padding + fontSize}" class="ascii-text">\n`
 
       formattedText.forEach((line, index) => {
         // Replace regular spaces with non-breaking spaces to preserve spacing
         const processedLine = line.replace(/ /g, '\u00A0') // Unicode non-breaking space
-        svgContent += `    <tspan x="${exportSettings.padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}">${escapeXml(processedLine)}</tspan>\n`
+        svgContent += `    <tspan x="${padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}">${escapeXml(processedLine)}</tspan>\n`
       })
 
       svgContent += '  </text>\n'
@@ -485,17 +518,43 @@ export function AssetExport({
     // Contains both the ASCII and grid overlay
     const containerElement = asciiParent
 
-    // Convert scale string to number (e.g., '2x' -> 2)
-    const scaleValue = parseInt(exportScale.replace('x', ''))
+    // Calculate scale to achieve target dimensions using character dimensions
+    const { totalWidth: totalActualWidth, totalHeight: totalActualHeight } =
+      calculateContentDimensions(dimensions, exportSettings.padding)
+
+    // Apply trim adjustments to final export dimensions
+    const finalExportWidth = trimEnabled
+      ? exportDimensions.width + trimX
+      : exportDimensions.width
+    const finalExportHeight = trimEnabled
+      ? exportDimensions.height + trimY
+      : exportDimensions.height
+
+    // Calculate scale factors based on original export dimensions (not trimmed)
+    const scaleX = exportDimensions.width / totalActualWidth
+    const scaleY = exportDimensions.height / totalActualHeight
+
+    // Calculate offset for centering content with any trim values
+    const offsetX = trimEnabled ? -trimX / 2 : 0
+    const offsetY = trimEnabled ? -trimY / 2 : 0
 
     return html2canvas(containerElement as HTMLElement, {
-      backgroundColor: 'transparent',
-      scale: scaleValue,
+      backgroundColor: exportSettings.backgroundColor,
       logging: false,
       allowTaint: true,
       useCORS: true,
       removeContainer: false,
-      onclone: (document) => {
+      width: finalExportWidth,
+      height: finalExportHeight,
+      x: offsetX,
+      y: offsetY,
+      scale: 1,
+      onclone: (document, element) => {
+        // Apply transform to scale the content to fill the export dimensions
+        const clonedElement = element as HTMLElement
+        clonedElement.style.transform = `scale(${scaleX}, ${scaleY})`
+        clonedElement.style.transformOrigin = 'top left'
+
         // Find elements with CSS color functions and simplify them
         const elements = document.querySelectorAll('*')
         elements.forEach((el) => {
@@ -548,14 +607,77 @@ export function AssetExport({
         exportFormat === 'frames' ||
         exportFormat === 'mp4' ||
         exportFormat === 'gif') && (
-        <InputSelect
-          value={exportScale}
-          onChange={(value) => setExportScale(value as ExportScale)}
-          options={['1x', '2x', '3x', '4x', '5x', '6x', '7x', '8x']}
-          disabled={isExporting}
-        >
-          Quality
-        </InputSelect>
+        <div className="space-y-2">
+          <div className="ui-select">
+            <label className="ui-select__label">Export Size</label>
+          </div>
+          <div className="dedent">
+            <InputNumber
+              min={1}
+              value={exportDimensions.width}
+              onChange={(val) => {
+                const newWidth = val || 0
+                const newDimensions = calculateExportDimensions(
+                  dimensions,
+                  exportSettings.padding,
+                  newWidth,
+                )
+                setExportDimensions(newDimensions)
+              }}
+            >
+              Width{' '}
+              {trimEnabled && trimX !== 0 && (
+                <span className="text-tertiary">({exportDimensions.width + trimX})</span>
+              )}
+            </InputNumber>
+            <InputNumber
+              min={1}
+              value={exportDimensions.height}
+              onChange={(val) => {
+                const newHeight = val || 0
+                const newDimensions = calculateExportDimensions(
+                  dimensions,
+                  exportSettings.padding,
+                  undefined,
+                  newHeight,
+                )
+                setExportDimensions(newDimensions)
+              }}
+            >
+              Height{' '}
+              {trimEnabled && trimY !== 0 && (
+                <span className="text-tertiary">({exportDimensions.height + trimY})</span>
+              )}
+            </InputNumber>
+
+            <InputSwitch checked={trimEnabled} onChange={setTrimEnabled}>
+              Trim Adjustment
+            </InputSwitch>
+
+            {trimEnabled && (
+              <div className="dedent mt-0">
+                <InputNumber
+                  min={-500}
+                  max={500}
+                  value={trimX}
+                  onChange={(val) => setTrimX(val || 0)}
+                  showSlider={false}
+                >
+                  X Trim
+                </InputNumber>
+                <InputNumber
+                  min={-500}
+                  max={500}
+                  value={trimY}
+                  onChange={(val) => setTrimY(val || 0)}
+                  showSlider={false}
+                >
+                  Y Trim
+                </InputNumber>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="space-y-2">
