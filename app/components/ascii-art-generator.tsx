@@ -146,7 +146,7 @@ export function AsciiArtGenerator() {
         try {
           window.esbuildInitialized = true
           await esbuild.initialize({
-            wasmURL: './node_modules/esbuild-wasm/esbuild.wasm',
+            wasmURL: 'https://unpkg.com/esbuild-wasm/esbuild.wasm',
           })
           esbuildService.current = esbuild
         } catch (error) {
