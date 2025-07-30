@@ -35,7 +35,6 @@ import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
 import { ProjectManagement } from './project-management'
 
-// Use window global to track esbuild initialization across hot reloads and StrictMode
 export type SourceType = 'image' | 'code' | 'gif'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
 export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
