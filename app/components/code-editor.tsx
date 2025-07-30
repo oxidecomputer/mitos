@@ -176,7 +176,7 @@ const oxideDarkExtension = [theme, syntaxHighlighting(highlightStyle)]
 
 export default function CodeEditor({ value, onChange, editorViewRef }: CodeEditorProps) {
   const editorExtensions = [
-    javascript({ jsx: false, typescript: false }),
+    javascript({ jsx: false, typescript: true }),
     EditorView.lineWrapping,
     oxideDarkExtension,
   ]

@@ -10,6 +10,7 @@ import { predefinedCharacterSets } from './components/output-options'
 import { clock } from './scripts/clock'
 import { coins } from './scripts/coins'
 import { numbers } from './scripts/numbers'
+import { unpkgDemo } from './scripts/unpkg-demo'
 
 export const DEFAULT_CODE = `/**
 @author ertdfgcvb
@@ -105,6 +106,16 @@ export const TEMPLATES = {
     output: { ...DEFAULT_SETTINGS, columns: 120, rows: 40, grid: 'none' },
     animation: {
       animationLength: 100,
+      frameRate: 30,
+    },
+  },
+  unpkgDemo: {
+    ...DEFAULT_SETTINGS,
+    meta: { name: 'Perlin Noise (Unpkg)' },
+    source: { type: 'code', data: null, code: unpkgDemo },
+    output: { ...DEFAULT_SETTINGS, columns: 80, rows: 40, grid: 'none' },
+    animation: {
+      animationLength: 300,
       frameRate: 30,
     },
   },

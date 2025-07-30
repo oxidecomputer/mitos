@@ -26,6 +26,7 @@
     "@react-hook/resize-observer": "^2.0.2",
     "@uiw/react-codemirror": "^4.23.10",
     "clsx": "^2.1.1",
+    "esbuild-wasm": "^0.25.8",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.3",

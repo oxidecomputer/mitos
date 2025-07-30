@@ -5,6 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
+import * as esbuild from 'esbuild-wasm'
 import { decompressFrames, ParsedFrame, ParsedGif, parseGIF } from 'gifuct-js'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -19,10 +20,10 @@ import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
 import type { Data, Program } from '~/lib/animation'
 import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-program'
+import { processCodeModule } from '~/lib/code-processor'
 import {
   DitheringAlgorithm,
   processAnimatedMedia,
-  processCodeModule,
   processImage,
   type CachedMediaData,
 } from '~/lib/image-processor'
@@ -32,6 +33,13 @@ import { DEFAULT_SETTINGS, exampleImage, TEMPLATES, TemplateType } from '~/templ
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
 import { ProjectManagement } from './project-management'
+
+// Use window global to track esbuild initialization across hot reloads and StrictMode
+declare global {
+  interface Window {
+    esbuildInitialized?: boolean
+  }
+}
 
 export type SourceType = 'image' | 'code' | 'gif'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
@@ -77,6 +85,8 @@ export interface AsciiSettings {
   }
 }
 
+export type EsbuildService = typeof esbuild
+
 export function AsciiArtGenerator() {
   // Core state
   const [settings, setSettings] = useState<AsciiSettings>(DEFAULT_SETTINGS)
@@ -97,6 +107,7 @@ export function AsciiArtGenerator() {
 
   const lastProcessedSettings = useRef<AsciiSettings | null>(null)
   const isInitialMount = useRef(true)
+  const esbuildService = useRef<EsbuildService>(null)
 
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
     // Trigger the warning dialog when the user closes or navigates the tab
@@ -127,6 +138,26 @@ export function AsciiArtGenerator() {
     },
     [showCodeSidebar],
   )
+
+  // Initialize esbuild service
+  useEffect(() => {
+    const startService = async () => {
+      if (!window.esbuildInitialized) {
+        try {
+          window.esbuildInitialized = true
+          await esbuild.initialize({
+            wasmURL: './node_modules/esbuild-wasm/esbuild.wasm',
+          })
+          esbuildService.current = esbuild
+        } catch (error) {
+          console.error('Failed to initialize esbuild:', error)
+        }
+      } else {
+        esbuildService.current = esbuild
+      }
+    }
+    startService()
+  }, [])
 
   // Load template from URL parameter on mount
   useEffect(() => {
@@ -301,9 +332,22 @@ export function AsciiArtGenerator() {
     currentSettings: AsciiSettings,
   ) => {
     try {
-      const module = processCodeModule(currentSettings.source.code)
-      if (!module) {
-        toast('Could not process your code. Check for syntax errors.')
+      if (!esbuildService.current) {
+        toast('Code processor not ready. Please try again.')
+        return
+      }
+
+      // Check if code contains import statements for unpkg support
+      const hasImports = /^\s*import\s+/m.test(currentSettings.source.code)
+
+      const result = await processCodeModule(currentSettings.source.code, {
+        esbuildService: esbuildService.current,
+        timeout: 5000,
+        allowUnpkgImports: hasImports,
+      })
+
+      if (!result.success || !result.module) {
+        toast(result.error || 'Could not process your code. Check for syntax errors.')
         return
       }
 
@@ -311,7 +355,7 @@ export function AsciiArtGenerator() {
         columns,
         rows,
         currentSettings.animation.frameRate,
-        module,
+        result.module,
       )
 
       setProgram(newProgram)
