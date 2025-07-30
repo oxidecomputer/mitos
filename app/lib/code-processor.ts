@@ -1,6 +1,6 @@
 import { BuildResult, Plugin } from 'esbuild-wasm'
 
-import { EsbuildService } from '~/components/ascii-art-generator'
+import { type EsbuildService } from '~/hooks/use-esbuild'
 
 import type { Program } from './animation'
 

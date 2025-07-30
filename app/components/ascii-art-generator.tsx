@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import * as esbuild from 'esbuild-wasm'
+
 import { decompressFrames, ParsedFrame, ParsedGif, parseGIF } from 'gifuct-js'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -18,6 +18,7 @@ import { ExportOptions } from '~/components/export-options'
 import { OutputOptions } from '~/components/output-options'
 import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
+import { useEsbuild } from '~/hooks/use-esbuild'
 import type { Data, Program } from '~/lib/animation'
 import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-program'
 import { processCodeModule } from '~/lib/code-processor'
@@ -35,12 +36,6 @@ import { CodeSidebar } from './code-sidebar'
 import { ProjectManagement } from './project-management'
 
 // Use window global to track esbuild initialization across hot reloads and StrictMode
-declare global {
-  interface Window {
-    esbuildInitialized?: boolean
-  }
-}
-
 export type SourceType = 'image' | 'code' | 'gif'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
 export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
@@ -85,8 +80,6 @@ export interface AsciiSettings {
   }
 }
 
-export type EsbuildService = typeof esbuild
-
 export function AsciiArtGenerator() {
   // Core state
   const [settings, setSettings] = useState<AsciiSettings>(DEFAULT_SETTINGS)
@@ -107,7 +100,6 @@ export function AsciiArtGenerator() {
 
   const lastProcessedSettings = useRef<AsciiSettings | null>(null)
   const isInitialMount = useRef(true)
-  const esbuildService = useRef<EsbuildService>(null)
 
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
     // Trigger the warning dialog when the user closes or navigates the tab
@@ -139,28 +131,16 @@ export function AsciiArtGenerator() {
     [showCodeSidebar],
   )
 
-  // Initialize esbuild service
-  useEffect(() => {
-    const startService = async () => {
-      if (!window.esbuildInitialized) {
-        try {
-          window.esbuildInitialized = true
-          await esbuild.initialize({
-            wasmURL: 'https://unpkg.com/esbuild-wasm/esbuild.wasm',
-          })
-          esbuildService.current = esbuild
-        } catch (error) {
-          console.error('Failed to initialize esbuild:', error)
-        }
-      } else {
-        esbuildService.current = esbuild
-      }
-    }
-    startService()
-  }, [])
+  const {
+    esbuildService,
+    isInitialized: esbuildInitialized,
+    isInitializing: esbuildInitializing,
+  } = useEsbuild()
 
   // Load template from URL parameter on mount
   useEffect(() => {
+    if (!esbuildInitialized || esbuildInitializing) return
+
     const urlParams = new URLSearchParams(window.location.search)
     const templateParam = urlParams.get('template')
 
@@ -170,7 +150,7 @@ export function AsciiArtGenerator() {
     }
     // only need to run on load
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [esbuildInitialized, esbuildInitializing])
 
   useEffect(() => {
     // Check if the user has loaded some media or modified the code
@@ -332,8 +312,12 @@ export function AsciiArtGenerator() {
     currentSettings: AsciiSettings,
   ) => {
     try {
-      if (!esbuildService.current) {
-        toast('Code processor not ready. Please try again.')
+      if (!esbuildService || !esbuildInitialized) {
+        if (esbuildInitializing) {
+          toast('Code processor is still initializing. Please wait a moment.')
+        } else {
+          toast('Code processor not ready. Please try again.')
+        }
         return
       }
 
@@ -341,7 +325,7 @@ export function AsciiArtGenerator() {
       const hasImports = /^\s*import\s+/m.test(currentSettings.source.code)
 
       const result = await processCodeModule(currentSettings.source.code, {
-        esbuildService: esbuildService.current,
+        esbuildService: esbuildService,
         timeout: 5000,
         allowUnpkgImports: hasImports,
       })
