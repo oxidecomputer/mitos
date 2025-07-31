@@ -15,6 +15,7 @@ import {
 import * as Accordion from '@radix-ui/react-accordion'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
@@ -346,7 +347,7 @@ export function CodeSidebar({
   const handleRedo = () => editorViewRef.current && redo(editorViewRef.current)
   const handleCodeRun = () =>
     updateSettings({ data: null, code: pendingCode, type: 'code' })
-  const handleCodeChange = (value: string) => setPendingCode(value)
+  const handleCodeChange = (value: string) => flushSync(() => setPendingCode(value))
 
   const addImport = (importStatement: string) => {
     if (!editorViewRef.current) return
@@ -368,7 +369,7 @@ export function CodeSidebar({
     editorViewRef.current.dispatch(transaction)
 
     const newContent = transaction.state.doc.toString()
-    setPendingCode(newContent)
+    flushSync(() => setPendingCode(newContent))
   }
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -471,7 +472,7 @@ export function CodeSidebar({
     editorViewRef.current.dispatch(transaction)
 
     const newContent = transaction.state.doc.toString()
-    setPendingCode(newContent)
+    flushSync(() => setPendingCode(newContent))
 
     // Debounced auto-run
     if (autoRun) {
