@@ -54,10 +54,10 @@ interface ControlVariable {
 }
 
 // Regex patterns used throughout parsing
-const PATTERNS = {
-  ROOT_OBJECT: /const\s+(\w+)\s*=\s*\{\s*([^}]*)\s*\}\s*;?\s*\/\/~\s*(.+)/,
-  MULTI_OBJECT: /const\s+(\w+)\s*=\s*\{/,
-  SIMPLE_VAR: /const\s+(\w+)\s*=\s*(.+?);?\s*\/\/~\s*(.+)/,
+export const PATTERNS = {
+  ROOT_OBJECT: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*\{\s*([^}]*)\s*\}\s*;?\s*\/\/~\s*(.+)/,
+  MULTI_OBJECT: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*\{/,
+  SIMPLE_VAR: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*(?!\s*\{)(.+?);?\s*\/\/~\s*(.+)/,
   NESTED_OBJECT: /\s*(\w+):\s*\{\s*([^}]+)\s*\},?\s*\/\/~\s*(.+)/,
   OBJECT_PROP: /\s*(\w+):\s*(.+?),?\s*\/\/~\s*(.+)/,
   PROP_VALUE: /(\w+):\s*([^,}]+)/g,

@@ -11,7 +11,10 @@
     "preview": "vite preview",
     "tsc": "tsc",
     "lint": "eslint app",
-    "ci": "bun run fmt:check && bun run tsc && bun run lint"
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "ci": "bun run fmt:check && bun run tsc && bun run lint && bun run test"
   },
   "dependencies": {
     "@ariakit/react": "^0.4.15",
@@ -53,6 +56,7 @@
   "devDependencies": {
     "@eslint/compat": "^1.2.8",
     "@eslint/js": "^9.21.0",
+    "@types/bun": "^1.2.19",
     "@types/file-saver": "^2.0.7",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
