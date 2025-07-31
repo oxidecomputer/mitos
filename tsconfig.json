@@ -20,6 +20,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
+    "types": ["bun-types"],
+
     "paths": {
       "~/*": ["./app/*"]
     }

@@ -10,6 +10,7 @@ import { predefinedCharacterSets } from './components/output-options'
 import { clock } from './scripts/clock'
 import { coins } from './scripts/coins'
 import { numbers } from './scripts/numbers'
+import { unpkgDemo } from './scripts/unpkg-demo'
 
 export const DEFAULT_CODE = `/**
 @author ertdfgcvb
@@ -106,6 +107,35 @@ export const TEMPLATES = {
     animation: {
       animationLength: 100,
       frameRate: 30,
+    },
+  },
+  unpkgDemo: {
+    ...DEFAULT_SETTINGS,
+    meta: { name: 'Perlin Noise (Unpkg)' },
+    source: { type: 'code', data: null, code: unpkgDemo },
+    output: { ...DEFAULT_SETTINGS, columns: 80, rows: 40, grid: 'none' },
+    animation: {
+      animationLength: 300,
+      frameRate: 30,
+    },
+  },
+  localPattern: {
+    ...DEFAULT_SETTINGS,
+    meta: { name: 'Local Pattern' },
+    source: {
+      type: 'code',
+      data: null,
+      code: `import { checkerboard } from '@/utils'
+
+function main(coord, context, cursor, buffer) {
+  const value = checkerboard(coord.x, coord.y, 4)
+  return value === 1 ? '█' : ' '
+}`,
+    },
+    output: { ...DEFAULT_SETTINGS.output, columns: 80, rows: 24, grid: 'both' },
+    animation: {
+      animationLength: 1,
+      frameRate: 1,
     },
   },
 }

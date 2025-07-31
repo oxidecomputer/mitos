@@ -5,6 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
+
 import { decompressFrames, ParsedFrame, ParsedGif, parseGIF } from 'gifuct-js'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -17,12 +18,13 @@ import { ExportOptions } from '~/components/export-options'
 import { OutputOptions } from '~/components/output-options'
 import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
+import { useEsbuild } from '~/hooks/use-esbuild'
 import type { Data, Program } from '~/lib/animation'
 import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-program'
+import { processCodeModule } from '~/lib/code-processor'
 import {
   DitheringAlgorithm,
   processAnimatedMedia,
-  processCodeModule,
   processImage,
   type CachedMediaData,
 } from '~/lib/image-processor'
@@ -128,8 +130,16 @@ export function AsciiArtGenerator() {
     [showCodeSidebar],
   )
 
+  const {
+    esbuildService,
+    isInitialized: esbuildInitialized,
+    isInitializing: esbuildInitializing,
+  } = useEsbuild()
+
   // Load template from URL parameter on mount
   useEffect(() => {
+    if (!esbuildInitialized || esbuildInitializing) return
+
     const urlParams = new URLSearchParams(window.location.search)
     const templateParam = urlParams.get('template')
 
@@ -139,7 +149,7 @@ export function AsciiArtGenerator() {
     }
     // only need to run on load
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [esbuildInitialized, esbuildInitializing])
 
   useEffect(() => {
     // Check if the user has loaded some media or modified the code
@@ -301,9 +311,22 @@ export function AsciiArtGenerator() {
     currentSettings: AsciiSettings,
   ) => {
     try {
-      const module = processCodeModule(currentSettings.source.code)
-      if (!module) {
-        toast('Could not process your code. Check for syntax errors.')
+      if (!esbuildService || !esbuildInitialized) {
+        if (esbuildInitializing) {
+          toast('Code processor is still initializing. Please wait a moment.')
+        } else {
+          toast('Code processor not ready. Please try again.')
+        }
+        return
+      }
+
+      const result = await processCodeModule(currentSettings.source.code, {
+        esbuildService: esbuildService,
+        timeout: 5000,
+      })
+
+      if (!result.success || !result.module) {
+        toast(result.error || 'Could not process your code. Check for syntax errors.')
         return
       }
 
@@ -311,7 +334,7 @@ export function AsciiArtGenerator() {
         columns,
         rows,
         currentSettings.animation.frameRate,
-        module,
+        result.module,
       )
 
       setProgram(newProgram)
@@ -457,7 +480,7 @@ export function AsciiArtGenerator() {
 
       // Parse the GIF and extract frames
       // Fix type issue by creating proper ArrayBuffer
-      const buffer = bytes.buffer
+      const buffer = bytes.buffer as ArrayBuffer
       const gif = parseGIF(buffer)
       const frames = decompressFrames(gif, true)
 

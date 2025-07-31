@@ -103,4 +103,31 @@
   .dedent {
     @apply mt-2 flex flex-col gap-2 border-l py-1 pl-3 border-default;
   }
+
+  /* Accordion animations */
+  @keyframes slideDown {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+
+  .animate-slideDown {
+    animation: slideDown 300ms cubic-bezier(0.87, 0, 0.13, 1);
+  }
+
+  .animate-slideUp {
+    animation: slideUp 300ms cubic-bezier(0.87, 0, 0.13, 1);
+  }
 }

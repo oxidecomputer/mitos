@@ -5,8 +5,11 @@
  *
  * Copyright Oxide Computer Company
  */
+import * as esbuild from 'esbuild-wasm'
+
 import type { AsciiSettings } from '~/components/ascii-art-generator'
 
+import { processCodeModule as processCodeModuleNew } from './code-processor'
 import type { Data } from './types'
 
 // Types
@@ -660,29 +663,29 @@ async function loadGifFrame(
   })
 }
 
-// Code module processing
-export function processCodeModule(code: string) {
-  try {
-    const wrappedCode = `
-      ${code}
-      return {
-        main: typeof main === 'function' ? main : undefined,
-        boot: typeof boot === 'function' ? boot : undefined,
-        pre: typeof pre === 'function' ? pre : undefined,
-        post: typeof post === 'function' ? post : undefined
-      };
-    `
+// Code module processing with TypeScript support
+export async function processCodeModule(
+  code: string,
+  options: { esbuildService: typeof esbuild; timeout?: number },
+) {
+  const result = await processCodeModuleNew(code, options)
 
-    const moduleFn = new Function(wrappedCode)
-    const moduleExports = moduleFn()
-
-    return {
-      async load() {
-        return moduleExports
-      },
+  if (!result.success) {
+    console.error('Error preparing user code module:', result.error)
+    if (result.warnings && result.warnings.length > 0) {
+      console.warn('Warnings:', result.warnings)
     }
-  } catch (error) {
-    console.error('Error preparing user code module:', error)
     return null
+  }
+
+  if (result.warnings && result.warnings.length > 0) {
+    console.warn('Code processing warnings:', result.warnings)
+  }
+
+  // Return a simple wrapper that matches the legacy functionality
+  return {
+    async load() {
+      return await result.module!.load()
+    },
   }
 }
