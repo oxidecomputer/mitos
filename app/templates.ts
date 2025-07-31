@@ -119,6 +119,25 @@ export const TEMPLATES = {
       frameRate: 30,
     },
   },
+  localPattern: {
+    ...DEFAULT_SETTINGS,
+    meta: { name: 'Local Pattern' },
+    source: {
+      type: 'code',
+      data: null,
+      code: `import { checkerboard } from '@/utils'
+
+function main(coord, context, cursor, buffer) {
+  const value = checkerboard(coord.x, coord.y, 4)
+  return value === 1 ? '█' : ' '
+}`,
+    },
+    output: { ...DEFAULT_SETTINGS.output, columns: 80, rows: 24, grid: 'both' },
+    animation: {
+      animationLength: 1,
+      frameRate: 1,
+    },
+  },
 }
 
 export type TemplateType = keyof typeof TEMPLATES

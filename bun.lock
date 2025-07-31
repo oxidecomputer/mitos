@@ -13,6 +13,7 @@
         "@ffmpeg/util": "^0.12.2",
         "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
         "@oxide/design-system": "^2.5.0",
+        "@radix-ui/react-accordion": "^1.2.11",
         "@react-hook/resize-observer": "^2.0.2",
         "@uiw/react-codemirror": "^4.23.10",
         "clsx": "^2.1.1",

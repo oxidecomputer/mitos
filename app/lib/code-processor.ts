@@ -3,6 +3,7 @@ import { BuildResult, Plugin } from 'esbuild-wasm'
 import { type EsbuildService } from '~/hooks/use-esbuild'
 
 import type { Program } from './animation'
+import * as localUtils from './utils/patterns'
 
 // Cache for fetched modules
 const moduleCache = new Map<string, string>()
@@ -11,7 +12,6 @@ interface CodeProcessorOptions {
   esbuildService: EsbuildService
   timeout?: number
   target?: string
-  allowUnpkgImports?: boolean
 }
 
 interface LoadProcessedModule {
@@ -32,6 +32,27 @@ interface ProcessingResult {
   warnings?: string[]
 }
 
+function isUrl(path: string): boolean {
+  return path.startsWith('https://') || path.startsWith('http://')
+}
+
+function resolveUnpkgUrl(packageName: string): string {
+  return `https://unpkg.com/${packageName}?module`
+}
+
+function handlePluginError(path: string, error: unknown) {
+  const message = error instanceof Error ? error.message : 'Unknown error'
+  console.error('Plugin error for:', path, message)
+  return {
+    errors: [
+      {
+        text: `Failed to load module: ${message}`,
+        location: null,
+      },
+    ],
+  }
+}
+
 export async function processCodeModule(
   code: string,
   options: CodeProcessorOptions,
@@ -43,7 +64,6 @@ export async function processCodeModule(
       throw new Error('esbuild service not provided')
     }
 
-    // Use build API for bundling with plugins
     const result: BuildResult = await esbuildService.build({
       entryPoints: ['input.ts'],
       bundle: true,
@@ -52,7 +72,7 @@ export async function processCodeModule(
       platform: 'browser',
       write: false,
       treeShaking: false,
-      plugins: [createUnpkgPathPlugin(), createUnpkgFetchPlugin(code)],
+      plugins: [createLocalUtilsPlugin(), createModuleResolutionPlugin(code)],
       define: {
         global: 'globalThis',
         'process.env.NODE_ENV': '"production"',
@@ -69,8 +89,6 @@ export async function processCodeModule(
     }
 
     const transformedCode = result.outputFiles[0].text
-
-    // Create a safe execution environment
     const moduleExports = await executeCodeSafely(transformedCode, timeout)
 
     return {
@@ -98,23 +116,19 @@ async function executeCodeSafely(code: string, timeout: number): Promise<Process
     }, timeout)
 
     try {
-      // Execute the ESM code using dynamic import
       const blob = new Blob([code], { type: 'application/javascript' })
       const moduleUrl = URL.createObjectURL(blob)
 
       import(moduleUrl)
         .then((module) => {
           URL.revokeObjectURL(moduleUrl)
-
-          const result = {
+          clearTimeout(timeoutId)
+          resolve({
             main: module.main,
             boot: module.boot,
             pre: module.pre,
             post: module.post,
-          }
-
-          clearTimeout(timeoutId)
-          resolve(result)
+          })
         })
         .catch((error) => {
           URL.revokeObjectURL(moduleUrl)
@@ -128,54 +142,64 @@ async function executeCodeSafely(code: string, timeout: number): Promise<Process
   })
 }
 
-function createUnpkgPathPlugin(): Plugin {
+function createLocalUtilsPlugin(): Plugin {
   return {
-    name: 'unpkg-path-plugin',
+    name: 'local-utils-plugin',
     setup(build) {
-      // Handle root entry file
-      build.onResolve({ filter: /(^input\.ts$)/ }, () => {
-        return { path: 'input.ts', namespace: 'app' }
-      })
+      // Resolve local utils imports
+      build.onResolve({ filter: /^@\/utils$/ }, () => ({
+        path: 'local-utils',
+        namespace: 'local',
+      }))
 
-      // Handle relative imports inside a module
-      build.onResolve({ filter: /^\.+\// }, (args) => {
+      // Load local utils
+      build.onLoad({ filter: /^local-utils$/, namespace: 'local' }, () => {
+        const utilsExports = Object.entries(localUtils)
+          .filter(([, value]) => typeof value === 'function')
+          .map(([key, fn]) => `export const ${key} = ${fn.toString()};`)
+          .join('\n')
+
         return {
-          path: new URL(args.path, 'https://unpkg.com' + args.resolveDir + '/').href,
-          namespace: 'app',
-        }
-      })
-
-      // Handle main file of a module
-      build.onResolve({ filter: /.*/ }, async (args) => {
-        const isUrl = args.path.startsWith('https://') || args.path.startsWith('http://')
-
-        if (isUrl) {
-          return {
-            path: args.path,
-            namespace: 'app',
-          }
-        }
-
-        // Use ESM version from unpkg
-        const resolvedPath = `https://unpkg.com/${args.path}?module`
-        console.log('Resolved:', resolvedPath)
-        return {
-          path: resolvedPath,
-          namespace: 'app',
+          loader: 'ts',
+          contents: `// Pattern generation utilities\n${utilsExports}`,
         }
       })
     },
   }
 }
 
-function createUnpkgFetchPlugin(input: string): Plugin {
+function createModuleResolutionPlugin(userCode: string): Plugin {
   return {
-    name: 'unpkg-fetch-plugin',
+    name: 'module-resolution-plugin',
     setup(build) {
-      // Handle root user input code
-      build.onLoad({ filter: /^input\.ts$/ }, () => {
-        const wrappedInput = `
-${input}
+      // Handle entry point
+      build.onResolve({ filter: /^input\.ts$/ }, () => ({
+        path: 'input.ts',
+        namespace: 'app',
+      }))
+
+      // Handle relative imports
+      build.onResolve({ filter: /^\.+\// }, (args) => ({
+        path: new URL(args.path, 'https://unpkg.com' + args.resolveDir + '/').href,
+        namespace: 'app',
+      }))
+
+      // Handle npm packages and URLs
+      build.onResolve({ filter: /.*/ }, (args) => {
+        if (isUrl(args.path)) {
+          return { path: args.path, namespace: 'app' }
+        }
+
+        const resolvedPath = resolveUnpkgUrl(args.path)
+        console.log('Resolved:', resolvedPath)
+        return { path: resolvedPath, namespace: 'app' }
+      })
+
+      // Load entry point with user code
+      build.onLoad({ filter: /^input\.ts$/, namespace: 'app' }, () => ({
+        loader: 'ts',
+        contents: `
+${userCode}
 
 // Export functions if they exist
 const _main = typeof main !== 'undefined' ? main : undefined;
@@ -184,76 +208,38 @@ const _pre = typeof pre !== 'undefined' ? pre : undefined;
 const _post = typeof post !== 'undefined' ? post : undefined;
 
 export { _main as main, _boot as boot, _pre as pre, _post as post };
-        `
-        return {
-          loader: 'tsx',
-          contents: wrappedInput,
-        }
-      })
+        `,
+      }))
 
-      // Handle JS/TS files
-      build.onLoad({ filter: /.*/ }, async (args) => {
-        // Check if we have this path cached
-        if (moduleCache.has(args.path)) {
-          const cachedContents = moduleCache.get(args.path)!
-
-          // Determine loader
-          let loader: 'js' | 'ts' | 'tsx' | 'jsx' | 'text' = 'js'
-          if (args.path.includes('.ts') && !args.path.includes('unpkg.com')) {
-            loader = 'ts'
-          } else if (args.path.includes('.tsx')) {
-            loader = 'tsx'
-          } else if (args.path.includes('.jsx')) {
-            loader = 'jsx'
-          }
-
-          const resolveDir = new URL('./', args.path).pathname
-
+      // Load external modules
+      build.onLoad({ filter: /.*/, namespace: 'app' }, async (args) => {
+        // Check cache first
+        const cachedContent = moduleCache.get(args.path)
+        if (cachedContent) {
           return {
-            loader,
-            contents: cachedContents,
-            resolveDir,
+            loader: 'ts',
+            contents: cachedContent,
+            resolveDir: new URL('./', args.path).pathname,
           }
         }
 
+        // Fetch and cache
         try {
           const response = await fetch(args.path)
           if (!response.ok) {
-            throw new Error(`Failed to fetch ${args.path}: ${response.statusText}`)
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
           }
 
           const contents = await response.text()
-
-          // Cache the content using path as key
           moduleCache.set(args.path, contents)
 
-          // Determine loader
-          let loader: 'js' | 'ts' | 'tsx' | 'jsx' | 'text' = 'js'
-          if (args.path.includes('.ts') && !args.path.includes('unpkg.com')) {
-            loader = 'ts'
-          } else if (args.path.includes('.tsx')) {
-            loader = 'tsx'
-          } else if (args.path.includes('.jsx')) {
-            loader = 'jsx'
-          }
-
-          const resolveDir = new URL('./', response.url).pathname
-
           return {
-            loader,
+            loader: 'ts',
             contents,
-            resolveDir,
+            resolveDir: new URL('./', response.url).pathname,
           }
         } catch (error) {
-          console.error('Failed to load:', args.path, error)
-          return {
-            errors: [
-              {
-                text: `Failed to load module: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                location: null,
-              },
-            ],
-          }
+          return handlePluginError(args.path, error)
         }
       })
     },

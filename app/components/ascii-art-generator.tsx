@@ -320,13 +320,9 @@ export function AsciiArtGenerator() {
         return
       }
 
-      // Check if code contains import statements for unpkg support
-      const hasImports = /^\s*import\s+/m.test(currentSettings.source.code)
-
       const result = await processCodeModule(currentSettings.source.code, {
         esbuildService: esbuildService,
         timeout: 5000,
-        allowUnpkgImports: hasImports,
       })
 
       if (!result.success || !result.module) {

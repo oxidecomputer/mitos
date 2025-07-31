@@ -7,7 +7,12 @@
  */
 import { redo, undo } from '@codemirror/commands'
 import { EditorView } from '@codemirror/view'
-import { DirectionDownIcon, Info12Icon } from '@oxide/design-system/icons/react'
+import {
+  AddRoundel12Icon,
+  DirectionDownIcon,
+  Info12Icon,
+} from '@oxide/design-system/icons/react'
+import * as Accordion from '@radix-ui/react-accordion'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -59,6 +64,23 @@ const PATTERNS = {
   RANGE: /(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)/,
   STEP: /step=(\d+(?:\.\d+)?)/,
 } as const
+
+const LOCAL_UTILS = [
+  {
+    name: 'checkerboard',
+    description: 'Generates a checkerboard pattern value for given coordinates',
+    type: '(x: number, y: number, size?: number) => number',
+    example: 'const value = checkerboard(coord.x, coord.y, 8)',
+    importStatement: "import { checkerboard } from '@/utils'",
+  },
+  {
+    name: 'stripes',
+    description: 'Creates striped patterns in horizontal, vertical, or diagonal directions',
+    type: '(x: number, y: number, stripeWidth?: number, direction?: "horizontal" | "vertical" | "diagonal") => number',
+    example: 'const value = stripes(coord.x, coord.y, 4, "diagonal")',
+    importStatement: "import { stripes } from '@/utils'",
+  },
+] as const
 
 function parseControlConfig(
   name: string,
@@ -301,6 +323,7 @@ export function CodeSidebar({
   const [isResizing, setIsResizing] = useState(false)
   const editorViewRef = useRef<EditorView | null>(null)
   const [controlsOpen, setControlsOpen] = useState(true)
+  const [utilsOpen, setUtilsOpen] = useState(false)
   const [autoRun, setAutoRun] = useState(true)
   const updateTimeoutRef = useRef<number>(null)
 
@@ -309,6 +332,29 @@ export function CodeSidebar({
   const handleCodeRun = () =>
     updateSettings({ data: null, code: pendingCode, type: 'code' })
   const handleCodeChange = (value: string) => setPendingCode(value)
+
+  const addImport = (importStatement: string) => {
+    if (!editorViewRef.current) return
+
+    const currentContent = editorViewRef.current.state.doc.toString()
+
+    // Check if import already exists
+    if (currentContent.includes(importStatement)) {
+      return
+    }
+
+    // Always add import at the beginning of the file
+    const insertText = `${importStatement}\n`
+
+    // Apply change
+    const transaction = editorViewRef.current.state.update({
+      changes: { from: 0, insert: insertText },
+    })
+    editorViewRef.current.dispatch(transaction)
+
+    const newContent = transaction.state.doc.toString()
+    setPendingCode(newContent)
+  }
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging.current) return
@@ -572,17 +618,88 @@ export function CodeSidebar({
             />
           </div>
 
+          <div className="border-t border-default">
+            <button
+              onClick={() => setUtilsOpen(!utilsOpen)}
+              className="flex w-full items-center justify-between px-4 py-1 font-mono text-[11px] uppercase text-default bg-raise hover:bg-hover"
+            >
+              Utils
+              <DirectionDownIcon
+                className={cn(
+                  'transition-transform text-quaternary',
+                  utilsOpen ? '' : '-rotate-90',
+                )}
+              />
+            </button>
+            {utilsOpen && (
+              <div className="max-h-[40vh] overflow-auto border-t border-default">
+                <div className="px-3 py-3">
+                  <Accordion.Root type="single" collapsible className="space-y-2">
+                    {LOCAL_UTILS.map((util) => (
+                      <Accordion.Item
+                        key={util.name}
+                        value={util.name}
+                        className="rounded border border-default"
+                      >
+                        <Accordion.Header>
+                          <Accordion.Trigger className="flex w-full items-center justify-between rounded px-2 py-1.5 font-mono text-[11px] uppercase text-secondary hover:bg-hover data-[state=open]:rounded-b-none [&_svg]:-rotate-90 [&_svg]:data-[state=open]:rotate-0">
+                            <div className="flex items-center gap-1">
+                              <DirectionDownIcon className="transition-transform text-quaternary" />
+                              <span>{util.name}</span>
+                            </div>
+                          </Accordion.Trigger>
+                        </Accordion.Header>
+                        <Accordion.Content className="data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp overflow-hidden border-t border-default">
+                          <div className="space-y-3 px-3 py-3">
+                            <div className="text-secondary text-sans-sm">
+                              {util.description}
+                            </div>
+                            <div className="space-y-1">
+                              <div className="font-mono text-[10px] uppercase text-tertiary">
+                                Type
+                              </div>
+                              <div className="overflow-x-auto rounded border px-2 py-1 font-mono text-[10px] text-secondary bg-raise border-secondary">
+                                {util.type}
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="font-mono text-[10px] uppercase text-tertiary">
+                                Example
+                              </div>
+                              <div className="cursor-pointer select-all rounded border px-2 py-1 font-mono text-[10px] text-secondary bg-raise border-secondary">
+                                {util.example}
+                              </div>
+                            </div>
+                            <InputButton
+                              variant="secondary"
+                              onClick={() => {
+                                addImport(util.importStatement)
+                              }}
+                              className="flex items-center gap-1.5"
+                            >
+                              Import <AddRoundel12Icon className="text-quaternary" />
+                            </InputButton>
+                          </div>
+                        </Accordion.Content>
+                      </Accordion.Item>
+                    ))}
+                  </Accordion.Root>
+                </div>
+              </div>
+            )}
+          </div>
+
           {controlVariables.length > 0 && (
             <div className="border-t border-default">
               <button
                 onClick={() => setControlsOpen(!controlsOpen)}
-                className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase text-secondary hover:bg-hover"
+                className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase text-default bg-raise hover:bg-hover"
               >
                 Controls
                 <DirectionDownIcon
                   className={cn(
                     'transition-transform text-quaternary',
-                    controlsOpen ? '' : 'rotate-180',
+                    controlsOpen ? '' : '-rotate-90',
                   )}
                 />
               </button>
