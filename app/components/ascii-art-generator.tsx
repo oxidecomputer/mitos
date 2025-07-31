@@ -480,7 +480,7 @@ export function AsciiArtGenerator() {
 
       // Parse the GIF and extract frames
       // Fix type issue by creating proper ArrayBuffer
-      const buffer = bytes.buffer
+      const buffer = bytes.buffer as ArrayBuffer
       const gif = parseGIF(buffer)
       const frames = decompressFrames(gif, true)
 

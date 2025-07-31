@@ -441,9 +441,12 @@ export function AssetExport({
 
       // Read the output file
       const data = await ffmpeg.readFile(outputFilename)
-      const blob = new Blob([data instanceof Uint8Array ? data.buffer : data], {
-        type: exportFormat === 'mp4' ? 'video/mp4' : 'image/gif',
-      })
+      const blob = new Blob(
+        [data instanceof Uint8Array ? (data.buffer as ArrayBuffer) : data],
+        {
+          type: exportFormat === 'mp4' ? 'video/mp4' : 'image/gif',
+        },
+      )
 
       // Save the video
       saveAs(blob, `ascii-animation.${exportFormat}`)
