@@ -65,7 +65,7 @@ export const PATTERNS = {
   STEP: /step=(\d+(?:\.\d+)?)/,
 } as const
 
-const LOCAL_UTILS = [
+const UTILS = [
   {
     name: 'checkerboard',
     description: 'Generates a checkerboard pattern value for given coordinates',
@@ -79,6 +79,21 @@ const LOCAL_UTILS = [
     type: '(x: number, y: number, stripeWidth?: number, direction?: "horizontal" | "vertical" | "diagonal") => number',
     example: 'const value = stripes(coord.x, coord.y, 4, "diagonal")',
     importStatement: "import { stripes } from '@/utils'",
+  },
+  {
+    name: 'simplex-noise',
+    description:
+      'Generates smooth, continuous noise values\nfor procedural textures and patterns',
+    type: 'createNoise2D: () => (x: number, y: number) => number',
+    example: `function boot() {
+  noise2D = createNoise2D()
+}
+
+function main(coord, context, cursor, buffer) {
+  const noise = noise2D(coord.x * 0.01, coord.y * 0.01)
+  return noise > 0 ? 1 : 0
+}`,
+    importStatement: "import { createNoise2D } from 'simplex-noise'",
   },
 ] as const
 
@@ -621,7 +636,7 @@ export function CodeSidebar({
           <div className="border-t border-default">
             <button
               onClick={() => setUtilsOpen(!utilsOpen)}
-              className="flex w-full items-center justify-between px-4 py-1 font-mono text-[11px] uppercase text-default bg-raise hover:bg-hover"
+              className="flex w-full items-center justify-between px-4 py-1 font-mono text-[11px] uppercase tracking-wider text-default bg-raise hover:bg-hover"
             >
               Utils
               <DirectionDownIcon
@@ -635,14 +650,14 @@ export function CodeSidebar({
               <div className="max-h-[40vh] overflow-auto border-t border-default">
                 <div className="px-3 py-3">
                   <Accordion.Root type="single" collapsible className="space-y-2">
-                    {LOCAL_UTILS.map((util) => (
+                    {UTILS.map((util) => (
                       <Accordion.Item
                         key={util.name}
                         value={util.name}
                         className="rounded border border-default"
                       >
                         <Accordion.Header>
-                          <Accordion.Trigger className="flex w-full items-center justify-between rounded px-2 py-1.5 font-mono text-[11px] uppercase text-secondary hover:bg-hover data-[state=open]:rounded-b-none [&_svg]:-rotate-90 [&_svg]:data-[state=open]:rotate-0">
+                          <Accordion.Trigger className="flex w-full items-center justify-between rounded px-2 py-1.5 font-mono text-[11px] uppercase tracking-wider text-default hover:bg-hover data-[state=open]:rounded-b-none [&_svg]:-rotate-90 [&_svg]:data-[state=open]:rotate-0">
                             <div className="flex items-center gap-1">
                               <DirectionDownIcon className="transition-transform text-quaternary" />
                               <span>{util.name}</span>
@@ -650,25 +665,25 @@ export function CodeSidebar({
                           </Accordion.Trigger>
                         </Accordion.Header>
                         <Accordion.Content className="data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp overflow-hidden border-t border-default">
-                          <div className="space-y-3 px-3 py-3">
-                            <div className="text-secondary text-sans-sm">
+                          <div className="space-y-2 px-3 py-3">
+                            <div className="text-[12px] tracking-wide text-secondary">
                               {util.description}
                             </div>
                             <div className="space-y-1">
-                              <div className="font-mono text-[10px] uppercase text-tertiary">
+                              <div className="font-mono text-[10px] uppercase tracking-wider text-tertiary">
                                 Type
                               </div>
-                              <div className="overflow-x-auto rounded border px-2 py-1 font-mono text-[10px] text-secondary bg-raise border-secondary">
+                              <pre className="overflow-x-auto rounded border px-2 py-1 font-mono text-[10px] text-default bg-raise border-secondary">
                                 {util.type}
-                              </div>
+                              </pre>
                             </div>
                             <div className="space-y-1">
-                              <div className="font-mono text-[10px] uppercase text-tertiary">
+                              <div className="font-mono text-[10px] uppercase tracking-wider text-tertiary">
                                 Example
                               </div>
-                              <div className="cursor-pointer select-all rounded border px-2 py-1 font-mono text-[10px] text-secondary bg-raise border-secondary">
+                              <pre className="overflow-x-auto rounded border px-2 py-1 font-mono text-[10px] text-default bg-raise border-secondary">
                                 {util.example}
-                              </div>
+                              </pre>
                             </div>
                             <InputButton
                               variant="secondary"
@@ -693,7 +708,7 @@ export function CodeSidebar({
             <div className="border-t border-default">
               <button
                 onClick={() => setControlsOpen(!controlsOpen)}
-                className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase text-default bg-raise hover:bg-hover"
+                className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase tracking-wider text-default bg-raise hover:bg-hover"
               >
                 Controls
                 <DirectionDownIcon

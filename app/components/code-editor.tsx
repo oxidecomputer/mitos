@@ -192,7 +192,7 @@ export default function CodeEditor({ value, onChange, editorViewRef }: CodeEdito
         highlightActiveLine: true,
         highlightSelectionMatches: false,
         drawSelection: false,
-        autocompletion: true,
+        autocompletion: false,
         foldGutter: true,
         indentOnInput: true,
         history: true,
