@@ -7,7 +7,6 @@
  */
 import { InputNumber } from '~/lib/ui/src'
 
-import type { SourceType } from './ascii-art-generator'
 import { Container } from './container'
 
 interface AnimationOptionsProps {
@@ -21,15 +20,10 @@ interface AnimationOptionsProps {
       frameRate: number
     }>,
   ) => void
-  sourceType?: SourceType
 }
 
-export function AnimationOptions({
-  settings,
-  updateSettings,
-  sourceType = 'code',
-}: AnimationOptionsProps) {
-  const isMediaSource = sourceType === 'gif'
+export function AnimationOptions({ settings, updateSettings }: AnimationOptionsProps) {
+  const isMediaSource = false // Always show all options since we unified the approach
 
   return (
     <Container>

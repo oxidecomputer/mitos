@@ -43,9 +43,9 @@ function post(context, cursor, buffer, userData) {}`
 export const DEFAULT_SETTINGS: AsciiSettings = {
   meta: { name: 'Default' },
   source: {
-    type: 'image',
     data: null,
-    code: DEFAULT_CODE,
+    code: '',
+    fileName: '',
   },
   preprocessing: {
     brightness: 0,
@@ -82,7 +82,7 @@ export const TEMPLATES = {
   clock: {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Clock' },
-    source: { type: 'code', data: null, code: clock },
+    source: { data: null, code: clock },
     output: { ...DEFAULT_SETTINGS, columns: 61, rows: 9, grid: 'both' },
     animation: {
       animationLength: 900,
@@ -92,7 +92,7 @@ export const TEMPLATES = {
   numbers: {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Numbers' },
-    source: { type: 'code', data: null, code: numbers },
+    source: { data: null, code: numbers },
     output: { ...DEFAULT_SETTINGS, columns: 98, rows: 9, grid: 'both' },
     animation: {
       animationLength: 1,
@@ -102,7 +102,7 @@ export const TEMPLATES = {
   coins: {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Coins' },
-    source: { type: 'code', data: null, code: coins },
+    source: { data: null, code: coins },
     output: { ...DEFAULT_SETTINGS, columns: 120, rows: 40, grid: 'none' },
     animation: {
       animationLength: 100,
@@ -112,7 +112,7 @@ export const TEMPLATES = {
   unpkgDemo: {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Perlin Noise (Unpkg)' },
-    source: { type: 'code', data: null, code: unpkgDemo },
+    source: { data: null, code: unpkgDemo },
     output: { ...DEFAULT_SETTINGS, columns: 80, rows: 40, grid: 'none' },
     animation: {
       animationLength: 300,
@@ -123,7 +123,6 @@ export const TEMPLATES = {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Local Pattern' },
     source: {
-      type: 'code',
       data: null,
       code: `import { checkerboard } from '@/utils'
 

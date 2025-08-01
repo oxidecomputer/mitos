@@ -18,7 +18,6 @@ import type { Program } from '~/lib/animation'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
-import { type SourceType } from './ascii-art-generator'
 import { getContent, type AnimationController } from './ascii-preview'
 import { Container } from './container'
 import {
@@ -37,13 +36,11 @@ interface ExportDimensions {
 
 interface AssetExportProps {
   program: Program | null
-  sourceType: SourceType
   animationController: AnimationController
   animationLength: number
   isExporting: boolean
   setIsExporting: (exporting: boolean) => void
   dimensions: { width: number; height: number }
-  gridType?: 'none' | 'horizontal' | 'vertical' | 'both'
   disabled: boolean
   exportSettings: {
     textColor: string
@@ -54,7 +51,6 @@ interface AssetExportProps {
 
 export function AssetExport({
   program,
-  sourceType,
   animationController,
   animationLength,
   isExporting,
@@ -64,7 +60,7 @@ export function AssetExport({
   exportSettings,
 }: AssetExportProps) {
   const [exportFormat, setExportFormat] = useState<ExportFormat>(
-    sourceType === 'code' ? 'frames' : 'png',
+    animationLength > 1 ? 'frames' : 'png',
   )
   const [exportDimensions, setExportDimensions] = useState<ExportDimensions>({
     width: 1920,
@@ -153,22 +149,19 @@ export function AssetExport({
   }, [exportFormat, ffmpegLoaded])
 
   useEffect(() => {
-    const isAnimated =
-      (sourceType === 'code' || sourceType === 'gif') && animationLength > 1
+    const isAnimated = animationLength > 1
 
     if (isAnimated) {
       setExportFormat('frames')
     } else {
       setExportFormat('png')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceType])
+  }, [animationLength])
 
   const exportContent = async () => {
     if (!program) return
 
-    const isAnimated =
-      (sourceType === 'code' || sourceType === 'gif') && animationController
+    const isAnimated = animationController && animationLength > 1
     const totalFrames = isAnimated ? animationLength : 1
     try {
       setIsExporting(true)
@@ -586,7 +579,7 @@ export function AssetExport({
           setExportFormat(value as ExportFormat)
         }}
         options={
-          (sourceType === 'code' || sourceType === 'gif') && animationLength > 1
+          animationLength > 1
             ? (['mp4', 'gif', 'frames'] as ExportFormat[])
             : (['svg', 'png'] as ExportFormat[])
         }
@@ -696,7 +689,7 @@ export function AssetExport({
         >
           {exportFormat === 'mp4' || exportFormat === 'gif'
             ? `Export as ${exportFormat.toUpperCase()}`
-            : sourceType === 'code' || sourceType === 'gif'
+            : animationLength > 1
               ? `Export ${exportFormat === 'frames' ? 'Frames' : 'Frame'}`
               : 'Export Image'}
         </InputButton>

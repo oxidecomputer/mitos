@@ -21,14 +21,13 @@ import type { createAnimation, Program } from '~/lib/animation'
 import { InputButton, InputNumber } from '~/lib/ui/src'
 
 import AsciiAnimation from './ascii-animation'
-import type { GridType, SourceType } from './ascii-art-generator'
+import type { GridType } from './ascii-art-generator'
 import { calculateContentDimensions } from './dimension-utils'
 import { GridOverlay } from './grid-overlay'
 
 interface AsciiPreviewProps {
   program: Program | null
   dimensions: { width: number; height: number }
-  sourceType: SourceType
   gridType: GridType
   showUnderlyingImage: boolean
   underlyingImageUrl: string | null
@@ -85,7 +84,6 @@ const useSize = (target: HTMLDivElement | null) => {
 export function AsciiPreview({
   program,
   dimensions,
-  sourceType,
   gridType,
   showUnderlyingImage,
   underlyingImageUrl,
@@ -231,35 +229,37 @@ export function AsciiPreview({
     <div className="relative flex h-full w-full flex-col">
       {/* Zoom controls */}
       {program && (
-        <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded-md border p-2 bg-raise border-default">
-          <InputNumber
-            showSlider={false}
-            value={zoomLevel}
-            min={0.5}
-            max={5}
-            step={0.25}
-            onChange={setZoomLevel}
-            formatOptions={{ style: 'percent' }}
-          />
+        <div className="absolute right-2 top-2 z-30 flex gap-2">
+          <div className="flex items-center gap-1 rounded-md border p-2 bg-raise border-default">
+            <InputNumber
+              showSlider={false}
+              value={zoomLevel}
+              min={0.5}
+              max={5}
+              step={0.25}
+              onChange={setZoomLevel}
+              formatOptions={{ style: 'percent' }}
+            />
 
-          <InputButton
-            variant="secondary"
-            icon
-            className="!h-6"
-            onClick={handleResetView}
-            disabled={zoomLevel === 1 && position.x === 0 && position.y === 0}
-          >
-            <AutoRestart12Icon className="rotate-90 -scale-x-100" />
-          </InputButton>
+            <InputButton
+              variant="secondary"
+              icon
+              className="!h-6"
+              onClick={handleResetView}
+              disabled={zoomLevel === 1 && position.x === 0 && position.y === 0}
+            >
+              <AutoRestart12Icon className="rotate-90 -scale-x-100" />
+            </InputButton>
 
-          <InputButton
-            variant={autoFit ? 'default' : 'secondary'}
-            icon
-            className="!h-6"
-            onClick={() => setAutoFit(!autoFit)}
-          >
-            <Resize16Icon className="w-3" />
-          </InputButton>
+            <InputButton
+              variant={autoFit ? 'default' : 'secondary'}
+              icon
+              className="!h-6"
+              onClick={() => setAutoFit(!autoFit)}
+            >
+              <Resize16Icon className="w-3" />
+            </InputButton>
+          </div>
         </div>
       )}
       {/* ASCII preview container */}
@@ -330,12 +330,11 @@ export function AsciiPreview({
           </div>
         </div>
       </div>
-      {(sourceType === 'code' || sourceType === 'gif') && settings.animationLength > 1 && (
+      {settings.animationLength > 1 && (
         <FrameSlider
           frame={frame}
           totalFrames={settings.animationLength}
           animationController={animationController}
-          sourceType={sourceType}
         />
       )}
     </div>
@@ -374,12 +373,10 @@ function FrameSlider({
   frame,
   totalFrames,
   animationController,
-  sourceType,
 }: {
   frame: number
   totalFrames: number
   animationController: AnimationController
-  sourceType?: SourceType
 }) {
   const [playing, setPlaying] = useState(
     animationController && animationController.getState().playing ? true : false,
@@ -412,7 +409,7 @@ function FrameSlider({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceType])
+  }, [])
 
   return (
     <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md border p-2 bg-raise border-default">

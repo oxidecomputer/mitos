@@ -5,14 +5,13 @@
  *
  * Copyright Oxide Computer Company
  */
-import { DocumentApi16Icon } from '@oxide/design-system/icons/react'
+import { Close8Icon, DocumentApi16Icon } from '@oxide/design-system/icons/react'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 import { InputButton } from '~/lib/ui/src'
 
-import type { SourceType } from './ascii-art-generator'
 import { Container } from './container'
 import { PasteConfirmationDialog } from './paste-confirmation'
 
@@ -25,9 +24,9 @@ export function SourceSelector({
   setShowCodeSidebar: (val: boolean) => void
   showCodeSidebar: boolean
   settings: {
-    type: SourceType
     data: string | null
     code: string
+    fileName: string | null
   }
   processFile: (file: File, dataUrl?: string) => boolean // Add this prop type
 }) {
@@ -104,7 +103,7 @@ export function SourceSelector({
     <Container className="border-b py-3 border-default">
       <div className="flex gap-2">
         <input
-          key={settings.type}
+          key="file-input"
           ref={inputRef}
           type="file"
           className="hidden"
@@ -130,6 +129,15 @@ export function SourceSelector({
           onCancel={cancelPastedImage}
         />
       </div>
+      {settings.data && (
+        <div className="!mt-2 line-clamp-1 flex items-center gap-0.5 font-mono uppercase text-quaternary [font-size:10px]">
+          <div className="text-secondary">Source:</div>
+          <div className="flex-grow truncate text-ellipsis">{settings.fileName}</div>
+          <button className="ml-1 flex items-center justify-center rounded border p-1 text-secondary border-default hover:bg-hover">
+            <Close8Icon />
+          </button>
+        </div>
+      )}
     </Container>
   )
 }

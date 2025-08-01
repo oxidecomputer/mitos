@@ -23,7 +23,6 @@ import { LinkButton } from '~/lib/ui/src/components/InputButton/InputButton'
 import { InputText } from '~/lib/ui/src/components/InputText/InputText'
 import { cn } from '~/lib/utils'
 
-import type { SourceType } from './ascii-art-generator'
 import CodeEditor from './code-editor'
 
 interface CodeSidebarProps {
@@ -32,7 +31,6 @@ interface CodeSidebarProps {
   isOpen: boolean
   updateSettings: (
     settings: Partial<{
-      type: SourceType
       data: string | null
       code: string
     }>,
@@ -80,6 +78,41 @@ const UTILS = [
     type: '(x: number, y: number, stripeWidth?: number, direction?: "horizontal" | "vertical" | "diagonal") => number',
     example: 'const value = stripes(coord.x, coord.y, 4, "diagonal")',
     importStatement: "import { stripes } from '@/utils'",
+  },
+  {
+    name: 'valueToChar',
+    description: 'Converts a 0-1 value to an ASCII character for rendering',
+    type: '(value: number, chars?: string) => string',
+    example: `import { valueToChar, getImageValue } from '@/utils'
+import { imageData } from '@/imageData'
+import { characterSet } from '@/settings'
+
+function main(pos, context) {
+  const value = getImageValue(imageData, pos.x, pos.y)
+  return { char: valueToChar(value, characterSet) }
+}`,
+    importStatement:
+      "import { valueToChar } from '@/utils'\nimport { characterSet } from '@/settings'",
+  },
+  {
+    name: 'getImageValue',
+    description: 'Gets a value from 2D image data array with bounds checking',
+    type: '(data: number[][], x: number, y: number) => number',
+    example: `import { getImageValue, valueToChar } from '@/utils'
+import { imageData, frames } from '@/imageData'
+import { characterSet } from '@/settings'
+
+function main(pos, context) {
+  // Use animated frames if available
+  const data = frames && frames.length > 0
+    ? frames[context.frame % frames.length]
+    : imageData
+
+  const value = getImageValue(data, pos.x, pos.y)
+  return { char: valueToChar(value, characterSet) }
+}`,
+    importStatement:
+      "import { getImageValue } from '@/utils'\nimport { characterSet } from '@/settings'",
   },
   {
     name: 'simplex-noise',
@@ -345,8 +378,7 @@ export function CodeSidebar({
 
   const handleUndo = () => editorViewRef.current && undo(editorViewRef.current)
   const handleRedo = () => editorViewRef.current && redo(editorViewRef.current)
-  const handleCodeRun = () =>
-    updateSettings({ data: null, code: pendingCode, type: 'code' })
+  const handleCodeRun = () => updateSettings({ code: pendingCode })
   const handleCodeChange = (value: string) => flushSync(() => setPendingCode(value))
 
   const addImport = (importStatement: string) => {
@@ -477,7 +509,7 @@ export function CodeSidebar({
     // Debounced auto-run
     if (autoRun) {
       updateTimeoutRef.current = window.setTimeout(() => {
-        updateSettings({ data: null, code: newContent, type: 'code' })
+        updateSettings({ data: null, code: newContent })
         updateTimeoutRef.current = null
       }, 100)
     }

@@ -15,10 +15,13 @@ import * as localUtils from './utils/patterns'
 // Cache for fetched modules
 const moduleCache = new Map<string, string>()
 
-interface CodeProcessorOptions {
+export interface CodeProcessorOptions {
   esbuildService: EsbuildService
   timeout?: number
   target?: string
+  imageData?: unknown
+  frames?: unknown[]
+  settings?: unknown
 }
 
 interface LoadProcessedModule {
@@ -79,7 +82,12 @@ export async function processCodeModule(
       platform: 'browser',
       write: false,
       treeShaking: false,
-      plugins: [createLocalUtilsPlugin(), createModuleResolutionPlugin(code)],
+      plugins: [
+        createLocalUtilsPlugin(),
+        createImageDataPlugin(options.imageData, options.frames),
+        createSettingsPlugin(options.settings),
+        createModuleResolutionPlugin(code),
+      ],
       define: {
         global: 'globalThis',
         'process.env.NODE_ENV': '"production"',
@@ -169,6 +177,57 @@ function createLocalUtilsPlugin(): Plugin {
         return {
           loader: 'ts',
           contents: `// Pattern generation utilities\n${utilsExports}`,
+        }
+      })
+    },
+  }
+}
+
+function createImageDataPlugin(imageData?: unknown, frames?: unknown[]): Plugin {
+  return {
+    name: 'image-data-plugin',
+    setup(build) {
+      // Resolve image data imports
+      build.onResolve({ filter: /^@\/imageData$/ }, () => ({
+        path: 'image-data',
+        namespace: 'imageData',
+      }))
+
+      // Load image data
+      build.onLoad({ filter: /^image-data$/, namespace: 'imageData' }, () => {
+        const imageDataStr = imageData ? JSON.stringify(imageData, null, 2) : '{}'
+        const framesStr = frames ? JSON.stringify(frames, null, 2) : 'null'
+
+        return {
+          loader: 'ts',
+          contents: `// Image data exports
+export const imageData = ${imageDataStr};
+export const frames = ${framesStr};`,
+        }
+      })
+    },
+  }
+}
+
+function createSettingsPlugin(settings?: unknown): Plugin {
+  return {
+    name: 'settings-plugin',
+    setup(build) {
+      // Resolve settings imports
+      build.onResolve({ filter: /^@\/settings$/ }, () => ({
+        path: 'settings',
+        namespace: 'settings',
+      }))
+
+      // Load settings
+      build.onLoad({ filter: /^settings$/, namespace: 'settings' }, () => {
+        const settingsObj = settings as any
+        const characterSet = settingsObj?.output?.characterSet || '@%#*+=-:. '
+
+        return {
+          loader: 'ts',
+          contents: `// Settings exports
+export const characterSet = ${JSON.stringify(characterSet)};`,
         }
       })
     },

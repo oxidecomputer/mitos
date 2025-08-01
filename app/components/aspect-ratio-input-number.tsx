@@ -9,7 +9,6 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { InputNumber, InputSwitch } from '~/lib/ui/src'
 
-import { SourceType } from './ascii-art-generator'
 import { CHAR_HEIGHT, CHAR_WIDTH } from './dimension-utils'
 
 export interface AspectRatioInputNumberProps {
@@ -27,7 +26,6 @@ export interface AspectRatioInputNumberProps {
   maxHeight?: number
   disabled?: boolean
   className?: string
-  sourceType: SourceType
 }
 
 const calculateAspectRatio = (w: number, h: number) => (w * CHAR_WIDTH) / (h * CHAR_HEIGHT)
@@ -48,7 +46,6 @@ export const AspectRatioInputNumber = ({
   aspectRatio,
   onAspectRatioChange,
   disabled = false,
-  sourceType,
 }: AspectRatioInputNumberProps) => {
   const [isLocked, setIsLocked] = useState(aspectRatio !== undefined)
 
@@ -138,11 +135,11 @@ export const AspectRatioInputNumber = ({
   )
 
   useEffect(() => {
-    if (aspectRatioFromImg && sourceType !== 'code' && !aspectRatio) {
+    if (aspectRatioFromImg && !aspectRatio) {
       // Set aspect ratio from image dimensions when enabled
       onAspectRatioChange(calculateAspectRatio(width, height))
     }
-  }, [aspectRatioFromImg, sourceType, aspectRatio, width, height, onAspectRatioChange])
+  }, [aspectRatioFromImg, aspectRatio, width, height, onAspectRatioChange])
 
   // Syncing dimensions when aspect ratio changes externally
   useEffect(() => {
@@ -204,18 +201,17 @@ export const AspectRatioInputNumber = ({
             Aspect Ratio
           </InputNumber>
 
-          {sourceType !== 'code' && (
-            <InputSwitch
-              checked={aspectRatioFromImg}
-              onChange={(checked) => {
-                if (onAspectRatioFromImgChange) {
-                  onAspectRatioFromImgChange(checked)
-                }
-              }}
-            >
-              Use Image Ratio
-            </InputSwitch>
-          )}
+          {/* Hide if no image data? */}
+          <InputSwitch
+            checked={aspectRatioFromImg}
+            onChange={(checked) => {
+              if (onAspectRatioFromImgChange) {
+                onAspectRatioFromImgChange(checked)
+              }
+            }}
+          >
+            Use Image Ratio
+          </InputSwitch>
         </div>
       )}
     </>

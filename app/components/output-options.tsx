@@ -11,7 +11,7 @@ import { InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 import { InputText } from '~/lib/ui/src/components/InputText/InputText'
 
-import type { ColorMappingType, GridType, SourceType } from './ascii-art-generator'
+import type { ColorMappingType, GridType } from './ascii-art-generator'
 import { AspectRatioInputNumber } from './aspect-ratio-input-number'
 import { Container } from './container'
 
@@ -38,8 +38,6 @@ interface OutputOptionsProps {
       colorMapping: ColorMappingType
     }>,
   ) => void
-  sourceType: SourceType
-  sourceImageDimensions?: { width: number; height: number }
 }
 
 export const predefinedCharacterSets = {
@@ -73,12 +71,7 @@ const gridOptions: GridType[] = ['none', 'horizontal', 'vertical', 'both']
 
 const colorMappingOptions: ColorMappingType[] = ['brightness', 'hue', 'saturation']
 
-export function OutputOptions({
-  settings,
-  updateSettings,
-  sourceType,
-  sourceImageDimensions,
-}: OutputOptionsProps) {
+export function OutputOptions({ settings, updateSettings }: OutputOptionsProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
 
   const handleCharacterSetChange = (value: string) => {
@@ -96,44 +89,40 @@ export function OutputOptions({
 
   return (
     <Container>
-      {sourceType !== 'code' && (
-        <>
-          <InputSelect<CharacterSet>
-            value={selectedCharSet as CharacterSet}
-            onChange={handleCharacterSetChange}
-            options={characterSets}
-            labelize={(label) => label}
-            placeholder="Select a character set"
-          >
-            Character Set
-          </InputSelect>
+      <InputSelect<CharacterSet>
+        value={selectedCharSet as CharacterSet}
+        onChange={handleCharacterSetChange}
+        options={characterSets}
+        labelize={(label) => label}
+        placeholder="Select a character set"
+      >
+        Character Set
+      </InputSelect>
 
-          <div className="dedent">
-            <InputText
-              value={settings.characterSet}
-              onChange={handleCustomCharacterSetChange}
-              placeholder="Enter custom characters"
-              className="[fontFamily:--font-mono]"
-            />
-          </div>
+      <div className="dedent">
+        <InputText
+          value={settings.characterSet}
+          onChange={handleCustomCharacterSetChange}
+          placeholder="Enter custom characters"
+          className="[fontFamily:--font-mono]"
+        />
+      </div>
 
-          <InputSelect<ColorMappingType>
-            value={settings.colorMapping}
-            onChange={(value) => updateSettings({ colorMapping: value })}
-            options={colorMappingOptions}
-            labelize={(option) => {
-              const labels = {
-                brightness: 'Brightness',
-                hue: 'Hue',
-                saturation: 'Saturation',
-              }
-              return labels[option]
-            }}
-          >
-            Color Mapping
-          </InputSelect>
-        </>
-      )}
+      <InputSelect<ColorMappingType>
+        value={settings.colorMapping}
+        onChange={(value) => updateSettings({ colorMapping: value })}
+        options={colorMappingOptions}
+        labelize={(option) => {
+          const labels = {
+            brightness: 'Brightness',
+            hue: 'Hue',
+            saturation: 'Saturation',
+          }
+          return labels[option]
+        }}
+      >
+        Color Mapping
+      </InputSelect>
 
       <AspectRatioInputNumber
         width={settings.columns}
@@ -144,16 +133,8 @@ export function OutputOptions({
         aspectRatioFromImg={settings.useImageAspectRatio}
         onAspectRatioFromImgChange={(value) => {
           updateSettings({ useImageAspectRatio: value })
-          if (value && (sourceType === 'image' || sourceType === 'gif')) {
-            if (sourceImageDimensions) {
-              // Use stored dimensions if available
-              const aspectRatio = sourceImageDimensions.width / sourceImageDimensions.height
-              updateSettings({ aspectRatio })
-            }
-          }
         }}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
-        sourceType={sourceType}
       />
 
       <InputSelect<GridType>
@@ -173,16 +154,14 @@ export function OutputOptions({
         Grid Lines
       </InputSelect>
 
-      {sourceType === 'image' && (
-        <div className="flex items-center justify-between">
-          <InputSwitch
-            checked={settings.showUnderlyingImage}
-            onChange={(checked) => updateSettings({ showUnderlyingImage: checked })}
-          >
-            Show Image
-          </InputSwitch>
-        </div>
-      )}
+      <div className="flex items-center justify-between">
+        <InputSwitch
+          checked={settings.showUnderlyingImage}
+          onChange={(checked) => updateSettings({ showUnderlyingImage: checked })}
+        >
+          Show Underlying Image
+        </InputSwitch>
+      </div>
     </Container>
   )
 }

@@ -10,7 +10,7 @@ import * as esbuild from 'esbuild-wasm'
 import type { AsciiSettings } from '~/components/ascii-art-generator'
 
 import { processCodeModule as processCodeModuleNew } from './code-processor'
-import type { Data } from './types'
+import type { AsciiImageData } from './types'
 
 // Types
 export interface CachedMediaData {
@@ -19,7 +19,7 @@ export interface CachedMediaData {
   rawFrames: MediaFrame[]
   processedFrames?: {
     settings: MediaProcessingSettings
-    frames: Data[]
+    frames: AsciiImageData[]
   }
 }
 
@@ -49,11 +49,11 @@ export type MediaProcessingSettings = {
 }
 
 export type ProcessingResult = {
-  data: Data
+  data: AsciiImageData
   width: number
   height: number
   processedImageUrl?: string
-  frames?: Data[]
+  frames?: AsciiImageData[]
   rawFrames?: MediaFrame[]
   frameCount?: number
   sourceFps?: number
@@ -65,12 +65,12 @@ export async function processAnimatedMedia(
   settings: AsciiSettings,
   progressCallback?: (frame: number) => void,
 ): Promise<{
-  frames: Data[]
-  firstFrameData: Data
+  frames: AsciiImageData[]
+  firstFrameData: AsciiImageData
   firstFrameUrl: string | null
 }> {
-  const processedFrames: Data[] = []
-  let firstFrameData: Data = {}
+  const processedFrames: AsciiImageData[] = []
+  let firstFrameData: AsciiImageData = {}
   let firstFrameUrl: string | null = null
 
   for (let i = 0; i < rawFrames.length; i++) {
@@ -101,7 +101,7 @@ export async function processImage(
   extractFrames: boolean = false,
 ): Promise<ProcessingResult> {
   return new Promise((resolve) => {
-    if (extractFrames && settings.source.type === 'gif') {
+    if (extractFrames && imageData.includes('data:image/gif')) {
       handleGifExtraction(imageData, settings, resolve)
       return
     }
@@ -143,14 +143,12 @@ export async function processImage(
 function createFallbackResponse(settings: AsciiSettings): ProcessingResult {
   const width = settings.output.columns || 80
   const height = settings.output.rows || 40
-  const data: Data = {}
+  const data: AsciiImageData = {}
 
   for (let x = 0; x < width; x++) {
     data[x] = {}
     for (let y = 0; y < height; y++) {
-      data[x][y] = {
-        char: '?',
-      }
+      data[x][y] = 0.5 // Default to middle density
     }
   }
 
@@ -161,7 +159,7 @@ async function processImageData(
   sourceCanvas: HTMLCanvasElement,
   settings: AsciiSettings,
 ): Promise<{
-  data: Data
+  data: AsciiImageData
   processedImageUrl?: string
 }> {
   const ctx = sourceCanvas.getContext('2d')!
@@ -274,11 +272,10 @@ function convertPixelsToAscii(
   width: number,
   height: number,
   settings: AsciiSettings,
-): Data {
-  const characterSet = settings.output.characterSet
+): AsciiImageData {
   const colorMapping = settings.output.colorMapping
 
-  const data: Data = {}
+  const data: AsciiImageData = {}
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -315,18 +312,15 @@ function convertPixelsToAscii(
         settings.preprocessing.whitePoint,
       )
 
-      // Map to character
-      const charIndex = Math.floor((mappingValue / 255) * (characterSet.length - 1))
-      const char = characterSet[charIndex] || ' '
+      // Convert to 0-1 value
+      const normalizedValue = mappingValue / 255
 
       // Initialize column if needed
       if (!data[x]) {
         data[x] = {}
       }
 
-      data[x][y] = {
-        char,
-      }
+      data[x][y] = normalizedValue
     }
   }
 
@@ -592,10 +586,10 @@ async function extractFirstGifFrame(img: HTMLImageElement, settings: AsciiSettin
 
 async function extractMultipleGifFrames(
   img: HTMLImageElement,
-  initialFrame: { data: Data; processedImageUrl?: string },
+  initialFrame: { data: AsciiImageData; processedImageUrl?: string },
   settings: AsciiSettings,
-): Promise<Data[]> {
-  const frames: Data[] = [initialFrame.data]
+): Promise<AsciiImageData[]> {
+  const frames: AsciiImageData[] = [initialFrame.data]
   const totalFrames = Math.min(24, settings.animation.animationLength)
 
   try {
@@ -631,9 +625,9 @@ async function loadGifFrame(
   frameImg: HTMLImageElement,
   originalImg: HTMLImageElement,
   frameIndex: number,
-  initialFrame: { data: Data; processedImageUrl?: string },
+  initialFrame: { data: AsciiImageData; processedImageUrl?: string },
   settings: AsciiSettings,
-): Promise<Data> {
+): Promise<AsciiImageData> {
   return new Promise((resolveFrame) => {
     frameImg.onload = async () => {
       const frameCanvas = document.createElement('canvas')
