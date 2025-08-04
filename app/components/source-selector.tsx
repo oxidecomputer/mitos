@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import { Close8Icon, DocumentApi16Icon } from '@oxide/design-system/icons/react'
+import { DocumentApi16Icon } from '@oxide/design-system/icons/react'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -133,9 +133,9 @@ export function SourceSelector({
         <div className="!mt-2 line-clamp-1 flex items-center gap-0.5 font-mono uppercase text-quaternary [font-size:10px]">
           <div className="text-secondary">Source:</div>
           <div className="flex-grow truncate text-ellipsis">{settings.fileName}</div>
-          <button className="ml-1 flex items-center justify-center rounded border p-1 text-secondary border-default hover:bg-hover">
+          {/*<button className="ml-1 flex items-center justify-center rounded border p-1 text-secondary border-default hover:bg-hover">
             <Close8Icon />
-          </button>
+          </button>*/}
         </div>
       )}
     </Container>
