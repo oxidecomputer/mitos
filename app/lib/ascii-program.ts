@@ -37,8 +37,7 @@
  * // import { imageData, frames } from '@/imageData'
  */
 import type { Program } from './animation'
-import { processCodeModule, type CodeProcessorOptions } from './code-processor'
-import type { AsciiImageData } from './types'
+import { ModuleProcessingResult } from './code-processor'
 
 export function generateImageCode(): string {
   return `
@@ -70,72 +69,16 @@ function main(pos, context) {
 }
 
 /**
- * Unified function to process any program (image or code)
- */
-export async function processProgram(
-  input:
-    | {
-        type: 'image'
-        imageData?: AsciiImageData
-        frames?: AsciiImageData[]
-        width?: number
-        height?: number
-        frameRate?: number
-      }
-    | {
-        type: 'code'
-        code: string
-        width?: number
-        height?: number
-        frameRate?: number
-      },
-  options: CodeProcessorOptions,
-) {
-  const width = Math.max(1, input.width || 80)
-  const height = Math.max(1, input.height || 40)
-  const frameRate = input.frameRate || 30
-
-  let code: string
-
-  if (input.type === 'image') {
-    const imageDataInput = input.imageData || {}
-    const framesInput = input.frames
-
-    code = generateImageCode(imageDataInput, framesInput, frameRate)
-  } else {
-    code = input.code
-  }
-
-  // Pass image data to processor options
-  const processorOptions = {
-    ...options,
-    imageData: input.type === 'image' ? input.imageData : undefined,
-    frames: input.type === 'image' ? input.frames : undefined,
-  }
-
-  const result = await processCodeModule(code, processorOptions)
-
-  return {
-    ...result,
-    settings: {
-      width,
-      height,
-      frameRate,
-    },
-  }
-}
-
-/**
  * Creates a program from the unified processor result
  */
 export async function createProgramFromProcessor(
-  processorResult: Awaited<ReturnType<typeof processProgram>>,
+  processorResult: ModuleProcessingResult,
+  settings: { width: number; height: number; frameRate: number },
 ): Promise<Program | null> {
   if (!processorResult.success || !processorResult.module) {
     return null
   }
 
-  const { settings } = processorResult
   const w = Math.max(1, settings.width)
   const h = Math.max(1, settings.height)
 
@@ -219,70 +162,4 @@ export async function createProgramFromProcessor(
   }
 
   return program
-}
-
-/**
- * Creates a program directly from image data using the unified approach
- */
-export async function createUnifiedImageProgram(
-  imageData: AsciiImageData,
-  width: number,
-  height: number,
-  frames: AsciiImageData[] | undefined,
-  frameRate: number,
-  options: CodeProcessorOptions,
-): Promise<{ program: Program | null; code: string }> {
-  const result = await processProgram(
-    {
-      type: 'image',
-      imageData,
-      frames,
-      width,
-      height,
-      frameRate,
-    },
-    options,
-  )
-
-  const code = generateImageCode(imageData, frames, frameRate)
-  const program = await createProgramFromProcessor(result)
-
-  return { program, code }
-}
-
-/**
- * Creates a program directly from code using the unified approach
- */
-export async function createUnifiedCodeProgram(
-  code: string,
-  width: number,
-  height: number,
-  frameRate: number,
-  options: CodeProcessorOptions,
-): Promise<{ program: Program | null; code: string }> {
-  const result = await processProgram(
-    {
-      type: 'code',
-      code,
-      width,
-      height,
-      frameRate,
-    },
-    options,
-  )
-
-  const program = await createProgramFromProcessor(result)
-
-  return { program, code }
-}
-
-export async function createImageAsciiProgram(
-  imageData: AsciiImageData,
-  width: number,
-  height: number,
-  frames: AsciiImageData[] | undefined,
-  frameRate: number,
-  options: CodeProcessorOptions,
-): Promise<{ program: Program | null; code: string }> {
-  return createUnifiedImageProgram(imageData, width, height, frames, frameRate, options)
 }

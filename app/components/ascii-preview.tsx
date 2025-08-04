@@ -58,7 +58,7 @@ const DemoCard = ({
   onClick?: () => void
 }) => (
   <button
-    className="flex w-[20rem] items-center rounded border p-3 text-left transition-colors bg-raise border-secondary elevation-1 hover:bg-[var(--base-neutral-100)]"
+    className="flex w-[20rem] items-center rounded border p-2 text-left transition-colors bg-raise border-secondary elevation-1 hover:bg-[var(--base-neutral-100)]"
     onClick={onClick}
   >
     <div className="mr-3 inline-flex items-center justify-center rounded p-2 text-accent bg-accent-secondary">

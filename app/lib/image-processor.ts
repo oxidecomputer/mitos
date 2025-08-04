@@ -48,7 +48,7 @@ export type MediaProcessingSettings = {
   colorMapping: string
 }
 
-export type ProcessingResult = {
+export type ImageProcessingResult = {
   data: AsciiImageData
   width: number
   height: number
@@ -99,7 +99,7 @@ export async function processImage(
   imageData: string,
   settings: AsciiSettings,
   extractFrames: boolean = false,
-): Promise<ProcessingResult> {
+): Promise<ImageProcessingResult> {
   return new Promise((resolve) => {
     if (extractFrames && imageData.includes('data:image/gif')) {
       handleGifExtraction(imageData, settings, resolve)
@@ -140,7 +140,7 @@ export async function processImage(
 }
 
 // Helper functions
-function createFallbackResponse(settings: AsciiSettings): ProcessingResult {
+function createFallbackResponse(settings: AsciiSettings): ImageProcessingResult {
   const width = settings.output.columns || 80
   const height = settings.output.rows || 40
   const data: AsciiImageData = {}
@@ -541,7 +541,7 @@ function applyBayer(data: Uint8ClampedArray, width: number, height: number) {
 function handleGifExtraction(
   imageData: string,
   settings: AsciiSettings,
-  resolve: (value: ProcessingResult) => void,
+  resolve: (value: ImageProcessingResult) => void,
 ) {
   const img = new Image()
   img.onload = async () => {

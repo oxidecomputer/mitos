@@ -352,13 +352,10 @@ export function AsciiArtGenerator() {
         return
       }
 
-      const newProgram = await createProgramFromProcessor({
-        ...result,
-        settings: {
-          width: columns,
-          height: rows,
-          frameRate: currentSettings.animation.frameRate,
-        },
+      const newProgram = await createProgramFromProcessor(result, {
+        width: columns,
+        height: rows,
+        frameRate: currentSettings.animation.frameRate,
       })
 
       setProgram(newProgram)

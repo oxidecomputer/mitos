@@ -7,6 +7,7 @@
  */
 import { BuildResult, Plugin } from 'esbuild-wasm'
 
+import { AsciiSettings } from '~/components/ascii-art-generator'
 import { type EsbuildService } from '~/hooks/use-esbuild'
 
 import type { Program } from './animation'
@@ -28,14 +29,14 @@ interface LoadProcessedModule {
   load(): Promise<ProcessedModule>
 }
 
-interface ProcessedModule {
+export interface ProcessedModule {
   main?: Program['main']
   boot?: Program['boot']
   pre?: Program['pre']
   post?: Program['post']
 }
 
-interface ProcessingResult {
+export interface ModuleProcessingResult {
   success: boolean
   module?: LoadProcessedModule
   error?: string
@@ -66,7 +67,7 @@ function handlePluginError(path: string, error: unknown) {
 export async function processCodeModule(
   code: string,
   options: CodeProcessorOptions,
-): Promise<ProcessingResult> {
+): Promise<ModuleProcessingResult> {
   const { esbuildService, timeout = 5000 } = options
 
   try {
@@ -221,8 +222,8 @@ function createSettingsPlugin(settings?: unknown): Plugin {
 
       // Load settings
       build.onLoad({ filter: /^settings$/, namespace: 'settings' }, () => {
-        const settingsObj = settings as any
-        const characterSet = settingsObj?.output?.characterSet || '@%#*+=-:. '
+        const settingsObj = settings as AsciiSettings
+        const characterSet = settingsObj.output.characterSet || '@%#*+=-:. '
 
         return {
           loader: 'ts',
