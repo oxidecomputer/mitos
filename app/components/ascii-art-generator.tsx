@@ -93,6 +93,8 @@ export function AsciiArtGenerator() {
   const [pendingCode, setPendingCode] = useState('')
   const [projectName, setProjectName] = useState('')
   const [templateType, setTemplateType] = useState<TemplateType | ''>('')
+  const [currentImageData, setCurrentImageData] = useState<AsciiImageData | null>(null)
+  const [currentFrames, setCurrentFrames] = useState<AsciiImageData[] | null>(null)
 
   // Processing state
   const [isExporting, setIsExporting] = useState(false)
@@ -122,6 +124,10 @@ export function AsciiArtGenerator() {
           setShowCodeSidebar(true)
         }
       }
+
+      // Clear image source state when loading templates
+      setCurrentImageData(null)
+      setCurrentFrames(null)
 
       toast(`Applied "${TEMPLATES[template].meta.name}" template`)
 
@@ -219,8 +225,8 @@ export function AsciiArtGenerator() {
           ? haveProcessingSettingsChanged(prevSettings.current, settings)
           : true
 
-      let imageData: AsciiImageData | null = null
-      let frames: AsciiImageData[] | null = null
+      let imageData = currentImageData
+      let frames = currentFrames
 
       if (shouldProcess && settings.source.data) {
         if (settings.source.data.includes('data:image/gif')) {
@@ -248,6 +254,9 @@ export function AsciiArtGenerator() {
         }
       }
 
+      setCurrentImageData(imageData)
+      setCurrentFrames(frames)
+
       await processCodeSource(columns, rows, settings, imageData, frames)
 
       // Update cache entry after processing is complete
@@ -263,6 +272,12 @@ export function AsciiArtGenerator() {
   const processStaticImage = async (imageData: string, currentSettings: AsciiSettings) => {
     try {
       const result = await processImage(imageData, currentSettings)
+
+      if (result.processedImageUrl) {
+        setProcessedImageUrl(result.processedImageUrl)
+      }
+      setCurrentImageData(result.data)
+      setCurrentFrames(null)
 
       // Only generate initial code if pendingCode is empty
       if (pendingCode === '') {
@@ -323,6 +338,12 @@ export function AsciiArtGenerator() {
 
       // Process all extracted frames
       const result = await processAnimatedMedia(rawFrames, currentSettings)
+
+      // Set preview
+      setProcessedImageUrl(result.firstFrameUrl)
+
+      setCurrentImageData(result.firstFrameData)
+      setCurrentFrames(result.frames)
 
       // Only generate initial code if pendingCode is empty
       if (pendingCode === '') {
