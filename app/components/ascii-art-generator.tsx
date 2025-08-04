@@ -93,8 +93,6 @@ export function AsciiArtGenerator() {
   const [pendingCode, setPendingCode] = useState('')
   const [projectName, setProjectName] = useState('')
   const [templateType, setTemplateType] = useState<TemplateType | ''>('')
-  const [currentImageData, setCurrentImageData] = useState<AsciiImageData | null>(null)
-  const [currentFrames, setCurrentFrames] = useState<AsciiImageData[] | null>(null)
 
   // Processing state
   const [isExporting, setIsExporting] = useState(false)
@@ -124,10 +122,6 @@ export function AsciiArtGenerator() {
           setShowCodeSidebar(true)
         }
       }
-
-      // Clear image source state when loading templates
-      setCurrentImageData(null)
-      setCurrentFrames(null)
 
       toast(`Applied "${TEMPLATES[template].meta.name}" template`)
 
@@ -225,15 +219,39 @@ export function AsciiArtGenerator() {
           ? haveProcessingSettingsChanged(prevSettings.current, settings)
           : true
 
+      let imageData: AsciiImageData | null = null
+      let frames: AsciiImageData[] | null = null
+
       if (shouldProcess && settings.source.data) {
         if (settings.source.data.includes('data:image/gif')) {
-          await processGifSource(settings.source.data, settings)
+          const gifResult = await processGifSource(settings.source.data, settings)
+          if (gifResult) {
+            // Update state with processed data
+            if (gifResult.processedImageUrl) {
+              setProcessedImageUrl(gifResult.processedImageUrl)
+            }
+
+            imageData = gifResult.imageData
+            frames = gifResult.frames
+          }
         } else {
-          await processStaticImage(settings.source.data, settings)
+          const staticResult = await processStaticImage(settings.source.data, settings)
+          if (staticResult) {
+            // Update state with processed data
+            if (staticResult.processedImageUrl) {
+              setProcessedImageUrl(staticResult.processedImageUrl)
+            }
+
+            imageData = staticResult.imageData
+            frames = null
+          }
         }
       }
 
-      await processCodeSource(columns, rows, settings)
+      await processCodeSource(columns, rows, settings, imageData, frames)
+
+      // Update cache entry after processing is complete
+      prevSettings.current = settings
     } catch (error) {
       console.error('Error processing:', error)
       toast(error instanceof Error ? error.message : 'Unknown error')
@@ -246,36 +264,47 @@ export function AsciiArtGenerator() {
     try {
       const result = await processImage(imageData, currentSettings)
 
-      if (result.processedImageUrl) {
-        setProcessedImageUrl(result.processedImageUrl)
-      }
-
-      setCurrentImageData(result.data)
-      setCurrentFrames(null)
-
       // Only generate initial code if pendingCode is empty
       if (pendingCode === '') {
         const code = generateImageCode()
         setPendingCode(code)
         updateSettings('source', { code })
       }
+
+      return {
+        imageData: result.data,
+        processedImageUrl: result.processedImageUrl,
+      }
     } catch (error) {
       handleProcessingError('processing image', error)
+      return null
     }
   }
 
   // Process GIF source using gifuct-js
-  const processGifSource = async (gifData: string, currentSettings: AsciiSettings) => {
+  const processGifSource = async (
+    gifData: string,
+    currentSettings: AsciiSettings,
+  ): Promise<{
+    imageData: AsciiImageData
+    frames: AsciiImageData[]
+    processedImageUrl: string | null
+  } | null> => {
     if (!esbuildService || !esbuildInitialized) {
       if (esbuildInitializing) {
         toast('Code processor is still initializing. Please wait a moment.')
       } else {
         toast('Code processor not ready. Please try again.')
       }
-      return
+      return null
     }
 
-    const processGif = async (): Promise<{ frames: number }> => {
+    const processGif = async (): Promise<{
+      frames: number
+      imageData: AsciiImageData
+      framesData: AsciiImageData[]
+      processedImageUrl: string | null
+    }> => {
       // Convert data URL to binary data
       const bytes = dataUrlToUint8Array(gifData)
 
@@ -295,14 +324,7 @@ export function AsciiArtGenerator() {
       // Process all extracted frames
       const result = await processAnimatedMedia(rawFrames, currentSettings)
 
-      // Create cache entry
-      prevSettings.current = currentSettings
-
-      // Set preview
-      setProcessedImageUrl(result.firstFrameUrl)
-
-      setCurrentImageData(result.firstFrameData)
-      setCurrentFrames(result.frames)
+      // Only generate initial code if pendingCode is empty
       if (pendingCode === '') {
         const code = generateImageCode()
         setPendingCode(code)
@@ -313,21 +335,37 @@ export function AsciiArtGenerator() {
         updateSettings('animation', { animationLength: result.frames.length })
       }
 
-      return { frames: result.frames.length }
+      return {
+        frames: result.frames.length,
+        imageData: result.firstFrameData,
+        framesData: result.frames,
+        processedImageUrl: result.firstFrameUrl,
+      }
     }
 
-    toast.promise(processGif(), {
-      loading: 'Processing GIF frames...',
-      success: (data) => `Processed ${data.frames} frames successfully`,
-      error: (error) =>
-        `Error: ${error instanceof Error ? error.message : 'Could not process GIF'}`,
-    })
+    try {
+      toast.loading('Processing GIF frames...')
+      const result = await processGif()
+      toast.dismiss()
+      toast.success(`Processed ${result.frames} frames successfully`)
+      return {
+        imageData: result.imageData,
+        frames: result.framesData,
+        processedImageUrl: result.processedImageUrl,
+      }
+    } catch (_error) {
+      toast.dismiss()
+      toast.error(_error instanceof Error ? _error.message : 'Could not process GIF')
+      return null
+    }
   }
 
   const processCodeSource = async (
     columns: number,
     rows: number,
     currentSettings: AsciiSettings,
+    imageData: AsciiImageData | null,
+    frames: AsciiImageData[] | null,
   ) => {
     try {
       if (!esbuildService || !esbuildInitialized) {
@@ -342,8 +380,8 @@ export function AsciiArtGenerator() {
       const result = await processCodeModule(currentSettings.source.code, {
         esbuildService: esbuildService,
         timeout: 5000,
-        imageData: currentImageData,
-        frames: currentFrames || undefined,
+        imageData: imageData,
+        frames: frames || undefined,
         settings: currentSettings,
       })
 
@@ -629,8 +667,6 @@ export function AsciiArtGenerator() {
   const handleCodeProjectLoaded = useCallback((code: string) => {
     setPendingCode(code)
     setShowCodeSidebar(true)
-    setCurrentImageData(null)
-    setCurrentFrames(null)
   }, [])
 
   const handleLoadProjectInput = useCallback(
@@ -647,8 +683,6 @@ export function AsciiArtGenerator() {
     setShowCodeSidebar(true)
     const defaultTemplate = TEMPLATES.default
     setPendingCode(DEFAULT_CODE)
-    setCurrentImageData(null)
-    setCurrentFrames(null)
     updateSettings('source', {
       data: null,
       code: DEFAULT_CODE,
@@ -850,7 +884,9 @@ export function AsciiArtGenerator() {
               setAnimationController={setAnimationController}
               isExporting={isExporting}
               onExampleScriptClick={handleExampleScriptClick}
-              onExampleImageClick={() => updateSourceAndAspectRatio(exampleImage, 'image')}
+              onExampleImageClick={() =>
+                updateSourceAndAspectRatio(exampleImage, 'image', 'example-grad.png')
+              }
             />
           </div>
 
