@@ -18,6 +18,7 @@ import { ExportOptions } from '~/components/export-options'
 import { OutputOptions } from '~/components/output-options'
 import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
+import { exampleImage } from '~/exampleImage'
 import { useEsbuild } from '~/hooks/use-esbuild'
 import type { Program } from '~/lib/animation'
 import { createProgramFromProcessor, generateImageCode } from '~/lib/ascii-program'
@@ -29,13 +30,7 @@ import {
 } from '~/lib/image-processor'
 import type { AsciiImageData } from '~/lib/types'
 import { cn } from '~/lib/utils'
-import {
-  DEFAULT_CODE,
-  DEFAULT_SETTINGS,
-  exampleImage,
-  TEMPLATES,
-  TemplateType,
-} from '~/templates'
+import { DEFAULT_CODE, DEFAULT_SETTINGS, TEMPLATES, TemplateType } from '~/templates'
 
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'

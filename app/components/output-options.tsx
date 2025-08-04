@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
@@ -72,6 +72,15 @@ const gridOptions: GridType[] = ['none', 'horizontal', 'vertical', 'both']
 
 const colorMappingOptions: ColorMappingType[] = ['brightness', 'hue', 'saturation']
 
+const findMatchingCharacterSet = (characterSet: string): CharacterSet => {
+  for (const [key, value] of Object.entries(predefinedCharacterSets)) {
+    if (value === characterSet) {
+      return key as CharacterSet
+    }
+  }
+  return 'custom'
+}
+
 export function OutputOptions({
   settings,
   updateSettings,
@@ -91,6 +100,11 @@ export function OutputOptions({
     updateSettings({ characterSet: val })
     setSelectedCharSet('custom')
   }
+
+  useEffect(() => {
+    const matchingSet = findMatchingCharacterSet(settings.characterSet)
+    setSelectedCharSet(matchingSet)
+  }, [settings.characterSet])
 
   return (
     <Container>
