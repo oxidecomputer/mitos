@@ -38,6 +38,7 @@ interface OutputOptionsProps {
       colorMapping: ColorMappingType
     }>,
   ) => void
+  sourceImageDimensions?: { width: number; height: number }
 }
 
 export const predefinedCharacterSets = {
@@ -71,7 +72,11 @@ const gridOptions: GridType[] = ['none', 'horizontal', 'vertical', 'both']
 
 const colorMappingOptions: ColorMappingType[] = ['brightness', 'hue', 'saturation']
 
-export function OutputOptions({ settings, updateSettings }: OutputOptionsProps) {
+export function OutputOptions({
+  settings,
+  updateSettings,
+  sourceImageDimensions,
+}: OutputOptionsProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
 
   const handleCharacterSetChange = (value: string) => {
@@ -133,6 +138,11 @@ export function OutputOptions({ settings, updateSettings }: OutputOptionsProps) 
         aspectRatioFromImg={settings.useImageAspectRatio}
         onAspectRatioFromImgChange={(value) => {
           updateSettings({ useImageAspectRatio: value })
+          if (sourceImageDimensions) {
+            // Use stored dimensions if available
+            const aspectRatio = sourceImageDimensions.width / sourceImageDimensions.height
+            updateSettings({ aspectRatio })
+          }
         }}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
       />

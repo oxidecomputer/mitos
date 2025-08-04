@@ -52,6 +52,7 @@ export interface AsciiSettings {
     data: string | null
     code: string
     fileName: string
+    imageDimensions?: { width: number; height: number }
   }
   preprocessing: {
     brightness: number
@@ -434,7 +435,6 @@ export function AsciiArtGenerator() {
     return (
       prevOutput.columns !== output.columns ||
       prevOutput.rows !== output.rows ||
-      prevOutput.characterSet !== output.characterSet ||
       prevOutput.colorMapping !== output.colorMapping ||
       prevPreprocessing.whitePoint !== preprocessing.whitePoint ||
       prevPreprocessing.blackPoint !== preprocessing.blackPoint ||
@@ -799,6 +799,7 @@ export function AsciiArtGenerator() {
               <OutputOptions
                 settings={settings.output}
                 updateSettings={(changes) => updateSettings('output', changes)}
+                sourceImageDimensions={settings.source.imageDimensions}
               />
               {/* Animation Options (always visible) */}
               <hr />
