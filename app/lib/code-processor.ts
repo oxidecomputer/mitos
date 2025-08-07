@@ -11,7 +11,7 @@ import { AsciiSettings } from '~/components/ascii-art-generator'
 import { type EsbuildService } from '~/hooks/use-esbuild'
 
 import type { Program } from './animation'
-import * as localUtils from './utils/patterns'
+import * as localUtils from './utils'
 
 // Cache for fetched modules
 const moduleCache = new Map<string, string>()

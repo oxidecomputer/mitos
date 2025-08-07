@@ -5,11 +5,8 @@
  *
  * Copyright Oxide Computer Company
  */
-import * as esbuild from 'esbuild-wasm'
-
 import type { AsciiSettings } from '~/components/ascii-art-generator'
 
-import { processCodeModule as processCodeModuleNew } from './code-processor'
 import type { AsciiImageData } from './types'
 
 // Types
@@ -655,31 +652,4 @@ async function loadGifFrame(
     const cacheBuster = `?frame=${frameIndex}&t=${Date.now()}`
     frameImg.src = originalImg.src + cacheBuster
   })
-}
-
-// Code module processing with TypeScript support
-export async function processCodeModule(
-  code: string,
-  options: { esbuildService: typeof esbuild; timeout?: number },
-) {
-  const result = await processCodeModuleNew(code, options)
-
-  if (!result.success) {
-    console.error('Error preparing user code module:', result.error)
-    if (result.warnings && result.warnings.length > 0) {
-      console.warn('Warnings:', result.warnings)
-    }
-    return null
-  }
-
-  if (result.warnings && result.warnings.length > 0) {
-    console.warn('Code processing warnings:', result.warnings)
-  }
-
-  // Return a simple wrapper that matches the legacy functionality
-  return {
-    async load() {
-      return await result.module!.load()
-    },
-  }
 }

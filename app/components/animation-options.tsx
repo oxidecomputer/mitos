@@ -23,15 +23,12 @@ interface AnimationOptionsProps {
 }
 
 export function AnimationOptions({ settings, updateSettings }: AnimationOptionsProps) {
-  const isMediaSource = false // Always show all options since we unified the approach
-
   return (
     <Container>
       <InputNumber
         min={1}
         value={settings.animationLength}
         onChange={(val) => updateSettings({ animationLength: val })}
-        disabled={isMediaSource}
       >
         Animation Length
       </InputNumber>
