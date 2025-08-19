@@ -80,7 +80,7 @@ const UTILS = [
     importStatement: "import { stripes } from '@/utils'",
   },
   {
-    name: 'valueToChar',
+    name: 'value-to-char',
     description: 'Converts a 0-1 value to an ASCII character for rendering',
     type: '(value: number, chars?: string) => string',
     example: `import { valueToChar, getImageValue } from '@/utils'
@@ -95,7 +95,7 @@ function main(pos, context) {
       "import { valueToChar } from '@/utils'\nimport { characterSet } from '@/settings'",
   },
   {
-    name: 'getImageValue',
+    name: 'get-image-value',
     description: 'Gets a value from 2D image data array with bounds checking',
     type: '(data: number[][], x: number, y: number) => number',
     example: `import { getImageValue, valueToChar } from '@/utils'
