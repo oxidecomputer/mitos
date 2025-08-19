@@ -28,7 +28,7 @@ export function useEsbuild() {
 
       try {
         await esbuild.initialize({
-          wasmURL: 'https://unpkg.com/esbuild-wasm/esbuild.wasm',
+          wasmURL: 'https://unpkg.com/esbuild-wasm@0.25.9/esbuild.wasm',
         })
         esbuildService.current = esbuild
         setIsInitialized(true)

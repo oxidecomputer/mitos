@@ -11,13 +11,13 @@ import { AsciiSettings } from '~/components/ascii-art-generator'
 import { type EsbuildService } from '~/hooks/use-esbuild'
 
 import type { Program } from './animation'
-import * as localUtils from './utils'
+import * as localUtils from './localUtils'
 
 // Cache for fetched modules
 const moduleCache = new Map<string, string>()
 
 export interface CodeProcessorOptions {
-  esbuildService: EsbuildService
+  esbuildService: EsbuildService | null
   timeout?: number
   target?: string
   imageData?: unknown

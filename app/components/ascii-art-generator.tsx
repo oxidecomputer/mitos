@@ -35,6 +35,7 @@ import { DEFAULT_CODE, DEFAULT_SETTINGS, TEMPLATES, TemplateType } from '~/templ
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
 import { ProjectManagement } from './project-management'
+import { DelayedSpinner } from './spinner'
 
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
 export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
@@ -80,6 +81,12 @@ export interface AsciiSettings {
 }
 
 export function AsciiArtGenerator() {
+  const {
+    esbuildService,
+    isInitialized: esbuildInitialized,
+    isInitializing: esbuildInitializing,
+  } = useEsbuild()
+
   // Core state
   const [settings, setSettings] = useState<AsciiSettings>(DEFAULT_SETTINGS)
   const [program, setProgram] = useState<Program | null>(null)
@@ -134,12 +141,6 @@ export function AsciiArtGenerator() {
     },
     [showCodeSidebar],
   )
-
-  const {
-    esbuildService,
-    isInitialized: esbuildInitialized,
-    isInitializing: esbuildInitializing,
-  } = useEsbuild()
 
   // Load template from URL parameter on mount
   useEffect(() => {
@@ -301,15 +302,6 @@ export function AsciiArtGenerator() {
     frames: AsciiImageData[]
     processedImageUrl: string | null
   } | null> => {
-    if (!esbuildService || !esbuildInitialized) {
-      if (esbuildInitializing) {
-        toast('Code processor is still initializing. Please wait a moment.')
-      } else {
-        toast('Code processor not ready. Please try again.')
-      }
-      return null
-    }
-
     const processGif = async (): Promise<{
       frames: number
       imageData: AsciiImageData
@@ -385,15 +377,6 @@ export function AsciiArtGenerator() {
     frames: AsciiImageData[] | null,
   ) => {
     try {
-      if (!esbuildService || !esbuildInitialized) {
-        if (esbuildInitializing) {
-          toast('Code processor is still initializing. Please wait a moment.')
-        } else {
-          toast('Code processor not ready. Please try again.')
-        }
-        return
-      }
-
       const result = await processCodeModule(currentSettings.source.code, {
         esbuildService: esbuildService,
         timeout: 5000,
@@ -424,10 +407,15 @@ export function AsciiArtGenerator() {
     lastProcessedSettings: AsciiSettings,
     currentSettings: AsciiSettings,
   ) => {
-    const { output, preprocessing } = currentSettings
-    const { output: prevOutput, preprocessing: prevPreprocessing } = lastProcessedSettings
+    const { output, preprocessing, source } = currentSettings
+    const {
+      output: prevOutput,
+      preprocessing: prevPreprocessing,
+      source: prevSource,
+    } = lastProcessedSettings
 
     return (
+      prevSource.data !== source.data ||
       prevOutput.columns !== output.columns ||
       prevOutput.rows !== output.rows ||
       prevOutput.colorMapping !== output.colorMapping ||
@@ -616,7 +604,6 @@ export function AsciiArtGenerator() {
       },
     }))
 
-    setShowCodeSidebar(false)
     return true
   }
 
@@ -874,47 +861,50 @@ export function AsciiArtGenerator() {
         </button>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden">
-        <div className="flex h-full">
-          {/* ASCII Preview */}
-          <div
-            className={cn(
-              'relative flex-1 overflow-hidden',
-              dragActive ? 'bg-secondary' : 'bg-default',
-            )}
-          >
-            {dragActive && (
-              <div className="absolute inset-1 rounded border border-dashed border-accent-secondary" />
-            )}
-            <AsciiPreview
-              program={program}
-              dimensions={{
-                width: settings.output.columns,
-                height: settings.output.rows,
-              }}
-              gridType={settings.output.grid}
-              showUnderlyingImage={settings.output.showUnderlyingImage}
-              underlyingImageUrl={processedImageUrl || settings.source.data}
-              settings={{ ...settings.animation, ...settings.export }}
-              animationController={animationController}
-              setAnimationController={setAnimationController}
-              isExporting={isExporting}
-              onExampleScriptClick={handleExampleScriptClick}
-              onExampleImageClick={() =>
-                updateSourceAndAspectRatio(exampleImage, 'image', 'example-grad.png')
-              }
+      <div className="relative h-full w-full flex-1 overflow-hidden">
+        <DelayedSpinner isLoading={!esbuildInitialized || esbuildInitializing} />
+        {/* Main Content Area */}
+        {esbuildInitialized && !esbuildInitializing && (
+          <div className="flex h-full">
+            {/* ASCII Preview */}
+            <div
+              className={cn(
+                'relative flex-1 overflow-hidden',
+                dragActive ? 'bg-secondary' : 'bg-default',
+              )}
+            >
+              {dragActive && (
+                <div className="absolute inset-1 rounded border border-dashed border-accent-secondary" />
+              )}
+              <AsciiPreview
+                program={program}
+                dimensions={{
+                  width: settings.output.columns,
+                  height: settings.output.rows,
+                }}
+                gridType={settings.output.grid}
+                showUnderlyingImage={settings.output.showUnderlyingImage}
+                underlyingImageUrl={processedImageUrl || settings.source.data}
+                settings={{ ...settings.animation, ...settings.export }}
+                animationController={animationController}
+                setAnimationController={setAnimationController}
+                isExporting={isExporting}
+                onExampleScriptClick={handleExampleScriptClick}
+                onExampleImageClick={() =>
+                  updateSourceAndAspectRatio(exampleImage, 'image', 'example-grad.png')
+                }
+              />
+            </div>
+
+            {/* Code Sidebar */}
+            <CodeSidebar
+              pendingCode={pendingCode}
+              setPendingCode={setPendingCode}
+              updateSettings={(changes) => updateSettings('source', changes)}
+              isOpen={showCodeSidebar}
             />
           </div>
-
-          {/* Code Sidebar */}
-          <CodeSidebar
-            pendingCode={pendingCode}
-            setPendingCode={setPendingCode}
-            updateSettings={(changes) => updateSettings('source', changes)}
-            isOpen={showCodeSidebar}
-          />
-        </div>
+        )}
       </div>
     </div>
   )

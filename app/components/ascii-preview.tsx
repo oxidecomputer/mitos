@@ -14,6 +14,7 @@ import {
   Resize16Icon,
 } from '@oxide/design-system/icons/react'
 import useResizeObserver from '@react-hook/resize-observer'
+import { motion } from 'motion/react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
@@ -52,12 +53,21 @@ const DemoCard = ({
   icon,
   title,
   onClick,
+  index,
 }: {
   icon: React.ReactNode
   title: string
   onClick?: () => void
+  index: number
 }) => (
-  <button
+  <motion.button
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{
+      duration: 0.5,
+      delay: index * 0.1,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    }}
     className="flex w-[20rem] items-center rounded border p-2 text-left transition-colors bg-raise border-secondary elevation-1 hover:bg-[var(--base-neutral-100)]"
     onClick={onClick}
   >
@@ -65,7 +75,7 @@ const DemoCard = ({
       {icon}
     </div>
     <div className="text-default text-sans-md">{title}</div>
-  </button>
+  </motion.button>
 )
 
 const useSize = (target: HTMLDivElement | null) => {
@@ -191,6 +201,7 @@ export function AsciiPreview({
       <div className="flex h-full w-full items-center justify-center">
         <div className="flex flex-col gap-3 p-8">
           <DemoCard
+            index={0}
             icon={<Folder16Icon className="text-accent-secondary" />}
             title="Upload image or GIF"
             onClick={() => {
@@ -203,11 +214,13 @@ export function AsciiPreview({
             }}
           />
           <DemoCard
+            index={1}
             icon={<DocumentApi16Icon className="text-accent-secondary" />}
             title="Run example script"
             onClick={onExampleScriptClick}
           />
           <DemoCard
+            index={2}
             icon={<Action16Icon className="text-accent-secondary" />}
             title="Use example image"
             onClick={onExampleImageClick}
