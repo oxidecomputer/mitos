@@ -18,6 +18,12 @@ export interface Data {
   }
 }
 
+export interface AsciiImageData {
+  [x: number]: {
+    [y: number]: number // 0-1 values
+  }
+}
+
 export const emptyCell: Cell = {
   char: ' ',
 }

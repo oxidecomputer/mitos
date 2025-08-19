@@ -7,9 +7,15 @@
  */
 import { redo, undo } from '@codemirror/commands'
 import { EditorView } from '@codemirror/view'
-import { DirectionDownIcon, Info12Icon } from '@oxide/design-system/icons/react'
+import {
+  AddRoundel12Icon,
+  DirectionDownIcon,
+  Info12Icon,
+} from '@oxide/design-system/icons/react'
+import * as Accordion from '@radix-ui/react-accordion'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
@@ -17,7 +23,6 @@ import { LinkButton } from '~/lib/ui/src/components/InputButton/InputButton'
 import { InputText } from '~/lib/ui/src/components/InputText/InputText'
 import { cn } from '~/lib/utils'
 
-import type { SourceType } from './ascii-art-generator'
 import CodeEditor from './code-editor'
 
 interface CodeSidebarProps {
@@ -26,7 +31,6 @@ interface CodeSidebarProps {
   isOpen: boolean
   updateSettings: (
     settings: Partial<{
-      type: SourceType
       data: string | null
       code: string
     }>,
@@ -49,16 +53,83 @@ interface ControlVariable {
 }
 
 // Regex patterns used throughout parsing
-const PATTERNS = {
-  ROOT_OBJECT: /const\s+(\w+)\s*=\s*\{\s*([^}]*)\s*\}\s*;?\s*\/\/~\s*(.+)/,
-  MULTI_OBJECT: /const\s+(\w+)\s*=\s*\{/,
-  SIMPLE_VAR: /const\s+(\w+)\s*=\s*(.+?);?\s*\/\/~\s*(.+)/,
+export const PATTERNS = {
+  ROOT_OBJECT: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*\{\s*([^}]*)\s*\}\s*;?\s*\/\/~\s*(.+)/,
+  MULTI_OBJECT: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*\{/,
+  SIMPLE_VAR: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*(?!\s*\{)(.+?);?\s*\/\/~\s*(.+)/,
   NESTED_OBJECT: /\s*(\w+):\s*\{\s*([^}]+)\s*\},?\s*\/\/~\s*(.+)/,
   OBJECT_PROP: /\s*(\w+):\s*(.+?),?\s*\/\/~\s*(.+)/,
   PROP_VALUE: /(\w+):\s*([^,}]+)/g,
   RANGE: /(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)/,
   STEP: /step=(\d+(?:\.\d+)?)/,
 } as const
+
+const UTILS = [
+  {
+    name: 'checkerboard',
+    description: 'Generates a checkerboard pattern value for given coordinates',
+    type: '(x: number, y: number, size?: number) => number',
+    example: 'const value = checkerboard(coord.x, coord.y, 8)',
+    importStatement: "import { checkerboard } from '@/utils'",
+  },
+  {
+    name: 'stripes',
+    description: 'Creates striped patterns in horizontal, vertical, or diagonal directions',
+    type: '(x: number, y: number, stripeWidth?: number, direction?: "horizontal" | "vertical" | "diagonal") => number',
+    example: 'const value = stripes(coord.x, coord.y, 4, "diagonal")',
+    importStatement: "import { stripes } from '@/utils'",
+  },
+  {
+    name: 'value-to-char',
+    description: 'Converts a 0-1 value to an ASCII character for rendering',
+    type: '(value: number, chars?: string) => string',
+    example: `import { valueToChar, getImageValue } from '@/utils'
+import { imageData } from '@/imageData'
+import { characterSet } from '@/settings'
+
+function main(pos, context) {
+  const value = getImageValue(imageData, pos.x, pos.y)
+  return { char: valueToChar(value, characterSet) }
+}`,
+    importStatement:
+      "import { valueToChar } from '@/utils'\nimport { characterSet } from '@/settings'",
+  },
+  {
+    name: 'get-image-value',
+    description: 'Gets a value from 2D image data array with bounds checking',
+    type: '(data: number[][], x: number, y: number) => number',
+    example: `import { getImageValue, valueToChar } from '@/utils'
+import { imageData, frames } from '@/imageData'
+import { characterSet } from '@/settings'
+
+function main(pos, context) {
+  // Use animated frames if available
+  const data = frames && frames.length > 0
+    ? frames[context.frame % frames.length]
+    : imageData
+
+  const value = getImageValue(data, pos.x, pos.y)
+  return { char: valueToChar(value, characterSet) }
+}`,
+    importStatement:
+      "import { getImageValue } from '@/utils'\nimport { characterSet } from '@/settings'",
+  },
+  {
+    name: 'simplex-noise',
+    description:
+      'Generates smooth, continuous noise values\nfor procedural textures and patterns',
+    type: 'createNoise2D: () => (x: number, y: number) => number',
+    example: `function boot() {
+  noise2D = createNoise2D()
+}
+
+function main(coord, context, cursor, buffer) {
+  const noise = noise2D(coord.x * 0.01, coord.y * 0.01)
+  return noise > 0 ? 1 : 0
+}`,
+    importStatement: "import { createNoise2D } from 'simplex-noise'",
+  },
+] as const
 
 function parseControlConfig(
   name: string,
@@ -301,14 +372,37 @@ export function CodeSidebar({
   const [isResizing, setIsResizing] = useState(false)
   const editorViewRef = useRef<EditorView | null>(null)
   const [controlsOpen, setControlsOpen] = useState(true)
+  const [utilsOpen, setUtilsOpen] = useState(false)
   const [autoRun, setAutoRun] = useState(true)
   const updateTimeoutRef = useRef<number>(null)
 
   const handleUndo = () => editorViewRef.current && undo(editorViewRef.current)
   const handleRedo = () => editorViewRef.current && redo(editorViewRef.current)
-  const handleCodeRun = () =>
-    updateSettings({ data: null, code: pendingCode, type: 'code' })
-  const handleCodeChange = (value: string) => setPendingCode(value)
+  const handleCodeRun = () => updateSettings({ code: pendingCode })
+  const handleCodeChange = (value: string) => flushSync(() => setPendingCode(value))
+
+  const addImport = (importStatement: string) => {
+    if (!editorViewRef.current) return
+
+    const currentContent = editorViewRef.current.state.doc.toString()
+
+    // Check if import already exists
+    if (currentContent.includes(importStatement)) {
+      return
+    }
+
+    // Always add import at the beginning of the file
+    const insertText = `${importStatement}\n`
+
+    // Apply change
+    const transaction = editorViewRef.current.state.update({
+      changes: { from: 0, insert: insertText },
+    })
+    editorViewRef.current.dispatch(transaction)
+
+    const newContent = transaction.state.doc.toString()
+    flushSync(() => setPendingCode(newContent))
+  }
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging.current) return
@@ -410,12 +504,12 @@ export function CodeSidebar({
     editorViewRef.current.dispatch(transaction)
 
     const newContent = transaction.state.doc.toString()
-    setPendingCode(newContent)
+    flushSync(() => setPendingCode(newContent))
 
     // Debounced auto-run
     if (autoRun) {
       updateTimeoutRef.current = window.setTimeout(() => {
-        updateSettings({ data: null, code: newContent, type: 'code' })
+        updateSettings({ data: null, code: newContent })
         updateTimeoutRef.current = null
       }, 100)
     }
@@ -572,17 +666,88 @@ export function CodeSidebar({
             />
           </div>
 
+          <div className="border-t border-default">
+            <button
+              onClick={() => setUtilsOpen(!utilsOpen)}
+              className="flex w-full items-center justify-between px-4 py-1 font-mono text-[11px] uppercase tracking-wider text-default bg-raise hover:bg-hover"
+            >
+              Utils
+              <DirectionDownIcon
+                className={cn(
+                  'transition-transform text-quaternary',
+                  utilsOpen ? '' : '-rotate-90',
+                )}
+              />
+            </button>
+            {utilsOpen && (
+              <div className="max-h-[40vh] overflow-auto border-t border-default">
+                <div className="px-3 py-3">
+                  <Accordion.Root type="single" collapsible className="space-y-2">
+                    {UTILS.map((util) => (
+                      <Accordion.Item
+                        key={util.name}
+                        value={util.name}
+                        className="rounded border border-default"
+                      >
+                        <Accordion.Header>
+                          <Accordion.Trigger className="flex w-full items-center justify-between rounded px-2 py-1.5 font-mono text-[11px] uppercase tracking-wider text-default hover:bg-hover data-[state=open]:rounded-b-none [&_svg]:-rotate-90 [&_svg]:data-[state=open]:rotate-0">
+                            <div className="flex items-center gap-1">
+                              <DirectionDownIcon className="transition-transform text-quaternary" />
+                              <span>{util.name}</span>
+                            </div>
+                          </Accordion.Trigger>
+                        </Accordion.Header>
+                        <Accordion.Content className="data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp overflow-hidden border-t border-default">
+                          <div className="space-y-2 px-3 py-3">
+                            <div className="text-[12px] tracking-wide text-secondary">
+                              {util.description}
+                            </div>
+                            <div className="space-y-1">
+                              <div className="font-mono text-[10px] uppercase tracking-wider text-tertiary">
+                                Type
+                              </div>
+                              <pre className="overflow-x-auto rounded border px-2 py-1 font-mono text-[10px] text-default bg-raise border-secondary">
+                                {util.type}
+                              </pre>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="font-mono text-[10px] uppercase tracking-wider text-tertiary">
+                                Example
+                              </div>
+                              <pre className="overflow-x-auto rounded border px-2 py-1 font-mono text-[10px] text-default bg-raise border-secondary">
+                                {util.example}
+                              </pre>
+                            </div>
+                            <InputButton
+                              variant="secondary"
+                              onClick={() => {
+                                addImport(util.importStatement)
+                              }}
+                              className="flex items-center gap-1.5"
+                            >
+                              Import <AddRoundel12Icon className="text-quaternary" />
+                            </InputButton>
+                          </div>
+                        </Accordion.Content>
+                      </Accordion.Item>
+                    ))}
+                  </Accordion.Root>
+                </div>
+              </div>
+            )}
+          </div>
+
           {controlVariables.length > 0 && (
             <div className="border-t border-default">
               <button
                 onClick={() => setControlsOpen(!controlsOpen)}
-                className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase text-secondary hover:bg-hover"
+                className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase tracking-wider text-default bg-raise hover:bg-hover"
               >
                 Controls
                 <DirectionDownIcon
                   className={cn(
                     'transition-transform text-quaternary',
-                    controlsOpen ? '' : 'rotate-180',
+                    controlsOpen ? '' : '-rotate-90',
                   )}
                 />
               </button>

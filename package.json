@@ -11,7 +11,10 @@
     "preview": "vite preview",
     "tsc": "tsc",
     "lint": "eslint app",
-    "ci": "bun run fmt:check && bun run tsc && bun run lint"
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "ci": "bun run fmt:check && bun run tsc && bun run lint && bun run test"
   },
   "dependencies": {
     "@ariakit/react": "^0.4.15",
@@ -23,9 +26,11 @@
     "@ffmpeg/util": "^0.12.2",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@oxide/design-system": "^2.5.0",
+    "@radix-ui/react-accordion": "^1.2.11",
     "@react-hook/resize-observer": "^2.0.2",
     "@uiw/react-codemirror": "^4.23.10",
     "clsx": "^2.1.1",
+    "esbuild-wasm": "^0.25.9",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.3",
@@ -46,11 +51,13 @@
     "sonner": "^2.0.2",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "usehooks-ts": "^3.1.1",
     "vite-tsconfig-paths": "^5.1.4"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.8",
     "@eslint/js": "^9.21.0",
+    "@types/bun": "^1.2.19",
     "@types/file-saver": "^2.0.7",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

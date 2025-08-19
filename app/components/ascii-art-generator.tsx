@@ -5,6 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
+
 import { decompressFrames, ParsedFrame, ParsedGif, parseGIF } from 'gifuct-js'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -17,23 +18,25 @@ import { ExportOptions } from '~/components/export-options'
 import { OutputOptions } from '~/components/output-options'
 import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
-import type { Data, Program } from '~/lib/animation'
-import { createCodeAsciiProgram, createImageAsciiProgram } from '~/lib/ascii-program'
+import { exampleImage } from '~/exampleImage'
+import { useEsbuild } from '~/hooks/use-esbuild'
+import type { Program } from '~/lib/animation'
+import { createProgramFromProcessor, generateImageCode } from '~/lib/ascii-program'
+import { processCodeModule } from '~/lib/code-processor'
 import {
   DitheringAlgorithm,
   processAnimatedMedia,
-  processCodeModule,
   processImage,
-  type CachedMediaData,
 } from '~/lib/image-processor'
+import type { AsciiImageData } from '~/lib/types'
 import { cn } from '~/lib/utils'
-import { DEFAULT_SETTINGS, exampleImage, TEMPLATES, TemplateType } from '~/templates'
+import { DEFAULT_SETTINGS, TEMPLATES, TemplateType } from '~/templates'
 
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
 import { ProjectManagement } from './project-management'
+import { DelayedSpinner } from './spinner'
 
-export type SourceType = 'image' | 'code' | 'gif'
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
 export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
 
@@ -42,9 +45,9 @@ export interface AsciiSettings {
     name: string
   }
   source: {
-    type: SourceType
     data: string | null
     code: string
+    fileName: string
     imageDimensions?: { width: number; height: number }
   }
   preprocessing: {
@@ -78,24 +81,31 @@ export interface AsciiSettings {
 }
 
 export function AsciiArtGenerator() {
+  const {
+    esbuildService,
+    isInitialized: esbuildInitialized,
+    isInitializing: esbuildInitializing,
+  } = useEsbuild()
+
   // Core state
   const [settings, setSettings] = useState<AsciiSettings>(DEFAULT_SETTINGS)
   const [program, setProgram] = useState<Program | null>(null)
   const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null)
   const [animationController, setAnimationController] = useState<AnimationController>(null)
   const [dragActive, setDragActive] = useState(false)
-  const [pendingCode, setPendingCode] = useState(settings.source.code)
+  const [pendingCode, setPendingCode] = useState('')
   const [projectName, setProjectName] = useState('')
   const [templateType, setTemplateType] = useState<TemplateType | ''>('')
+  const [currentImageData, setCurrentImageData] = useState<AsciiImageData | null>(null)
+  const [currentFrames, setCurrentFrames] = useState<AsciiImageData[] | null>(null)
 
   // Processing state
   const [isExporting, setIsExporting] = useState(false)
   const [_isProcessing, setIsProcessing] = useState(false)
-  const [cachedMedia, setCachedMedia] = useState<CachedMediaData | null>(null)
   const [showCodeSidebar, setShowCodeSidebar] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
 
-  const lastProcessedSettings = useRef<AsciiSettings | null>(null)
+  const prevSettings = useRef<AsciiSettings | null>(null)
   const isInitialMount = useRef(true)
 
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -118,6 +128,10 @@ export function AsciiArtGenerator() {
         }
       }
 
+      // Clear image source state when loading templates
+      setCurrentImageData(null)
+      setCurrentFrames(null)
+
       toast(`Applied "${TEMPLATES[template].meta.name}" template`)
 
       // Remove template parameter from URL after loading template
@@ -130,6 +144,8 @@ export function AsciiArtGenerator() {
 
   // Load template from URL parameter on mount
   useEffect(() => {
+    if (!esbuildInitialized || esbuildInitializing) return
+
     const urlParams = new URLSearchParams(window.location.search)
     const templateParam = urlParams.get('template')
 
@@ -139,13 +155,11 @@ export function AsciiArtGenerator() {
     }
     // only need to run on load
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [esbuildInitialized, esbuildInitializing])
 
   useEffect(() => {
     // Check if the user has loaded some media or modified the code
-    const isSourceDirty =
-      (settings.source.type !== 'code' && settings.source.data !== null) ||
-      pendingCode !== DEFAULT_SETTINGS.source.code
+    const isSourceDirty = settings.source.data !== null || pendingCode !== ''
 
     if (isSourceDirty) {
       window.addEventListener('beforeunload', handleBeforeUnload)
@@ -165,9 +179,9 @@ export function AsciiArtGenerator() {
 
     // Check if settings have meaningfully changed
     if (
-      lastProcessedSettings.current &&
+      prevSettings.current &&
       R.isDeepEqual(
-        getRelevantSettings(lastProcessedSettings.current),
+        getRelevantSettings(prevSettings.current),
         getRelevantSettings(settings),
       )
     ) {
@@ -183,20 +197,9 @@ export function AsciiArtGenerator() {
   const getRelevantSettings = (settings: AsciiSettings) => {
     const { source, preprocessing, output, animation } = settings
 
-    // For code sources, we only care about the code and dimensions
-    if (source.type === 'code') {
-      return {
-        sourceType: source.type,
-        code: source.code,
-        columns: output.columns,
-        rows: output.rows,
-        frameRate: animation.frameRate,
-      }
-    }
-
     return {
-      sourceType: source.type,
       sourceData: source.data,
+      code: source.code,
       preprocessing,
       columns: output.columns,
       rows: output.rows,
@@ -207,34 +210,54 @@ export function AsciiArtGenerator() {
   }
 
   const processCurrentSettings = async () => {
-    if (!settings.source.data && settings.source.type !== 'code') {
+    if (!settings.source.data && !settings.source.code) {
       return
     }
-
-    setIsProcessing(true)
-
     try {
-      const { source, output } = settings
-      const columns = output.columns
-      const rows = output.rows
+      const columns = settings.output.columns
+      const rows = settings.output.rows
 
-      switch (source.type) {
-        case 'image':
-          if (source.data) {
-            await processStaticImage(source.data, columns, rows, settings)
+      const shouldProcess =
+        prevSettings && prevSettings.current
+          ? haveProcessingSettingsChanged(prevSettings.current, settings)
+          : true
+
+      let imageData = currentImageData
+      let frames = currentFrames
+
+      if (shouldProcess && settings.source.data) {
+        if (settings.source.data.includes('data:image/gif')) {
+          const gifResult = await processGifSource(settings.source.data, settings)
+          if (gifResult) {
+            // Update state with processed data
+            if (gifResult.processedImageUrl) {
+              setProcessedImageUrl(gifResult.processedImageUrl)
+            }
+
+            imageData = gifResult.imageData
+            frames = gifResult.frames
           }
-          break
-        case 'gif':
-          if (source.data) {
-            await processAnimatedSource(source.type, source.data, columns, rows, settings)
+        } else {
+          const staticResult = await processStaticImage(settings.source.data, settings)
+          if (staticResult) {
+            // Update state with processed data
+            if (staticResult.processedImageUrl) {
+              setProcessedImageUrl(staticResult.processedImageUrl)
+            }
+
+            imageData = staticResult.imageData
+            frames = null
           }
-          break
-        case 'code':
-          await processCodeSource(columns, rows, settings)
-          break
+        }
       }
 
-      lastProcessedSettings.current = structuredClone(settings)
+      setCurrentImageData(imageData)
+      setCurrentFrames(frames)
+
+      await processCodeSource(columns, rows, settings, imageData, frames)
+
+      // Update cache entry after processing is complete
+      prevSettings.current = settings
     } catch (error) {
       console.error('Error processing:', error)
       toast(error instanceof Error ? error.message : 'Unknown error')
@@ -243,221 +266,54 @@ export function AsciiArtGenerator() {
     }
   }
 
-  const processStaticImage = async (
-    imageData: string,
-    columns: number,
-    rows: number,
-    currentSettings: AsciiSettings,
-  ) => {
+  const processStaticImage = async (imageData: string, currentSettings: AsciiSettings) => {
     try {
       const result = await processImage(imageData, currentSettings)
 
       if (result.processedImageUrl) {
         setProcessedImageUrl(result.processedImageUrl)
       }
+      setCurrentImageData(result.data)
+      setCurrentFrames(null)
 
-      const newProgram = await createImageAsciiProgram(result.data, columns, rows)
-      setProgram(newProgram)
+      // Only generate initial code if pendingCode is empty
+      if (pendingCode === '') {
+        const code = generateImageCode()
+        setPendingCode(code)
+        updateSettings('source', { code })
+      }
+
+      return {
+        imageData: result.data,
+        processedImageUrl: result.processedImageUrl,
+      }
     } catch (error) {
       handleProcessingError('processing image', error)
-    }
-  }
-
-  const processAnimatedSource = async (
-    sourceType: 'gif',
-    sourceData: string,
-    columns: number,
-    rows: number,
-    currentSettings: AsciiSettings,
-  ) => {
-    const canReuseCache =
-      cachedMedia && cachedMedia.type === sourceType && cachedMedia.sourceUrl === sourceData
-
-    try {
-      if (canReuseCache) {
-        const processingSettingsChanged = haveProcessingSettingsChanged(
-          cachedMedia,
-          currentSettings,
-        )
-
-        if (processingSettingsChanged) {
-          // Settings have changed, reprocess the cached raw frames
-          await reprocessCachedFrames(cachedMedia, columns, rows, currentSettings)
-        } else {
-          // Settings haven't changed, use existing processed frames
-          await reuseExistingFrames(cachedMedia, columns, rows, currentSettings)
-        }
-      } else {
-        await processGifSource(sourceData, columns, rows, currentSettings)
-      }
-    } catch (error) {
-      handleProcessingError('processing animated source', error)
-    }
-  }
-
-  const processCodeSource = async (
-    columns: number,
-    rows: number,
-    currentSettings: AsciiSettings,
-  ) => {
-    try {
-      const module = processCodeModule(currentSettings.source.code)
-      if (!module) {
-        toast('Could not process your code. Check for syntax errors.')
-        return
-      }
-
-      const newProgram = await createCodeAsciiProgram(
-        columns,
-        rows,
-        currentSettings.animation.frameRate,
-        module,
-      )
-
-      setProgram(newProgram)
-    } catch (error) {
-      handleProcessingError('processing code', error)
-    }
-  }
-
-  // Check if processing settings have changed requiring reprocessing
-  const haveProcessingSettingsChanged = (
-    cache: CachedMediaData,
-    currentSettings: AsciiSettings,
-  ) => {
-    if (!cache.processedFrames) return true
-
-    const { settings: cachedSettings } = cache.processedFrames
-    const { output, preprocessing } = currentSettings
-
-    return (
-      cachedSettings.columns !== output.columns ||
-      cachedSettings.rows !== output.rows ||
-      cachedSettings.characterSet !== output.characterSet ||
-      cachedSettings.colorMapping !== output.colorMapping ||
-      cachedSettings.whitePoint !== preprocessing.whitePoint ||
-      cachedSettings.blackPoint !== preprocessing.blackPoint ||
-      cachedSettings.brightness !== preprocessing.brightness ||
-      cachedSettings.invert !== preprocessing.invert ||
-      cachedSettings.dithering !== preprocessing.dithering ||
-      cachedSettings.ditheringAlgorithm !== preprocessing.ditheringAlgorithm
-    )
-  }
-
-  // Reprocess cached frames with new settings
-  const reprocessCachedFrames = async (
-    cache: CachedMediaData,
-    columns: number,
-    rows: number,
-    currentSettings: AsciiSettings,
-  ) => {
-    const processFrames = async (): Promise<{ frames: number }> => {
-      const result = await processAnimatedMedia(cache.rawFrames, currentSettings)
-
-      // Update cache with newly processed frames
-      updateMediaCache(cache, result.frames, currentSettings)
-      setProcessedImageUrl(result.firstFrameUrl || null)
-
-      // Create program with newly processed frames
-      const newProgram = await createImageAsciiProgram(
-        result.firstFrameData,
-        columns,
-        rows,
-        result.frames,
-        currentSettings.animation.frameRate,
-      )
-
-      setProgram(newProgram)
-      return { frames: result.frames.length }
-    }
-
-    // Show a promise-based toast that updates its state
-    toast.promise(processFrames(), {
-      loading: 'Applying new visual settings...',
-      success: (data) => `Reprocessed ${data.frames} frames with new settings`,
-      error: (error) =>
-        `Error: ${error instanceof Error ? error.message : 'Could not apply settings'}`,
-    })
-  }
-
-  // Update the media cache with new processed frames
-  const updateMediaCache = (
-    cache: CachedMediaData,
-    frames: Data[],
-    currentSettings: AsciiSettings,
-  ) => {
-    setCachedMedia({
-      ...cache,
-      processedFrames: {
-        settings: {
-          columns: currentSettings.output.columns,
-          rows: currentSettings.output.rows,
-          characterSet: currentSettings.output.characterSet,
-          colorMapping: currentSettings.output.colorMapping,
-          whitePoint: currentSettings.preprocessing.whitePoint,
-          blackPoint: currentSettings.preprocessing.blackPoint,
-          brightness: currentSettings.preprocessing.brightness,
-          invert: currentSettings.preprocessing.invert,
-          dithering: currentSettings.preprocessing.dithering,
-          ditheringAlgorithm: currentSettings.preprocessing.ditheringAlgorithm,
-        },
-        frames,
-      },
-    })
-  }
-
-  // Use cached frames without reprocessing
-  const reuseExistingFrames = async (
-    cache: CachedMediaData,
-    columns: number,
-    rows: number,
-    currentSettings: AsciiSettings,
-  ) => {
-    toast('Applying cached frames...')
-
-    try {
-      // Use cached frames directly
-      const processedFrames = cache.processedFrames!.frames
-
-      // Create program with cached frames
-      const newProgram = await createImageAsciiProgram(
-        processedFrames[0], // First frame
-        columns,
-        rows,
-        processedFrames,
-        currentSettings.animation.frameRate,
-      )
-
-      // Set the first frame as preview
-      if (cache.rawFrames.length > 0) {
-        setProcessedImageUrl(cache.rawFrames[0].dataUrl)
-      }
-
-      setProgram(newProgram)
-
-      toast(`Loaded ${processedFrames.length} frames from cache`)
-    } catch (error) {
-      handleProcessingError('loading cached', error)
-
-      // If using cached frames fails, try reprocessing
-      await processGifSource(cache.sourceUrl, columns, rows, currentSettings)
+      return null
     }
   }
 
   // Process GIF source using gifuct-js
   const processGifSource = async (
     gifData: string,
-    columns: number,
-    rows: number,
     currentSettings: AsciiSettings,
-  ) => {
-    const processGif = async (): Promise<{ frames: number }> => {
+  ): Promise<{
+    imageData: AsciiImageData
+    frames: AsciiImageData[]
+    processedImageUrl: string | null
+  } | null> => {
+    const processGif = async (): Promise<{
+      frames: number
+      imageData: AsciiImageData
+      framesData: AsciiImageData[]
+      processedImageUrl: string | null
+    }> => {
       // Convert data URL to binary data
       const bytes = dataUrlToUint8Array(gifData)
 
       // Parse the GIF and extract frames
       // Fix type issue by creating proper ArrayBuffer
-      const buffer = bytes.buffer
+      const buffer = bytes.buffer as ArrayBuffer
       const gif = parseGIF(buffer)
       const frames = decompressFrames(gif, true)
 
@@ -471,52 +327,105 @@ export function AsciiArtGenerator() {
       // Process all extracted frames
       const result = await processAnimatedMedia(rawFrames, currentSettings)
 
-      // Create cache entry
-      setCachedMedia({
-        type: 'gif',
-        sourceUrl: gifData,
-        rawFrames,
-        processedFrames: {
-          settings: {
-            columns: currentSettings.output.columns,
-            rows: currentSettings.output.rows,
-            characterSet: currentSettings.output.characterSet,
-            whitePoint: currentSettings.preprocessing.whitePoint,
-            blackPoint: currentSettings.preprocessing.blackPoint,
-            brightness: currentSettings.preprocessing.brightness,
-            invert: currentSettings.preprocessing.invert,
-            dithering: currentSettings.preprocessing.dithering,
-            ditheringAlgorithm: currentSettings.preprocessing.ditheringAlgorithm,
-            colorMapping: currentSettings.output.colorMapping,
-          },
-          frames: result.frames,
-        },
-      })
-
       // Set preview
       setProcessedImageUrl(result.firstFrameUrl)
 
-      // Create animated program
-      const newProgram = await createImageAsciiProgram(
-        result.firstFrameData,
-        columns,
-        rows,
-        result.frames,
-        currentSettings.animation.frameRate,
-      )
+      setCurrentImageData(result.firstFrameData)
+      setCurrentFrames(result.frames)
 
-      setProgram(newProgram)
-      updateSettings('animation', { animationLength: result.frames.length })
+      // Only generate initial code if pendingCode is empty
+      if (pendingCode === '') {
+        const code = generateImageCode()
+        setPendingCode(code)
+        updateSettings('source', { code })
+      }
+      // Only update animation length if it's different to prevent infinite loop
+      if (currentSettings.animation.animationLength !== result.frames.length) {
+        updateSettings('animation', { animationLength: result.frames.length })
+      }
 
-      return { frames: result.frames.length }
+      return {
+        frames: result.frames.length,
+        imageData: result.firstFrameData,
+        framesData: result.frames,
+        processedImageUrl: result.firstFrameUrl,
+      }
     }
 
-    toast.promise(processGif(), {
-      loading: 'Processing GIF frames...',
-      success: (data) => `Processed ${data.frames} frames successfully`,
-      error: (error) =>
-        `Error: ${error instanceof Error ? error.message : 'Could not process GIF'}`,
-    })
+    try {
+      toast.loading('Processing GIF frames...')
+      const result = await processGif()
+      toast.dismiss()
+      toast.success(`Processed ${result.frames} frames successfully`)
+      return {
+        imageData: result.imageData,
+        frames: result.framesData,
+        processedImageUrl: result.processedImageUrl,
+      }
+    } catch (_error) {
+      toast.dismiss()
+      toast.error(_error instanceof Error ? _error.message : 'Could not process GIF')
+      return null
+    }
+  }
+
+  const processCodeSource = async (
+    columns: number,
+    rows: number,
+    currentSettings: AsciiSettings,
+    imageData: AsciiImageData | null,
+    frames: AsciiImageData[] | null,
+  ) => {
+    try {
+      const result = await processCodeModule(currentSettings.source.code, {
+        esbuildService: esbuildService,
+        timeout: 5000,
+        imageData: imageData,
+        frames: frames || undefined,
+        settings: currentSettings,
+      })
+
+      if (!result.success || !result.module) {
+        toast(result.error || 'Could not process your code. Check for syntax errors.')
+        return
+      }
+
+      const newProgram = await createProgramFromProcessor(result, {
+        width: columns,
+        height: rows,
+        frameRate: currentSettings.animation.frameRate,
+      })
+
+      setProgram(newProgram)
+    } catch (error) {
+      handleProcessingError('processing code', error)
+    }
+  }
+
+  // Check if processing settings have changed requiring reprocessing
+  const haveProcessingSettingsChanged = (
+    lastProcessedSettings: AsciiSettings,
+    currentSettings: AsciiSettings,
+  ) => {
+    const { output, preprocessing, source } = currentSettings
+    const {
+      output: prevOutput,
+      preprocessing: prevPreprocessing,
+      source: prevSource,
+    } = lastProcessedSettings
+
+    return (
+      prevSource.data !== source.data ||
+      prevOutput.columns !== output.columns ||
+      prevOutput.rows !== output.rows ||
+      prevOutput.colorMapping !== output.colorMapping ||
+      prevPreprocessing.whitePoint !== preprocessing.whitePoint ||
+      prevPreprocessing.blackPoint !== preprocessing.blackPoint ||
+      prevPreprocessing.brightness !== preprocessing.brightness ||
+      prevPreprocessing.invert !== preprocessing.invert ||
+      prevPreprocessing.dithering !== preprocessing.dithering ||
+      prevPreprocessing.ditheringAlgorithm !== preprocessing.ditheringAlgorithm
+    )
   }
 
   // Helper functions
@@ -628,24 +537,6 @@ export function AsciiArtGenerator() {
   const updateSettings = useCallback(
     <K extends keyof AsciiSettings>(section: K, newValues: Partial<AsciiSettings[K]>) => {
       setSettings((prev) => {
-        // Handle special case for source type changes
-        if (
-          section === 'source' &&
-          'type' in newValues &&
-          newValues.type !== prev.source.type
-        ) {
-          setProgram(null)
-          setProcessedImageUrl(null)
-          setCachedMedia(null)
-
-          if (animationController) {
-            setAnimationController(null)
-          }
-
-          // Reset last processed settings
-          lastProcessedSettings.current = null
-        }
-
         return {
           ...prev,
           [section]: {
@@ -655,7 +546,7 @@ export function AsciiArtGenerator() {
         }
       })
     },
-    [animationController],
+    [],
   )
 
   const setAspectRatioFromImage = (
@@ -673,8 +564,27 @@ export function AsciiArtGenerator() {
   }
 
   // Helper to update both source and aspect ratio in a single batch update
-  const updateSourceAndAspectRatio = async (imageUrl: string, type: 'image' | 'gif') => {
+  const updateSourceAndAspectRatio = async (
+    imageUrl: string,
+    type: 'image' | 'gif',
+    fileName?: string,
+  ) => {
     const { aspectRatio, width, height } = await setAspectRatioFromImage(imageUrl)
+
+    if (type === 'image') {
+      updateSettings('animation', { animationLength: 1 })
+    }
+
+    // Generate filename for screenshots if not provided
+    const finalFileName =
+      fileName ||
+      (() => {
+        const now = new Date()
+        const hours = now.getHours().toString().padStart(2, '0')
+        const minutes = now.getMinutes().toString().padStart(2, '0')
+        const seconds = now.getSeconds().toString().padStart(2, '0')
+        return `Img-${hours}-${minutes}-${seconds}.png`
+      })()
 
     // Update all settings at once to avoid race conditions
     setSettings((prev) => ({
@@ -684,6 +594,7 @@ export function AsciiArtGenerator() {
         data: imageUrl,
         type,
         imageDimensions: { width, height }, // Store dimensions with source
+        fileName: finalFileName,
       },
       output: {
         ...prev.output,
@@ -693,7 +604,6 @@ export function AsciiArtGenerator() {
       },
     }))
 
-    setShowCodeSidebar(false)
     return true
   }
 
@@ -724,7 +634,7 @@ export function AsciiArtGenerator() {
           const reader = new FileReader()
           reader.onload = (e) => {
             const result = e.target?.result as string
-            updateSourceAndAspectRatio(result, sourceType)
+            updateSourceAndAspectRatio(result, sourceType, file.name)
           }
           reader.readAsDataURL(file)
           return true
@@ -774,15 +684,15 @@ export function AsciiArtGenerator() {
   const handleExampleScriptClick = useCallback(() => {
     // Open code sidebar and load the clock example
     setShowCodeSidebar(true)
-    const defaultTemplate = TEMPLATES.default
-    setPendingCode(defaultTemplate.source.code)
-    updateSettings('source', {
-      type: 'code',
-      data: null,
-      code: defaultTemplate.source.code,
-    })
-    updateSettings('output', defaultTemplate.output)
-    updateSettings('animation', defaultTemplate.animation)
+    const template = TEMPLATES.sin
+    setPendingCode(template.source.code)
+    updateSettings('source', template.source)
+    updateSettings('output', template.output)
+    updateSettings('export', template.export)
+    updateSettings('preprocessing', template.preprocessing)
+    updateSettings('meta', template.meta)
+    updateSettings('source', template.source)
+    updateSettings('animation', template.animation)
   }, [updateSettings])
 
   const handleTemplateChange = (template: TemplateType) => {
@@ -802,8 +712,8 @@ export function AsciiArtGenerator() {
       if (projectData.settings) {
         setSettings(projectData.settings as AsciiSettings)
 
-        // If the imported project is a code project, show the code sidebar
-        if (projectData.settings.source.type === 'code') {
+        // If the imported project has code, show the code sidebar
+        if (projectData.settings.source.code) {
           // Pass this information up to the parent
           handleCodeProjectLoaded(projectData.settings.source.code)
         }
@@ -862,34 +772,24 @@ export function AsciiArtGenerator() {
           />
           <div className="flex grow flex-col justify-between overflow-auto">
             <div className="space-y-6 py-4">
-              {/* Preprocessing (for non-code sources) */}
-              {settings.source.type !== 'code' && (
-                <>
-                  <PreprocessingOptions
-                    settings={settings.preprocessing}
-                    updateSettings={(changes) => updateSettings('preprocessing', changes)}
-                  />
-                  <hr />
-                </>
-              )}
+              {/* Preprocessing (always visible) */}
+              <PreprocessingOptions
+                settings={settings.preprocessing}
+                updateSettings={(changes) => updateSettings('preprocessing', changes)}
+              />
+              <hr />
               {/* Output Options */}
               <OutputOptions
                 settings={settings.output}
                 updateSettings={(changes) => updateSettings('output', changes)}
-                sourceType={settings.source.type}
                 sourceImageDimensions={settings.source.imageDimensions}
               />
-              {/* Animation Options (for animated content) */}
-              {(settings.source.type === 'code' || settings.source.type === 'gif') && (
-                <>
-                  <hr />
-                  <AnimationOptions
-                    settings={settings.animation}
-                    updateSettings={(changes) => updateSettings('animation', changes)}
-                    sourceType={settings.source.type}
-                  />
-                </>
-              )}
+              {/* Animation Options (always visible) */}
+              <hr />
+              <AnimationOptions
+                settings={settings.animation}
+                updateSettings={(changes) => updateSettings('animation', changes)}
+              />
               <hr />
               {/* Export Options */}
               <ExportOptions
@@ -900,7 +800,6 @@ export function AsciiArtGenerator() {
               {/* Asset Export */}
               <AssetExport
                 program={program}
-                sourceType={settings.source.type}
                 animationController={animationController}
                 animationLength={settings.animation.animationLength}
                 isExporting={isExporting}
@@ -963,47 +862,50 @@ export function AsciiArtGenerator() {
         </button>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden">
-        <div className="flex h-full">
-          {/* ASCII Preview */}
-          <div
-            className={cn(
-              'relative flex-1 overflow-hidden',
-              dragActive ? 'bg-secondary' : 'bg-default',
-            )}
-          >
-            {dragActive && (
-              <div className="absolute inset-1 rounded border border-dashed border-accent-secondary" />
-            )}
-            <AsciiPreview
-              key={settings.source.type}
-              program={program}
-              dimensions={{
-                width: settings.output.columns,
-                height: settings.output.rows,
-              }}
-              sourceType={settings.source.type}
-              gridType={settings.output.grid}
-              showUnderlyingImage={settings.output.showUnderlyingImage}
-              underlyingImageUrl={processedImageUrl || settings.source.data}
-              settings={{ ...settings.animation, ...settings.export }}
-              animationController={animationController}
-              setAnimationController={setAnimationController}
-              isExporting={isExporting}
-              onExampleScriptClick={handleExampleScriptClick}
-              onExampleImageClick={() => updateSourceAndAspectRatio(exampleImage, 'image')}
+      <div className="relative h-full w-full flex-1 overflow-hidden">
+        <DelayedSpinner isLoading={!esbuildInitialized || esbuildInitializing} />
+        {/* Main Content Area */}
+        {esbuildInitialized && !esbuildInitializing && (
+          <div className="flex h-full">
+            {/* ASCII Preview */}
+            <div
+              className={cn(
+                'relative flex-1 overflow-hidden',
+                dragActive ? 'bg-secondary' : 'bg-default',
+              )}
+            >
+              {dragActive && (
+                <div className="absolute inset-1 rounded border border-dashed border-accent-secondary" />
+              )}
+              <AsciiPreview
+                program={program}
+                dimensions={{
+                  width: settings.output.columns,
+                  height: settings.output.rows,
+                }}
+                gridType={settings.output.grid}
+                showUnderlyingImage={settings.output.showUnderlyingImage}
+                underlyingImageUrl={processedImageUrl || settings.source.data}
+                settings={{ ...settings.animation, ...settings.export }}
+                animationController={animationController}
+                setAnimationController={setAnimationController}
+                isExporting={isExporting}
+                onExampleScriptClick={handleExampleScriptClick}
+                onExampleImageClick={() =>
+                  updateSourceAndAspectRatio(exampleImage, 'image', 'example-grad.png')
+                }
+              />
+            </div>
+
+            {/* Code Sidebar */}
+            <CodeSidebar
+              pendingCode={pendingCode}
+              setPendingCode={setPendingCode}
+              updateSettings={(changes) => updateSettings('source', changes)}
+              isOpen={showCodeSidebar}
             />
           </div>
-
-          {/* Code Sidebar */}
-          <CodeSidebar
-            pendingCode={pendingCode}
-            setPendingCode={setPendingCode}
-            updateSettings={(changes) => updateSettings('source', changes)}
-            isOpen={showCodeSidebar}
-          />
-        </div>
+        )}
       </div>
     </div>
   )
