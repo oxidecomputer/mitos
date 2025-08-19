@@ -6,7 +6,7 @@
  * Copyright Oxide Computer Company
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useInterval } from 'usehooks-ts'
 
 export const Spinner = ({ className }: { className?: string }) => {
@@ -34,67 +34,14 @@ export const Spinner = ({ className }: { className?: string }) => {
   return <span className={className}>{loader.char}</span>
 }
 
-type Props = {
-  isLoading: boolean
-  children?: ReactNode
-  minTime?: number
-}
-
-/** Loading spinner that shows for a minimum of `minTime` */
-export const SpinnerLoader = ({ isLoading, children = null, minTime = 500 }: Props) => {
-  const [isVisible, setIsVisible] = useState(false)
-  const hideTimeout = useRef<NodeJS.Timeout | null>(null)
-  const showTimeout = useRef<NodeJS.Timeout | null>(null)
-  const loadingStartTime = useRef<number>(0)
-
-  useEffect(() => {
-    if (isLoading) {
-      loadingStartTime.current = Date.now()
-      // Only show spinner after 250ms delay
-      showTimeout.current = setTimeout(() => {
-        setIsVisible(true)
-      }, 250)
-    } else {
-      // Clear the show timer if it's still running
-      if (showTimeout.current) clearTimeout(showTimeout.current)
-      // Clear the hide timer if it's still running
-      if (hideTimeout.current) clearTimeout(hideTimeout.current)
-
-      // If spinner is visible, turn it off making sure it showed for at least `minTime`
-      if (isVisible) {
-        const elapsedTime = Date.now() - loadingStartTime.current
-        const remainingTime = Math.max(0, minTime - elapsedTime)
-        if (remainingTime === 0) {
-          setIsVisible(false) // might as well not use a timeout
-        } else {
-          hideTimeout.current = setTimeout(() => setIsVisible(false), remainingTime)
-        }
-      }
-    }
-
-    return () => {
-      if (hideTimeout.current) clearTimeout(hideTimeout.current)
-      if (showTimeout.current) clearTimeout(showTimeout.current)
-    }
-  }, [isLoading, minTime, isVisible])
-
-  return isVisible ? (
-    <div className="flex h-full flex-col items-center justify-center gap-2">
-      <Spinner className="text-mono-lg text-secondary" />
-      <div className="text-quaternary text-mono-sm">Initializing…</div>
-    </div>
-  ) : (
-    <>{children}</>
-  )
-}
-
-type DelayedSpinnerProps = {
+/** Overlay spinner that only shows after a delay */
+export const DelayedSpinner = ({
+  isLoading,
+  delay = 250,
+}: {
   isLoading: boolean
   delay?: number
-}
-
-/** Overlay spinner that only shows after a delay */
-export const DelayedSpinner = ({ isLoading, delay = 250 }: DelayedSpinnerProps) => {
+}) => {
   const [showSpinner, setShowSpinner] = useState(false)
   const showTimeout = useRef<NodeJS.Timeout | null>(null)
 
