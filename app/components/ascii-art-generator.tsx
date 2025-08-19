@@ -30,7 +30,7 @@ import {
 } from '~/lib/image-processor'
 import type { AsciiImageData } from '~/lib/types'
 import { cn } from '~/lib/utils'
-import { DEFAULT_CODE, DEFAULT_SETTINGS, TEMPLATES, TemplateType } from '~/templates'
+import { DEFAULT_SETTINGS, TEMPLATES, TemplateType } from '~/templates'
 
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
@@ -684,14 +684,15 @@ export function AsciiArtGenerator() {
   const handleExampleScriptClick = useCallback(() => {
     // Open code sidebar and load the clock example
     setShowCodeSidebar(true)
-    const defaultTemplate = TEMPLATES.default
-    setPendingCode(DEFAULT_CODE)
-    updateSettings('source', {
-      data: null,
-      code: DEFAULT_CODE,
-    })
-    updateSettings('output', defaultTemplate.output)
-    updateSettings('animation', defaultTemplate.animation)
+    const template = TEMPLATES.sin
+    setPendingCode(template.source.code)
+    updateSettings('source', template.source)
+    updateSettings('output', template.output)
+    updateSettings('export', template.export)
+    updateSettings('preprocessing', template.preprocessing)
+    updateSettings('meta', template.meta)
+    updateSettings('source', template.source)
+    updateSettings('animation', template.animation)
   }, [updateSettings])
 
   const handleTemplateChange = (template: TemplateType) => {

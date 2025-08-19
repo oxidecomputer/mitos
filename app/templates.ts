@@ -11,35 +11,8 @@ import { exampleImage } from './exampleImage'
 import { clock } from './scripts/clock'
 import { coins } from './scripts/coins'
 import { numbers } from './scripts/numbers'
+import { sin } from './scripts/sin'
 import { unpkgDemo } from './scripts/unpkg-demo'
-
-export const DEFAULT_CODE = `/**
-@author ertdfgcvb
-@url https://play.ertdfgcvb.xyz/#/src/basics/time_milliseconds
-*/
-import { characterSet } from '@/settings'
-
-const speed = 1; //~ number 0-10 step=0.5
-const amplitude = 18; //~ number 1-50
-
-// Renders each cell
-function main(coord, context, cursor, buffer) {
-  const t = context.frame * 0.01 * speed
-  const x = coord.x
-  const y = coord.y
-  const o = Math.sin(y * Math.sin(t) * 0.2 + x * 0.04 + t) * amplitude
-  const i = Math.round(Math.abs(x + y + o)) % characterSet.length
-  return characterSet[i]
-}
-
-// Optional: Runs once at startup
-function boot(context, buffer, userData) {}
-
-// Optional: Runs at the start of each frame
-function pre(context, cursor, buffer, userData) {}
-
-// Optional: Runs after each frame is complete
-function post(context, cursor, buffer, userData) {}`
 
 export const DEFAULT_SETTINGS: AsciiSettings = {
   meta: { name: 'Default' },
@@ -78,13 +51,21 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
 }
 
 export const TEMPLATES = {
-  default: DEFAULT_SETTINGS,
+  sin: {
+    ...DEFAULT_SETTINGS,
+    meta: { name: 'Sin' },
+    source: { data: null, code: sin },
+    animation: {
+      animationLength: 900,
+      frameRate: 15,
+    },
+  },
   custom: { ...DEFAULT_SETTINGS, meta: { name: 'Custom Project' } },
   clock: {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Clock' },
     source: { data: null, code: clock },
-    output: { ...DEFAULT_SETTINGS, columns: 61, rows: 9, grid: 'both' },
+    output: { ...DEFAULT_SETTINGS.output, columns: 61, rows: 9, grid: 'both' },
     animation: {
       animationLength: 900,
       frameRate: 15,
@@ -94,7 +75,7 @@ export const TEMPLATES = {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Numbers' },
     source: { data: null, code: numbers },
-    output: { ...DEFAULT_SETTINGS, columns: 98, rows: 9, grid: 'both' },
+    output: { ...DEFAULT_SETTINGS.output, columns: 98, rows: 9, grid: 'both' },
     animation: {
       animationLength: 1,
       frameRate: 1,
@@ -104,7 +85,7 @@ export const TEMPLATES = {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Coins' },
     source: { data: null, code: coins },
-    output: { ...DEFAULT_SETTINGS, columns: 120, rows: 40, grid: 'none' },
+    output: { ...DEFAULT_SETTINGS.output, columns: 120, rows: 40, grid: 'none' },
     animation: {
       animationLength: 100,
       frameRate: 30,
@@ -114,7 +95,7 @@ export const TEMPLATES = {
     ...DEFAULT_SETTINGS,
     meta: { name: 'Perlin Noise (Unpkg)' },
     source: { data: null, code: unpkgDemo },
-    output: { ...DEFAULT_SETTINGS, columns: 80, rows: 40, grid: 'none' },
+    output: { ...DEFAULT_SETTINGS.output, columns: 80, rows: 40, grid: 'none' },
     animation: {
       animationLength: 300,
       frameRate: 30,
