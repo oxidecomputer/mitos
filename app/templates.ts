@@ -17,8 +17,8 @@ export const DEFAULT_CODE = `/**
 @author ertdfgcvb
 @url https://play.ertdfgcvb.xyz/#/src/basics/time_milliseconds
 */
+import { characterSet } from '@/settings'
 
-const pattern = 'ABCxyz01═|+:. '; //~ text
 const speed = 1; //~ number 0-10 step=0.5
 const amplitude = 18; //~ number 1-50
 
@@ -28,8 +28,8 @@ function main(coord, context, cursor, buffer) {
   const x = coord.x
   const y = coord.y
   const o = Math.sin(y * Math.sin(t) * 0.2 + x * 0.04 + t) * amplitude
-  const i = Math.round(Math.abs(x + y + o)) % pattern.length
-  return pattern[i]
+  const i = Math.round(Math.abs(x + y + o)) % characterSet.length
+  return characterSet[i]
 }
 
 // Optional: Runs once at startup
