@@ -681,20 +681,6 @@ export function AsciiArtGenerator() {
     [processFile],
   )
 
-  const handleExampleScriptClick = useCallback(() => {
-    // Open code sidebar and load the clock example
-    setShowCodeSidebar(true)
-    const template = TEMPLATES.sin
-    setPendingCode(template.source.code)
-    updateSettings('source', template.source)
-    updateSettings('output', template.output)
-    updateSettings('export', template.export)
-    updateSettings('preprocessing', template.preprocessing)
-    updateSettings('meta', template.meta)
-    updateSettings('source', template.source)
-    updateSettings('animation', template.animation)
-  }, [updateSettings])
-
   const handleTemplateChange = (template: TemplateType) => {
     if (template !== 'custom' && TEMPLATES[template]) {
       loadTemplate(template)
@@ -811,18 +797,8 @@ export function AsciiArtGenerator() {
                 disabled={!program}
                 exportSettings={settings.export}
               />
-              <hr />
-              {/* Project Management */}
-              <ProjectManagement
-                projectName={projectName}
-                setProjectName={setProjectName}
-                templateType={templateType}
-                settings={settings}
-                handleLoadProjectInput={handleLoadProjectInput}
-                handleTemplateChange={handleTemplateChange}
-              />
             </div>
-            <div className="flex grow items-end p-3 pb-2">
+            <div className="flex grow items-end p-3 pb-3">
               <a
                 href="https://oxide.computer"
                 target="_blank"
@@ -834,6 +810,15 @@ export function AsciiArtGenerator() {
               </a>
             </div>
           </div>
+          {/* Project Management */}
+          <ProjectManagement
+            projectName={projectName}
+            setProjectName={setProjectName}
+            templateType={templateType}
+            settings={settings}
+            handleLoadProjectInput={handleLoadProjectInput}
+            handleTemplateChange={handleTemplateChange}
+          />
         </motion.div>
       </motion.div>
 
@@ -890,7 +875,7 @@ export function AsciiArtGenerator() {
                 animationController={animationController}
                 setAnimationController={setAnimationController}
                 isExporting={isExporting}
-                onExampleScriptClick={handleExampleScriptClick}
+                onExampleScriptClick={(template) => loadTemplate(template)}
                 onExampleImageClick={() =>
                   updateSourceAndAspectRatio(exampleImage, 'image', 'example-grad.png')
                 }
