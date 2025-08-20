@@ -13,6 +13,19 @@ import { type EsbuildService } from '~/hooks/use-esbuild'
 import type { Program } from './animation'
 import * as localUtils from './localUtils'
 
+// Global type extensions for Mitos data storage
+declare global {
+  interface Window {
+    __MITOS_IMAGE_DATA?: unknown
+    __MITOS_FRAMES?: unknown[] | null
+  }
+
+  interface GlobalThis {
+    __MITOS_IMAGE_DATA?: unknown
+    __MITOS_FRAMES?: unknown[] | null
+  }
+}
+
 // Cache for fetched modules
 const moduleCache = new Map<string, string>()
 
@@ -196,13 +209,30 @@ function createImageDataPlugin(imageData?: unknown, frames?: unknown[]): Plugin 
 
       // Load image data
       build.onLoad({ filter: /^image-data$/, namespace: 'imageData' }, () => {
-        const imageDataStr = imageData ? JSON.stringify(imageData, null, 2) : '{}'
-        const framesStr = frames ? JSON.stringify(frames, null, 2) : 'null'
+        // For large frame arrays, use global storage to avoid massive JS literals
+        const shouldUseGlobals = frames && Array.isArray(frames) && frames.length > 10
+
+        if (shouldUseGlobals) {
+          // Store data globally to avoid embedding in compiled code
+          if (typeof window !== 'undefined') {
+            window.__MITOS_IMAGE_DATA = imageData || {}
+            window.__MITOS_FRAMES = frames
+          }
+
+          return {
+            loader: 'ts',
+            contents: `export const imageData = globalThis.__MITOS_IMAGE_DATA || {};
+export const frames = globalThis.__MITOS_FRAMES || null;`,
+          }
+        }
+
+        // For small datasets, embed directly (no pretty-printing for size)
+        const imageDataStr = imageData ? JSON.stringify(imageData) : '{}'
+        const framesStr = frames ? JSON.stringify(frames) : 'null'
 
         return {
           loader: 'ts',
-          contents: `// Image data exports
-export const imageData = ${imageDataStr};
+          contents: `export const imageData = ${imageDataStr};
 export const frames = ${framesStr};`,
         }
       })
@@ -223,12 +253,23 @@ function createSettingsPlugin(settings?: unknown): Plugin {
       // Load settings
       build.onLoad({ filter: /^settings$/, namespace: 'settings' }, () => {
         const settingsObj = settings as AsciiSettings
-        const characterSet = settingsObj.output.characterSet || '@%#*+=-:. '
+        const characterSet = settingsObj?.output?.characterSet || '@%#*+=-:. '
+
+        // Strip out large source data to reduce compiled code size
+        const lightweightSettings = settingsObj
+          ? {
+              ...settingsObj,
+              source: {
+                ...settingsObj.source,
+                data: null, // Remove base64 image data (~14MB)
+              },
+            }
+          : {}
 
         return {
           loader: 'ts',
-          contents: `// Settings exports
-export const characterSet = ${JSON.stringify(characterSet)};`,
+          contents: `export const characterSet = ${JSON.stringify(characterSet)};
+export const settings = ${JSON.stringify(lightweightSettings)};`,
         }
       })
     },
@@ -310,5 +351,15 @@ export { _main as main, _boot as boot, _pre as pre, _post as post };
         }
       })
     },
+  }
+}
+
+// Utility to clear old stored image data
+export function clearStaleImageData(): void {
+  moduleCache.clear()
+
+  if (typeof window !== 'undefined') {
+    delete window.__MITOS_IMAGE_DATA
+    delete window.__MITOS_FRAMES
   }
 }
