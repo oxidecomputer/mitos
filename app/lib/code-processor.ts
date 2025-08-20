@@ -354,8 +354,8 @@ export { _main as main, _boot as boot, _pre as pre, _post as post };
   }
 }
 
-// Utility to clear caches
-export function clearProcessorCaches(): void {
+// Utility to clear old stored image data
+export function clearStaleImageData(): void {
   moduleCache.clear()
 
   if (typeof window !== 'undefined') {

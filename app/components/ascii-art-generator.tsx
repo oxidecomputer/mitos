@@ -22,7 +22,7 @@ import { exampleImage } from '~/exampleImage'
 import { useEsbuild } from '~/hooks/use-esbuild'
 import type { Program } from '~/lib/animation'
 import { createProgramFromProcessor, generateImageCode } from '~/lib/ascii-program'
-import { processCodeModule } from '~/lib/code-processor'
+import { clearStaleImageData, processCodeModule } from '~/lib/code-processor'
 import {
   DitheringAlgorithm,
   processAnimatedMedia,
@@ -268,6 +268,9 @@ export function AsciiArtGenerator() {
 
   const processStaticImage = async (imageData: string, currentSettings: AsciiSettings) => {
     try {
+      // Clear stored image data when processing new media
+      clearStaleImageData()
+
       const result = await processImage(imageData, currentSettings)
 
       if (result.processedImageUrl) {
@@ -323,6 +326,9 @@ export function AsciiArtGenerator() {
 
       // Extract frames as data URLs
       const rawFrames = await extractGifFrames(gif, frames)
+
+      // Clear stored image data when processing new media
+      clearStaleImageData()
 
       // Process all extracted frames
       const result = await processAnimatedMedia(rawFrames, currentSettings)
