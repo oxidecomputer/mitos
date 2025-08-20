@@ -66,7 +66,7 @@ export function ProjectManagement({
   }
 
   return (
-    <Container>
+    <Container className="border-t py-3 border-default">
       <InputSelect<TemplateType>
         value={templateType}
         onChange={handleTemplateChange}
@@ -91,7 +91,7 @@ export function ProjectManagement({
 
       <div className="flex gap-2">
         <InputButton variant="secondary">
-          Load
+          Load JSON
           <input
             type="file"
             className="absolute inset-0 z-10 opacity-0"

@@ -8,18 +8,21 @@
 import {
   Action16Icon,
   AutoRestart12Icon,
+  DirectionDownIcon,
   DirectionRightIcon,
   DocumentApi16Icon,
   Folder16Icon,
   Resize16Icon,
 } from '@oxide/design-system/icons/react'
 import useResizeObserver from '@react-hook/resize-observer'
+import cn from 'classnames'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 import type { createAnimation, Program } from '~/lib/animation'
 import { InputButton, InputNumber } from '~/lib/ui/src'
+import { TEMPLATES, type TemplateType } from '~/templates'
 
 import AsciiAnimation from './ascii-animation'
 import type { GridType } from './ascii-art-generator'
@@ -43,7 +46,7 @@ interface AsciiPreviewProps {
   setAnimationController: (controller: AnimationController) => void
   isExporting: boolean
   onUploadClick?: () => void
-  onExampleScriptClick?: () => void
+  onExampleScriptClick?: (templateType: TemplateType) => void
   onExampleImageClick?: () => void
 }
 
@@ -54,13 +57,17 @@ const DemoCard = ({
   title,
   onClick,
   index,
+  hasDropdown = false,
+  onDropdownChange,
 }: {
   icon: React.ReactNode
   title: string
   onClick?: () => void
   index: number
+  hasDropdown?: boolean
+  onDropdownChange?: (value: string) => void
 }) => (
-  <motion.button
+  <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{
@@ -68,14 +75,39 @@ const DemoCard = ({
       delay: index * 0.1,
       ease: [0.25, 0.46, 0.45, 0.94],
     }}
-    className="flex w-[20rem] items-center rounded border p-2 text-left transition-colors bg-raise border-secondary elevation-1 hover:bg-[var(--base-neutral-100)]"
-    onClick={onClick}
+    className="group relative flex w-[20rem] items-center rounded border p-2 text-left transition-colors bg-raise border-secondary elevation-1 hover:bg-[var(--base-neutral-100)]"
   >
     <div className="mr-3 inline-flex items-center justify-center rounded p-2 text-accent bg-accent-secondary">
       {icon}
     </div>
     <div className="text-default text-sans-md">{title}</div>
-  </motion.button>
+    {hasDropdown && (
+      <div className="absolute bottom-0 right-0 top-0 flex w-8 items-center justify-center border-l bg-raise border-secondary hover:bg-[var(--base-neutral-100)]">
+        <select
+          className="absolute h-full w-full cursor-pointer appearance-none opacity-0"
+          style={{ color: 'transparent' }}
+          onChange={(e) => onDropdownChange?.(e.target.value)}
+          defaultValue=""
+        >
+          <option value="" disabled>
+            Select script
+          </option>
+          {Object.entries(TEMPLATES)
+            .filter(([key]) => key !== 'custom' && key !== 'imageCode')
+            .map(([key, template]) => (
+              <option key={key} value={key}>
+                {template.meta.name}
+              </option>
+            ))}
+        </select>
+        <DirectionDownIcon className="h-3 w-3 flex-shrink-0 text-tertiary" />
+      </div>
+    )}
+    <button
+      className={cn('absolute bottom-0 left-0 top-0', hasDropdown ? 'right-12' : 'right-0')}
+      onClick={onClick}
+    />
+  </motion.div>
 )
 
 const useSize = (target: HTMLDivElement | null) => {
@@ -217,7 +249,11 @@ export function AsciiPreview({
             index={1}
             icon={<DocumentApi16Icon className="text-accent-secondary" />}
             title="Run example script"
-            onClick={onExampleScriptClick}
+            hasDropdown={true}
+            onDropdownChange={(templateKey) =>
+              onExampleScriptClick?.(templateKey as TemplateType)
+            }
+            onClick={() => onExampleScriptClick?.('sin')}
           />
           <DemoCard
             index={2}
