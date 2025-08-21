@@ -56,8 +56,8 @@ export const TEMPLATES = {
     meta: { name: 'Sin' },
     source: { data: null, code: sin },
     animation: {
-      animationLength: 900,
-      frameRate: 15,
+      animationLength: 100,
+      frameRate: 30,
     },
   },
   custom: { ...DEFAULT_SETTINGS, meta: { name: 'Custom Project' } },

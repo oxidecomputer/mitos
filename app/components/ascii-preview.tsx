@@ -331,7 +331,7 @@ export function AsciiPreview({
           </div>
         )}
         <div
-          className="duration-50 relative transform-gpu transition-transform ease-out"
+          className="duration-50 relative transform-gpu overflow-hidden rounded-[1%] transition-transform ease-out"
           style={{
             transform: isExporting
               ? 'none'

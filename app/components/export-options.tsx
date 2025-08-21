@@ -112,21 +112,20 @@ export function ExportOptions({ settings, updateSettings }: ExportOptionsProps) 
       <div className="dedent">
         <div className="flex gap-2">
           <InputText
-            value={flipped ? settings.backgroundColor : settings.textColor}
-            onChange={(val) =>
-              handleCustomColorSetChange(flipped ? 'backgroundColor' : 'textColor', val)
-            }
-          >
-            {flipped ? 'BG color' : 'Text color'}
-          </InputText>
-
-          <InputText
             value={flipped ? settings.textColor : settings.backgroundColor}
             onChange={(val) =>
               handleCustomColorSetChange(flipped ? 'textColor' : 'backgroundColor', val)
             }
           >
             {flipped ? 'Text color' : 'BG color'}
+          </InputText>
+          <InputText
+            value={flipped ? settings.backgroundColor : settings.textColor}
+            onChange={(val) =>
+              handleCustomColorSetChange(flipped ? 'backgroundColor' : 'textColor', val)
+            }
+          >
+            {flipped ? 'BG color' : 'Text color'}
           </InputText>
         </div>
         <InputSwitch checked={flipped} onChange={handleFlipColors}>
