@@ -32,7 +32,7 @@ export default function AsciiAnimation({
   padding: number
   children: ReactNode
 }) {
-  const asciiEl = useRef<HTMLPreElement>(null)
+  const asciiEl = useRef<HTMLCanvasElement>(null)
   const controllerRef = useRef(animationController)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -94,6 +94,8 @@ export default function AsciiAnimation({
         element: asciiEl.current,
         onFrameUpdate: onFrameUpdate ? onFrameUpdate : undefined,
         maxFrames,
+        textColor,
+        backgroundColor,
       })
 
       animController.togglePlay(wasPlaying)
@@ -103,7 +105,14 @@ export default function AsciiAnimation({
     } catch (error) {
       console.error('Error creating animation controller:', error)
     }
-  }, [program, maxFrames, onFrameUpdate, setAnimationController])
+  }, [
+    program,
+    maxFrames,
+    onFrameUpdate,
+    setAnimationController,
+    textColor,
+    backgroundColor,
+  ])
 
   return (
     <div
@@ -116,13 +125,15 @@ export default function AsciiAnimation({
         padding,
       }}
     >
-      <pre
+      <canvas
         ref={asciiEl}
-        className="pointer-events-none relative z-10 m-0 select-none whitespace-pre p-0 font-mono leading-[1.2]"
+        id="ascii-canvas"
+        className="pointer-events-none relative z-10 m-0 select-none"
         style={{
-          fontFamily: '"GT America Mono",monospace',
+          imageRendering: 'pixelated',
+          fontFamily: '"GT America Mono", monospace',
           fontSize: '12px',
-          color: textColor,
+          lineHeight: '1.2',
         }}
       />
       {children}

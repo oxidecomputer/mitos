@@ -6,8 +6,8 @@
  * Modified from https://github.com/ertdfgcvb/play.core
  * Copyright ertdfgcvb (Andreas Gysin)
  */
+import createRenderer from './core/canvas-renderer'
 import FPS, { type FPSType } from './core/fps'
-import createRenderer from './core/text-renderer'
 
 // Default settings for the program runner.
 // They can be overwritten by the parameters of the runner
@@ -34,6 +34,8 @@ export interface Settings {
   fontWeight?: string
   onFrameUpdate?: (frame: number) => void
   maxFrames?: number
+  textColor?: string
+  backgroundColor?: string
 }
 
 interface State {
@@ -417,6 +419,7 @@ export function createAnimation(
     setFrame,
     updateSettings,
     getState,
+    getBuffer: () => buffer,
   }
 }
 
@@ -453,25 +456,39 @@ function getContext(state: State, settings: Settings, metrics: Metrics, fps: any
 export function calcMetrics(el: HTMLElement): Metrics {
   const style = getComputedStyle(el)
 
-  // Extract info from the style
+  // Extract info from the style: in case of a canvas element
+  // the style and font family should be set anyways.
   const fontFamily = style.getPropertyValue('font-family')
   const lineHeightStyle = style.getPropertyValue('line-height')
   const fontSize = Number.parseFloat(style.getPropertyValue('font-size'))
-  let cellWidth, cellHeight
+  const lineHeight =
+    lineHeightStyle === 'normal' ? fontSize * 1.2 : Number.parseFloat(lineHeightStyle)
+  let cellWidth
 
-  // cellWidth is computed
-  const span = document.createElement('span')
-  el.appendChild(span)
-  span.innerHTML = ''.padEnd(50, 'X')
-  cellWidth = span.getBoundingClientRect().width / 50
-  cellHeight = span.getBoundingClientRect().height
-  el.removeChild(span)
+  // If the output element is a canvas 'measureText()' is used
+  // else cellWidth is computed 'by hand' (should be the same, in any case)
+  if (el.nodeName === 'CANVAS') {
+    const canvas = el as HTMLCanvasElement
+    const ctx = canvas.getContext('2d')
+
+    if (ctx) {
+      ctx.font = fontSize + 'px ' + fontFamily
+      cellWidth = ctx.measureText(''.padEnd(50, 'X')).width / 50
+    } else {
+      cellWidth = fontSize * 0.6 // fallback
+    }
+  } else {
+    const span = document.createElement('span')
+    el.appendChild(span)
+    span.innerHTML = ''.padEnd(50, 'X')
+    cellWidth = span.getBoundingClientRect().width / 50
+    el.removeChild(span)
+  }
 
   const metrics = {
-    aspect: cellWidth / cellHeight,
+    aspect: cellWidth / lineHeight,
     cellWidth,
-    lineHeight:
-      lineHeightStyle === 'normal' ? fontSize * 1.2 : Number.parseFloat(lineHeightStyle),
+    lineHeight,
     fontFamily,
     fontSize,
   }

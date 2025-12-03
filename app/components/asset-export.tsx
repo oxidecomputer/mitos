@@ -5,16 +5,15 @@
  *
  * Copyright Oxide Computer Company
  */
-import { FFmpeg } from '@ffmpeg/ffmpeg'
-import { fetchFile, toBlobURL } from '@ffmpeg/util'
+import { Recorder } from 'canvas-record'
 import { saveAs } from 'file-saver'
-import html2canvas from 'html2canvas-pro'
 import JSZip from 'jszip'
-import { useEffect, useRef, useState } from 'react'
+import { AVC } from 'media-codecs'
+import { useEffect, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
-import type { Program } from '~/lib/animation'
+import type { Cell, Program } from '~/lib/animation'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
@@ -27,7 +26,7 @@ import {
   CHAR_WIDTH,
 } from './dimension-utils'
 
-export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4' | 'gif'
+export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4'
 
 interface ExportDimensions {
   width: number
@@ -71,9 +70,6 @@ export function AssetExport({
   const [trimX, setTrimX] = useState(0)
   const [trimY, setTrimY] = useState(0)
 
-  const [ffmpegLoaded, setFfmpegLoaded] = useState(false)
-  const ffmpegRef = useRef<FFmpeg | null>(null)
-
   // Set export height based on character dimensions including padding
   useEffect(() => {
     const { totalWidth, totalHeight } = calculateContentDimensions(
@@ -86,67 +82,6 @@ export function AssetExport({
       height: Math.round(prev.width * aspectRatio),
     }))
   }, [dimensions, exportSettings.padding])
-
-  useEffect(() => {
-    const loadFFmpeg = async () => {
-      try {
-        if (!ffmpegRef.current) {
-          toast.loading('Loading video processing library...', { id: 'ffmpeg-load' })
-
-          const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm'
-          const ffmpeg = new FFmpeg()
-
-          ffmpeg.on('log', ({ message }) => {
-            if (message && message.includes('frame=')) {
-              toast.message(message, { id: 'ffmpeg-load' })
-            }
-          })
-
-          ffmpeg.on('progress', ({ progress }) => {
-            toast.loading(`Encoding: ${Math.round(progress * 100)}%`, {
-              id: 'video-export',
-            })
-          })
-
-          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript')
-          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
-
-          // Load with a timeout to detect hanging
-          const loadPromise = ffmpeg.load({
-            coreURL,
-            wasmURL,
-          })
-
-          // Create a timeout promise
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Loading ffmpeg timed out')), 30000)
-          })
-
-          // Race the loading against the timeout
-          await Promise.race([loadPromise, timeoutPromise])
-
-          ffmpegRef.current = ffmpeg
-          setFfmpegLoaded(true)
-          toast.success('Video processing library loaded!', { id: 'ffmpeg-load' })
-        }
-      } catch (error) {
-        console.error('Error loading ffmpeg:', error)
-        toast.error(
-          `Failed to load video processing: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          {
-            id: 'ffmpeg-load',
-            duration: 5000,
-          },
-        )
-        // Reset loading state so user can try again
-        setFfmpegLoaded(false)
-      }
-    }
-
-    if ((exportFormat === 'mp4' || exportFormat === 'gif') && !ffmpegLoaded) {
-      loadFFmpeg()
-    }
-  }, [exportFormat, ffmpegLoaded])
 
   useEffect(() => {
     const isAnimated = animationLength > 1
@@ -204,10 +139,25 @@ export function AssetExport({
   }
 
   const exportAsPng = async () => {
-    const canvas = await captureFrame()
-    if (!canvas) return
+    if (!animationController) {
+      toast.error('Animation controller not available')
+      return
+    }
 
-    canvas.toBlob(
+    // Apply trim adjustments
+    const finalWidth = trimEnabled ? exportDimensions.width + trimX : exportDimensions.width
+    const finalHeight = trimEnabled
+      ? exportDimensions.height + trimY
+      : exportDimensions.height
+
+    const exportCanvas = document.createElement('canvas')
+    exportCanvas.width = finalWidth
+    exportCanvas.height = finalHeight
+
+    const buffer = animationController.getBuffer()
+    renderBufferToCanvas(exportCanvas, buffer, dimensions, exportSettings)
+
+    exportCanvas.toBlob(
       (blob) => {
         if (blob) saveAs(blob, 'ascii-art.png')
       },
@@ -228,7 +178,7 @@ export function AssetExport({
 
     try {
       const { width, height } = dimensions
-      const formattedText = getContent(dimensions)?.split('\n') || []
+      const formattedText = getContent(dimensions, animationController)?.split('\n') || []
 
       const padding = exportSettings.padding * CHAR_WIDTH
 
@@ -342,9 +292,11 @@ export function AssetExport({
     if (!program) return
 
     try {
-      navigator.clipboard.writeText(getContent(dimensions) || '').then(() => {
-        toast('ASCII art has been copied to your clipboard')
-      })
+      navigator.clipboard
+        .writeText(getContent(dimensions, animationController) || '')
+        .then(() => {
+          toast('ASCII art has been copied to your clipboard')
+        })
     } catch (error) {
       console.error('Error copying to clipboard:', error)
       toast('Could not copy to clipboard')
@@ -370,79 +322,100 @@ export function AssetExport({
     })
   }
 
-  const exportAsVideo = async (frames: Blob[]) => {
-    if (!ffmpegLoaded || !ffmpegRef.current) {
-      toast.error('Video processing library not loaded')
+  const renderBufferToCanvas = (
+    canvas: HTMLCanvasElement,
+    buffer: Cell[],
+    dimensions: { width: number; height: number },
+    settings: { textColor: string; backgroundColor: string },
+  ) => {
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const cellWidth = canvas.width / dimensions.width
+    const lineHeight = canvas.height / dimensions.height
+
+    ctx.fillStyle = settings.backgroundColor
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = settings.textColor
+    ctx.font = '12px "GT America Mono", monospace'
+    ctx.textBaseline = 'top'
+
+    for (let i = 0; i < buffer.length; i++) {
+      const col = i % dimensions.width
+      const row = Math.floor(i / dimensions.width)
+      const x = col * cellWidth
+      const y = row * lineHeight
+      ctx.fillText(buffer[i]?.char || ' ', x, y)
+    }
+  }
+
+  const exportAsVideoWithCanvasRecord = async (totalFrames: number) => {
+    if (!animationController) {
+      toast.error('Animation controller not available')
       return
     }
 
     try {
-      const ffmpeg = ffmpegRef.current
-      toast.loading('Processing video...', { id: 'video-export' })
+      toast.loading('Initializing video encoder...', { id: 'video-export' })
 
-      // Write each frame to the virtual file system
-      for (let i = 0; i < frames.length; i++) {
-        const frameName = `frame_${String(i).padStart(4, '0')}.png`
-        const frameData = await fetchFile(frames[i])
-        await ffmpeg.writeFile(frameName, frameData)
+      // Apply trim adjustments and ensure even dimensions for H264
+      let finalWidth = trimEnabled ? exportDimensions.width + trimX : exportDimensions.width
+      let finalHeight = trimEnabled
+        ? exportDimensions.height + trimY
+        : exportDimensions.height
 
-        if (i % 10 === 0 || i === frames.length - 1) {
-          toast.loading(
-            `Preparing frames: ${Math.round(((i + 1) / frames.length) * 100)}%`,
-            {
-              id: 'video-export',
-            },
-          )
+      // H264 requires even dimensions - round up to nearest even number
+      finalWidth = Math.ceil(finalWidth / 2) * 2
+      finalHeight = Math.ceil(finalHeight / 2) * 2
+
+      const exportCanvas = document.createElement('canvas')
+      exportCanvas.width = finalWidth
+      exportCanvas.height = finalHeight
+
+      const ctx = exportCanvas.getContext('2d')
+      if (!ctx) {
+        toast.error('Could not get canvas context')
+        return
+      }
+
+      const recorder = new Recorder(ctx, {
+        name: 'ascii-animation',
+        encoderOptions: {
+          codec: AVC.getCodec({ profile: 'Main', level: '5.2' }),
+        },
+      })
+
+      const wasPlaying = animationController.getState().playing
+      const currentFrame = animationController.getState().frame
+
+      animationController.togglePlay(false)
+
+      await recorder.start()
+
+      for (let i = 0; i < totalFrames; i++) {
+        animationController.setFrame(i)
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        const buffer = animationController.getBuffer()
+        renderBufferToCanvas(exportCanvas, buffer, dimensions, exportSettings)
+
+        await recorder.step()
+
+        if (i % 5 === 0 || i === totalFrames - 1) {
+          toast.loading(`Encoding: ${Math.round(((i + 1) / totalFrames) * 100)}%`, {
+            id: 'video-export',
+          })
         }
       }
 
-      // Generate the video based on selected format
-      const fps = Math.min(30, Math.max(10, animationController?.getState().fps || 24))
-      const outputFilename = `output.${exportFormat}`
+      const blob = (await recorder.stop()) as unknown as Blob
 
-      toast.loading('Encoding video...', { id: 'video-export' })
-
-      if (exportFormat === 'gif') {
-        await ffmpeg.exec([
-          '-framerate',
-          `${fps}`,
-          '-pattern_type',
-          'glob',
-          '-i',
-          'frame_*.png',
-          '-vf',
-          'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
-          '-f',
-          'gif',
-          outputFilename,
-        ])
-      } else {
-        await ffmpeg.exec([
-          '-framerate',
-          `${fps}`,
-          '-pattern_type',
-          'glob',
-          '-i',
-          'frame_*.png',
-          '-vf',
-          'format=yuv420p',
-          '-c:v',
-          'libx264',
-          outputFilename,
-        ])
+      animationController.setFrame(currentFrame)
+      if (wasPlaying) {
+        animationController.togglePlay(true)
       }
 
-      // Read the output file
-      const data = await ffmpeg.readFile(outputFilename)
-      const blob = new Blob(
-        [data instanceof Uint8Array ? (data.buffer as ArrayBuffer) : data],
-        {
-          type: exportFormat === 'mp4' ? 'video/mp4' : 'image/gif',
-        },
-      )
-
-      // Save the video
-      saveAs(blob, `ascii-animation.${exportFormat}`)
+      saveAs(blob, 'ascii-animation.mp4')
       toast.success('Video export complete!', { id: 'video-export' })
     } catch (error) {
       console.error('Error encoding video:', error)
@@ -455,22 +428,34 @@ export function AssetExport({
     currentFrame: number,
     wasPlaying: boolean,
   ) => {
+    if (exportFormat === 'mp4') {
+      await exportAsVideoWithCanvasRecord(totalFrames)
+      return
+    }
+
+    if (!animationController) return
+
     const frames: Blob[] = []
 
-    for (let i = 0; i < totalFrames; i++) {
-      if (animationController) {
-        animationController.setFrame(i)
-      }
+    // Apply trim adjustments
+    const finalWidth = trimEnabled ? exportDimensions.width + trimX : exportDimensions.width
+    const finalHeight = trimEnabled
+      ? exportDimensions.height + trimY
+      : exportDimensions.height
 
-      // Allow DOM to update
+    const exportCanvas = document.createElement('canvas')
+    exportCanvas.width = finalWidth
+    exportCanvas.height = finalHeight
+
+    for (let i = 0; i < totalFrames; i++) {
+      animationController.setFrame(i)
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      const canvas = await captureFrame()
-      if (!canvas) continue
+      const buffer = animationController.getBuffer()
+      renderBufferToCanvas(exportCanvas, buffer, dimensions, exportSettings)
 
-      // Convert canvas to blob and add to zip
       const blob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((b) => resolve(b as Blob), 'image/png', 1.0),
+        exportCanvas.toBlob((b) => resolve(b as Blob), 'image/png', 1.0),
       )
 
       frames.push(blob)
@@ -482,87 +467,19 @@ export function AssetExport({
       }
     }
 
-    // Restore animation state
-    if (animationController) {
-      animationController.setFrame(currentFrame)
-      if (wasPlaying) {
-        animationController.togglePlay(true)
-      }
+    animationController.setFrame(currentFrame)
+    if (wasPlaying) {
+      animationController.togglePlay(true)
     }
 
-    // Either export as video or as frame zip
-    if (exportFormat === 'mp4' || exportFormat === 'gif') {
-      await exportAsVideo(frames)
-    } else {
-      // Original frames export code
-      const zip = new JSZip()
-      frames.forEach((blob, i) => {
-        zip.file(`frame_${String(i).padStart(4, '0')}.png`, blob)
-      })
-
-      const zipBlob = await zip.generateAsync({ type: 'blob' })
-      saveAs(zipBlob, 'ascii-animation-frames.zip')
-      toast.success('Export complete!', { id: 'export-progress' })
-    }
-  }
-
-  // The ASCII is HTML so we need some way to turn it into an image
-  const captureFrame = async () => {
-    const asciiParent = document.querySelector('.ascii-animation')?.parentElement
-    if (!asciiParent) return null
-
-    // Contains both the ASCII and grid overlay
-    const containerElement = asciiParent
-
-    // Calculate scale to achieve target dimensions using character dimensions
-    const { totalWidth: totalActualWidth, totalHeight: totalActualHeight } =
-      calculateContentDimensions(dimensions, exportSettings.padding)
-
-    // Apply trim adjustments to final export dimensions
-    const finalExportWidth = trimEnabled
-      ? exportDimensions.width + trimX
-      : exportDimensions.width
-    const finalExportHeight = trimEnabled
-      ? exportDimensions.height + trimY
-      : exportDimensions.height
-
-    // Calculate scale factors based on original export dimensions (not trimmed)
-    const scaleX = exportDimensions.width / totalActualWidth
-    const scaleY = exportDimensions.height / totalActualHeight
-
-    // Calculate offset for centering content with any trim values
-    const offsetX = trimEnabled ? -trimX / 2 : 0
-    const offsetY = trimEnabled ? -trimY / 2 : 0
-
-    return html2canvas(containerElement as HTMLElement, {
-      backgroundColor: exportSettings.backgroundColor,
-      logging: false,
-      allowTaint: true,
-      useCORS: true,
-      removeContainer: false,
-      width: finalExportWidth,
-      height: finalExportHeight,
-      x: offsetX,
-      y: offsetY,
-      scale: 1,
-      onclone: (document, element) => {
-        // Apply transform to scale the content to fill the export dimensions
-        const clonedElement = element as HTMLElement
-        clonedElement.style.transform = `scale(${scaleX}, ${scaleY})`
-        clonedElement.style.transformOrigin = 'top left'
-
-        // Find elements with CSS color functions and simplify them
-        const elements = document.querySelectorAll('*')
-        elements.forEach((el) => {
-          const style = window.getComputedStyle(el)
-          const color = style.color
-          if (color.includes('color(')) {
-            // Set to a basic color that html2canvas can handle
-            ;(el as HTMLElement).style.color = 'currentColor'
-          }
-        })
-      },
+    const zip = new JSZip()
+    frames.forEach((blob, i) => {
+      zip.file(`frame_${String(i).padStart(4, '0')}.png`, blob)
     })
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    saveAs(zipBlob, 'ascii-animation-frames.zip')
+    toast.success('Export complete!', { id: 'export-progress' })
   }
 
   // Copy with cmd+c
@@ -580,7 +497,7 @@ export function AssetExport({
         }}
         options={
           animationLength > 1
-            ? (['mp4', 'gif', 'frames'] as ExportFormat[])
+            ? (['mp4', 'frames'] as ExportFormat[])
             : (['svg', 'png'] as ExportFormat[])
         }
         labelize={(format) => {
@@ -588,7 +505,6 @@ export function AssetExport({
             case 'frames':
               return 'PNGs'
             case 'mp4':
-            case 'gif':
               return format.toUpperCase()
             default:
               return format.toUpperCase()
@@ -599,10 +515,7 @@ export function AssetExport({
         Format
       </InputSelect>
 
-      {(exportFormat === 'png' ||
-        exportFormat === 'frames' ||
-        exportFormat === 'mp4' ||
-        exportFormat === 'gif') && (
+      {(exportFormat === 'png' || exportFormat === 'frames' || exportFormat === 'mp4') && (
         <div className="space-y-2">
           <div className="ui-select">
             <label className="ui-select__label">Export Size</label>
@@ -681,14 +594,10 @@ export function AssetExport({
           variant="secondary"
           className="mt-2 w-full"
           onClick={exportContent}
-          disabled={
-            isExporting ||
-            disabled ||
-            ((exportFormat === 'mp4' || exportFormat === 'gif') && !ffmpegLoaded)
-          }
+          disabled={isExporting || disabled}
         >
-          {exportFormat === 'mp4' || exportFormat === 'gif'
-            ? `Export as ${exportFormat.toUpperCase()}`
+          {exportFormat === 'mp4'
+            ? 'Export as MP4'
             : animationLength > 1
               ? `Export ${exportFormat === 'frames' ? 'Frames' : 'Frame'}`
               : 'Export Image'}
