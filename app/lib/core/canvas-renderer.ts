@@ -39,9 +39,12 @@ export default function createRenderer() {
       return
     }
 
-    // Calculate canvas dimensions based on character grid
-    const canvasWidth = context.cols * m.cellWidth
-    const canvasHeight = context.rows * m.lineHeight
+    // Get padding from settings (default to 0)
+    const padding = context.settings.padding || 0
+
+    // Calculate canvas dimensions based on character grid + padding
+    const canvasWidth = context.cols * m.cellWidth + padding * 2
+    const canvasHeight = context.rows * m.lineHeight + padding * 2
 
     // Set canvas size
     canvas.width = canvasWidth * scale
@@ -64,12 +67,12 @@ export default function createRenderer() {
     ctx.font = `${m.fontSize}px ${m.fontFamily}`
     ctx.textBaseline = 'top'
 
-    // Render cells
+    // Render cells with padding offset
     for (let j = 0; j < context.rows; j++) {
       for (let i = 0; i < context.cols; i++) {
         const cell = buffer[j * context.cols + i]
-        const x = i * m.cellWidth
-        const y = j * m.lineHeight
+        const x = i * m.cellWidth + padding
+        const y = j * m.lineHeight + padding
 
         ctx.fillText(cell?.char || ' ', x, y)
       }

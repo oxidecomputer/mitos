@@ -48,8 +48,8 @@ export default function AsciiAnimation({
       const element = asciiEl.current
       if (!container || !element) return
 
-      const width = Math.floor(element.offsetWidth + padding * 2)
-      const height = Math.floor(element.offsetHeight + padding * 2)
+      const width = Math.floor(element.offsetWidth)
+      const height = Math.floor(element.offsetHeight)
 
       container.style.width = `${width}px`
       container.style.height = `${height}px`
@@ -96,6 +96,7 @@ export default function AsciiAnimation({
         maxFrames,
         textColor,
         backgroundColor,
+        padding,
       })
 
       animController.togglePlay(wasPlaying)
@@ -112,17 +113,17 @@ export default function AsciiAnimation({
     setAnimationController,
     textColor,
     backgroundColor,
+    padding,
   ])
 
   return (
     <div
       ref={containerRef}
-      className="ascii-animation relative flex items-center justify-center [font-size:0px]"
+      className="ascii-animation relative flex items-center justify-center overflow-hidden rounded-[1%] [font-size:0px]"
       aria-hidden
       role="img"
       style={{
         backgroundColor,
-        padding,
       }}
     >
       <canvas

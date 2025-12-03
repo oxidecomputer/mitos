@@ -36,6 +36,7 @@ export interface Settings {
   maxFrames?: number
   textColor?: string
   backgroundColor?: string
+  padding?: number
 }
 
 interface State {
@@ -420,6 +421,7 @@ export function createAnimation(
     updateSettings,
     getState,
     getBuffer: () => buffer,
+    getMetrics: () => metrics,
   }
 }
 

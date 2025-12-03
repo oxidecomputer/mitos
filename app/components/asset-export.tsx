@@ -155,7 +155,30 @@ export function AssetExport({
     exportCanvas.height = finalHeight
 
     const buffer = animationController.getBuffer()
-    renderBufferToCanvas(exportCanvas, buffer, dimensions, exportSettings)
+    const metrics = animationController.getMetrics()
+    if (!metrics) {
+      toast.error('Animation metrics not available')
+      return
+    }
+
+    // Calculate padding for export using calculateContentDimensions
+    const { pixelHeight, paddingPixels } = calculateContentDimensions(
+      dimensions,
+      exportSettings.padding,
+    )
+    const previewTotalHeight = pixelHeight + paddingPixels * 2
+    const scale = finalHeight / previewTotalHeight
+    const exportPadding = paddingPixels * scale
+
+    renderBufferToCanvas(
+      exportCanvas,
+      buffer,
+      dimensions,
+      exportSettings,
+      metrics.fontSize,
+      metrics.lineHeight,
+      exportPadding,
+    )
 
     exportCanvas.toBlob(
       (blob) => {
@@ -327,24 +350,35 @@ export function AssetExport({
     buffer: Cell[],
     dimensions: { width: number; height: number },
     settings: { textColor: string; backgroundColor: string },
+    baseFontSize: number,
+    baseLineHeight: number,
+    padding: number = 0,
   ) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const cellWidth = canvas.width / dimensions.width
-    const lineHeight = canvas.height / dimensions.height
+    // Calculate cell dimensions accounting for padding
+    const contentWidth = canvas.width - padding * 2
+    const contentHeight = canvas.height - padding * 2
+    const cellWidth = contentWidth / dimensions.width
+    const lineHeight = contentHeight / dimensions.height
+
+    // Calculate font size based on the scale ratio between export and preview
+    // Scale = (export lineHeight) / (base lineHeight from preview)
+    const scale = lineHeight / baseLineHeight
+    const fontSize = Math.round(baseFontSize * scale)
 
     ctx.fillStyle = settings.backgroundColor
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = settings.textColor
-    ctx.font = '12px "GT America Mono", monospace'
+    ctx.font = `${fontSize}px "GT America Mono", monospace`
     ctx.textBaseline = 'top'
 
     for (let i = 0; i < buffer.length; i++) {
       const col = i % dimensions.width
       const row = Math.floor(i / dimensions.width)
-      const x = col * cellWidth
-      const y = row * lineHeight
+      const x = col * cellWidth + padding
+      const y = row * lineHeight + padding
       ctx.fillText(buffer[i]?.char || ' ', x, y)
     }
   }
@@ -390,6 +424,21 @@ export function AssetExport({
 
       animationController.togglePlay(false)
 
+      const metrics = animationController.getMetrics()
+      if (!metrics) {
+        toast.error('Animation metrics not available', { id: 'video-export' })
+        return
+      }
+
+      // Calculate padding for export using calculateContentDimensions
+      const { pixelHeight, paddingPixels } = calculateContentDimensions(
+        dimensions,
+        exportSettings.padding,
+      )
+      const previewTotalHeight = pixelHeight + paddingPixels * 2
+      const scale = finalHeight / previewTotalHeight
+      const exportPadding = paddingPixels * scale
+
       await recorder.start()
 
       for (let i = 0; i < totalFrames; i++) {
@@ -397,7 +446,15 @@ export function AssetExport({
         await new Promise((resolve) => setTimeout(resolve, 50))
 
         const buffer = animationController.getBuffer()
-        renderBufferToCanvas(exportCanvas, buffer, dimensions, exportSettings)
+        renderBufferToCanvas(
+          exportCanvas,
+          buffer,
+          dimensions,
+          exportSettings,
+          metrics.fontSize,
+          metrics.lineHeight,
+          exportPadding,
+        )
 
         await recorder.step()
 
@@ -447,12 +504,35 @@ export function AssetExport({
     exportCanvas.width = finalWidth
     exportCanvas.height = finalHeight
 
+    const metrics = animationController.getMetrics()
+    if (!metrics) {
+      toast.error('Animation metrics not available')
+      return
+    }
+
+    // Calculate padding for export using calculateContentDimensions
+    const { pixelHeight, paddingPixels } = calculateContentDimensions(
+      dimensions,
+      exportSettings.padding,
+    )
+    const previewTotalHeight = pixelHeight + paddingPixels * 2
+    const scale = finalHeight / previewTotalHeight
+    const exportPadding = paddingPixels * scale
+
     for (let i = 0; i < totalFrames; i++) {
       animationController.setFrame(i)
       await new Promise((resolve) => setTimeout(resolve, 50))
 
       const buffer = animationController.getBuffer()
-      renderBufferToCanvas(exportCanvas, buffer, dimensions, exportSettings)
+      renderBufferToCanvas(
+        exportCanvas,
+        buffer,
+        dimensions,
+        exportSettings,
+        metrics.fontSize,
+        metrics.lineHeight,
+        exportPadding,
+      )
 
       const blob = await new Promise<Blob>((resolve) =>
         exportCanvas.toBlob((b) => resolve(b as Blob), 'image/png', 1.0),
