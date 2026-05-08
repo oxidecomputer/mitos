@@ -384,9 +384,12 @@ export function AssetExport({
         captured.push(getContent(dimensions) ?? '')
 
         if (i % 5 === 0 || i === totalFrames - 1) {
-          toast.loading(`Capturing React frames: ${Math.round(((i + 1) / totalFrames) * 100)}%`, {
-            id: 'react-export',
-          })
+          toast.loading(
+            `Capturing React frames: ${Math.round(((i + 1) / totalFrames) * 100)}%`,
+            {
+              id: 'react-export',
+            },
+          )
         }
       }
     } finally {
