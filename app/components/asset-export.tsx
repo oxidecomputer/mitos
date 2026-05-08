@@ -15,6 +15,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
 import type { Program } from '~/lib/animation'
+import { generateReactComponentSource } from '~/lib/react-export'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
@@ -350,6 +351,106 @@ export function AssetExport({
       toast('Could not copy to clipboard')
     }
   }
+
+  const buildReactComponentSource = async (): Promise<string | null> => {
+    if (!program) return null
+
+    // Allow DOM to update (matches PNG/SVG export)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const isAnimated = animationLength > 1 && animationController
+
+    if (!isAnimated) {
+      const text = getContent(dimensions) ?? ''
+      return generateReactComponentSource({
+        mode: 'static',
+        text,
+        fps: 24,
+        settings: exportSettings,
+      })
+    }
+
+    const controller = animationController!
+    const wasPlaying = controller.getState().playing
+    controller.togglePlay(false)
+    const previousFrame = controller.getState().frame
+    const totalFrames = animationLength
+    const captured: string[] = []
+
+    try {
+      for (let i = 0; i < totalFrames; i++) {
+        controller.setFrame(i)
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        captured.push(getContent(dimensions) ?? '')
+
+        if (i % 5 === 0 || i === totalFrames - 1) {
+          toast.loading(`Capturing React frames: ${Math.round(((i + 1) / totalFrames) * 100)}%`, {
+            id: 'react-export',
+          })
+        }
+      }
+    } finally {
+      controller.setFrame(previousFrame)
+      if (wasPlaying) {
+        controller.togglePlay(true)
+      }
+      toast.dismiss('react-export')
+    }
+
+    const fps = Math.min(30, Math.max(10, controller.getState().fps || 24))
+
+    return generateReactComponentSource({
+      mode: 'animated',
+      text: '',
+      frames: captured,
+      fps,
+      settings: exportSettings,
+    })
+  }
+
+  const downloadReactComponent = async () => {
+    if (!program) return
+
+    try {
+      setIsExporting(true)
+      const source = await buildReactComponentSource()
+      if (!source) {
+        toast('Could not generate React component')
+        return
+      }
+      const blob = new Blob([source], { type: 'text/typescript;charset=utf-8' })
+      saveAs(blob, 'ascii-art.tsx')
+      toast('React component downloaded')
+    } catch (error) {
+      console.error('Error exporting React component:', error)
+      toast('Failed to export React component')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const copyReactComponent = async () => {
+    if (!program) return
+
+    try {
+      setIsExporting(true)
+      const source = await buildReactComponentSource()
+      if (!source) {
+        toast('Could not generate React component')
+        return
+      }
+      await navigator.clipboard.writeText(source)
+      toast('React component copied to clipboard')
+    } catch (error) {
+      console.error('Error copying React component:', error)
+      toast('Failed to copy React component')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const reactExportDisabled =
+    disabled || isExporting || (animationLength > 1 && !animationController)
 
   const escapeXml = (unsafe: string) => {
     return unsafe.replace(/[<>&'"]/g, (c) => {
@@ -709,6 +810,25 @@ export function AssetExport({
             disabled={isExporting || disabled}
           >
             Copy SVG
+          </InputButton>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <InputButton
+            variant="secondary"
+            className="w-full"
+            onClick={downloadReactComponent}
+            disabled={reactExportDisabled}
+          >
+            Download React component
+          </InputButton>
+          <InputButton
+            variant="secondary"
+            className="w-full"
+            onClick={copyReactComponent}
+            disabled={reactExportDisabled}
+          >
+            Copy React component
           </InputButton>
         </div>
       </div>
