@@ -224,9 +224,10 @@ export function AsciiArtGenerator() {
 
       let imageData = currentImageData
       let frames = currentFrames
+      let compilationSettings = settings
 
       if (shouldProcess && settings.source.data) {
-        if (settings.source.data.includes('data:image/gif')) {
+        if (isGifDataUrl(settings.source.data)) {
           const gifResult = await processGifSource(settings.source.data, settings)
           if (gifResult) {
             // Update state with processed data
@@ -236,6 +237,12 @@ export function AsciiArtGenerator() {
 
             imageData = gifResult.imageData
             frames = gifResult.frames
+            if (gifResult.generatedCode !== undefined) {
+              compilationSettings = {
+                ...settings,
+                source: { ...settings.source, code: gifResult.generatedCode },
+              }
+            }
           }
         } else {
           const staticResult = await processStaticImage(settings.source.data, settings)
@@ -247,6 +254,12 @@ export function AsciiArtGenerator() {
 
             imageData = staticResult.imageData
             frames = null
+            if (staticResult.generatedCode !== undefined) {
+              compilationSettings = {
+                ...settings,
+                source: { ...settings.source, code: staticResult.generatedCode },
+              }
+            }
           }
         }
       }
@@ -254,10 +267,10 @@ export function AsciiArtGenerator() {
       setCurrentImageData(imageData)
       setCurrentFrames(frames)
 
-      await processCodeSource(columns, rows, settings, imageData, frames)
+      await processCodeSource(columns, rows, compilationSettings, imageData, frames)
 
-      // Update cache entry after processing is complete
-      prevSettings.current = settings
+      // Cache the settings we actually compiled (includes freshly generated image code).
+      prevSettings.current = compilationSettings
     } catch (error) {
       console.error('Error processing:', error)
       toast(error instanceof Error ? error.message : 'Unknown error')
@@ -279,9 +292,11 @@ export function AsciiArtGenerator() {
       setCurrentImageData(result.data)
       setCurrentFrames(null)
 
+      let generatedCode: string | undefined
       // Only generate initial code if pendingCode is empty
       if (pendingCode === '') {
         const code = generateImageCode()
+        generatedCode = code
         setPendingCode(code)
         updateSettings('source', { code })
       }
@@ -289,6 +304,7 @@ export function AsciiArtGenerator() {
       return {
         imageData: result.data,
         processedImageUrl: result.processedImageUrl,
+        generatedCode,
       }
     } catch (error) {
       handleProcessingError('processing image', error)
@@ -304,12 +320,14 @@ export function AsciiArtGenerator() {
     imageData: AsciiImageData
     frames: AsciiImageData[]
     processedImageUrl: string | null
+    generatedCode?: string
   } | null> => {
     const processGif = async (): Promise<{
       frames: number
       imageData: AsciiImageData
       framesData: AsciiImageData[]
       processedImageUrl: string | null
+      generatedCode?: string
     }> => {
       // Convert data URL to binary data
       const bytes = dataUrlToUint8Array(gifData)
@@ -339,9 +357,11 @@ export function AsciiArtGenerator() {
       setCurrentImageData(result.firstFrameData)
       setCurrentFrames(result.frames)
 
+      let generatedCode: string | undefined
       // Only generate initial code if pendingCode is empty
       if (pendingCode === '') {
         const code = generateImageCode()
+        generatedCode = code
         setPendingCode(code)
         updateSettings('source', { code })
       }
@@ -355,6 +375,7 @@ export function AsciiArtGenerator() {
         imageData: result.firstFrameData,
         framesData: result.frames,
         processedImageUrl: result.firstFrameUrl,
+        generatedCode,
       }
     }
 
@@ -367,6 +388,7 @@ export function AsciiArtGenerator() {
         imageData: result.imageData,
         frames: result.framesData,
         processedImageUrl: result.processedImageUrl,
+        generatedCode: result.generatedCode,
       }
     } catch (_error) {
       toast.dismiss()
@@ -435,6 +457,8 @@ export function AsciiArtGenerator() {
   }
 
   // Helper functions
+  const isGifDataUrl = (dataUrl: string) => /data:image\/gif/i.test(dataUrl)
+
   const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
     const base64Data = dataUrl.split(',')[1]
     const binaryString = window.atob(base64Data)
@@ -592,12 +616,15 @@ export function AsciiArtGenerator() {
         return `Img-${hours}-${minutes}-${seconds}.png`
       })()
 
-    // Update all settings at once to avoid race conditions
+    // New media replaces any template/script code so image/GIF pipelines always compile
+    // the generated `generateImageCode()` output (avoids stale `settings.source.code`).
+    setPendingCode('')
     setSettings((prev) => ({
       ...prev,
       source: {
         ...prev.source,
         data: imageUrl,
+        code: '',
         type,
         imageDimensions: { width, height }, // Store dimensions with source
         fileName: finalFileName,
