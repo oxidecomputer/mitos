@@ -11,6 +11,8 @@ export const sin = `/**
 @url https://play.ertdfgcvb.xyz/#/src/basics/time_milliseconds
 */
 import { characterSet } from '@/settings'
+// You can also import { textColor, backgroundColor } from '@/settings' (the stock
+// colours) and set a per-cell colour by returning { char, color } from main().
 
 const speed = 1; //~ number 0-10 step=0.5
 const amplitude = 18; //~ number 1-50

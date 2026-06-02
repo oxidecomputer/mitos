@@ -254,6 +254,10 @@ function createSettingsPlugin(settings?: unknown): Plugin {
       build.onLoad({ filter: /^settings$/, namespace: 'settings' }, () => {
         const settingsObj = settings as AsciiSettings
         const characterSet = settingsObj?.output?.characterSet || '@%#*+=-:. '
+        // Stock colours, exposed so scripts can `import { textColor } from '@/settings'`
+        // and build palettes off the user's chosen export colours.
+        const textColor = settingsObj?.export?.textColor || '#d7d8d9'
+        const backgroundColor = settingsObj?.export?.backgroundColor || '#080f11'
 
         // Strip out large source data to reduce compiled code size
         const lightweightSettings = settingsObj
@@ -269,6 +273,8 @@ function createSettingsPlugin(settings?: unknown): Plugin {
         return {
           loader: 'ts',
           contents: `export const characterSet = ${JSON.stringify(characterSet)};
+export const textColor = ${JSON.stringify(textColor)};
+export const backgroundColor = ${JSON.stringify(backgroundColor)};
 export const settings = ${JSON.stringify(lightweightSettings)};`,
         }
       })
