@@ -81,17 +81,27 @@ export default function createRenderer() {
       if (rowNeedsUpdate === false) continue
 
       let html = '' // Accumulates the markup
-      let tagIsOpen = false
+      let openColor: string | null = null // colour of the currently open <span>, or null
 
       for (let i = 0; i < cols; i++) {
         const idx = i + offs
         if (idx >= buffer.length) continue
 
         const currCell = buffer[idx]
+        const color = currCell.color || null
+
+        // Open / close colour spans only when the colour changes, so a run of
+        // same-coloured cells shares a single span. Uncoloured cells fall back
+        // to the stock text colour set on the container.
+        if (color !== openColor) {
+          if (openColor !== null) html += '</span>'
+          if (color !== null) html += `<span style="color:${color}">`
+          openColor = color
+        }
 
         html += currCell.char || ' '
       }
-      if (tagIsOpen) {
+      if (openColor !== null) {
         html += '</span>'
       }
 
@@ -108,6 +118,7 @@ export default function createRenderer() {
     if (typeof cellA !== 'object') return false
     if (typeof cellB !== 'object') return false
     if (cellA?.char !== cellB?.char) return false
+    if (cellA?.color !== cellB?.color) return false
     return true
   }
 

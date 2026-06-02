@@ -49,6 +49,53 @@ interface AssetExportProps {
   }
 }
 
+// Walk the rendered ASCII DOM and group each row into runs of same-coloured
+// text, so SVG export can reproduce the per-cell colours scripts emit (the live
+// preview wraps coloured runs in <span style="color:…">). Cells without an
+// explicit colour fall back to the stock text colour.
+function extractColoredRows(
+  preEl: Element,
+  width: number,
+  height: number,
+  defaultColor: string,
+): { text: string; color: string }[][] {
+  const rows: { text: string; color: string }[][] = []
+  const rowEls = preEl.children
+
+  for (let r = 0; r < height; r++) {
+    const segments: { text: string; color: string }[] = []
+    const rowEl = rowEls[r]
+    let col = 0
+
+    const pushText = (text: string, color: string) => {
+      if (col >= width || !text) return
+      const slice = text.slice(0, width - col)
+      if (!slice) return
+      col += slice.length
+      const last = segments[segments.length - 1]
+      if (last && last.color === color) last.text += slice
+      else segments.push({ text: slice, color })
+    }
+
+    if (rowEl) {
+      rowEl.childNodes.forEach((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          pushText(node.textContent || '', defaultColor)
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as HTMLElement
+          pushText(el.textContent || '', el.style?.color || defaultColor)
+        }
+      })
+    }
+
+    // Pad short rows so vertical positioning stays aligned.
+    if (col < width) pushText(' '.repeat(width - col), defaultColor)
+    rows.push(segments)
+  }
+
+  return rows
+}
+
 export function AssetExport({
   program,
   animationController,
@@ -194,7 +241,7 @@ export function AssetExport({
     toast('Preparing image...')
 
     // Allow DOM to update
-    await new Promise((resolve) => setTimeout(resolve, 50))
+    await waitForPaint()
 
     if (exportFormat === 'svg') {
       await exportAsSvg()
@@ -228,7 +275,12 @@ export function AssetExport({
 
     try {
       const { width, height } = dimensions
-      const formattedText = getContent(dimensions)?.split('\n') || []
+      const coloredRows = extractColoredRows(
+        asciiElement,
+        width,
+        height,
+        exportSettings.textColor,
+      )
 
       const padding = exportSettings.padding * CHAR_WIDTH
 
@@ -285,10 +337,23 @@ export function AssetExport({
 
       svgContent += `  <text x="${padding}" y="${padding + fontSize}" class="ascii-text">\n`
 
-      formattedText.forEach((line, index) => {
-        // Replace regular spaces with non-breaking spaces to preserve spacing
-        const processedLine = line.replace(/ /g, '\u00A0') // Unicode non-breaking space
-        svgContent += `    <tspan x="${padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}">${escapeXml(processedLine)}</tspan>\n`
+      coloredRows.forEach((segments, index) => {
+        if (segments.length === 0) {
+          // Keep the (blank) line so following rows stay vertically aligned.
+          svgContent += `    <tspan x="${padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}"> </tspan>\n`
+          return
+        }
+
+        // Each row is one or more tspans flowing left-to-right. Only the first
+        // tspan of a row sets x (left margin) and advances dy to the next line;
+        // the rest inherit the position so colour runs stay contiguous.
+        segments.forEach((seg, segIndex) => {
+          const processed = seg.text.replace(/ /g, '\u00A0') // preserve spacing
+          const isFirst = segIndex === 0
+          const xAttr = isFirst ? ` x="${padding}"` : ''
+          const dyAttr = ` dy="${isFirst && index !== 0 ? cellHeight : 0}"`
+          svgContent += `    <tspan${xAttr}${dyAttr} fill="${seg.color}">${escapeXml(processed)}</tspan>\n`
+        })
       })
 
       svgContent += '  </text>\n'
@@ -450,6 +515,15 @@ export function AssetExport({
     }
   }
 
+  // Wait for the browser to actually paint the new frame, rather than guessing
+  // with a fixed delay. Two rAFs guarantees a render has flushed; this is both
+  // faster and more reliable than a 50ms sleep, and the saving scales with the
+  // number of frames (a long sequence no longer pays 50ms × N of dead time).
+  const waitForPaint = () =>
+    new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    )
+
   const exportAnimationFrames = async (
     totalFrames: number,
     currentFrame: number,
@@ -463,7 +537,7 @@ export function AssetExport({
       }
 
       // Allow DOM to update
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await waitForPaint()
 
       const canvas = await captureFrame()
       if (!canvas) continue

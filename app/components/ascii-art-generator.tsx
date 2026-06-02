@@ -195,7 +195,7 @@ export function AsciiArtGenerator() {
   }, [settings])
 
   const getRelevantSettings = (settings: AsciiSettings) => {
-    const { source, preprocessing, output, animation } = settings
+    const { source, preprocessing, output, animation, export: exportSettings } = settings
 
     return {
       sourceData: source.data,
@@ -206,6 +206,8 @@ export function AsciiArtGenerator() {
       frameRate: animation.frameRate,
       characterSet: output.characterSet,
       colorMapping: output.colorMapping,
+      textColor: exportSettings.textColor,
+      backgroundColor: exportSettings.backgroundColor,
     }
   }
 
