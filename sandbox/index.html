@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mitos React Export Sandbox</title>
+
+    <!-- A single React instance for both this page and the dropped component.
+         react-dom is pinned with ?external=react so it imports the bare "react"
+         specifier, which this import map resolves to the same module. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19",
+          "react/": "https://esm.sh/react@19/",
+          "react-dom/client": "https://esm.sh/react-dom@19/client?external=react"
+        }
+      }
+    </script>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0b0e12;
+        color: #6d7679;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Helvetica Neue',
+          sans-serif;
+        display: grid;
+        place-items: center;
+      }
+      #hint {
+        position: fixed;
+        padding: 2rem 3rem;
+        top: 2rem;
+        bottom: 2rem;
+        left: 2rem;
+        right: 2rem;
+        border: 1px dashed #303235;
+        border-radius: 3px;
+        font-size: 13px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-content: center;
+        pointer-events: none;
+      }
+      body.dragging #hint {
+        border-color: #00d892;
+      }
+      #error {
+        position: fixed;
+        bottom: 3rem;
+        left: 3rem;
+        right: 3rem;
+        padding: 12px 16px;
+        background: #38110b;
+        color: #ff6785;
+        font-size: 12px;
+        white-space: pre-wrap;
+      }
+      #error:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <label id="hint">
+      Drag an exported component anywhere in this window <br />or click to choose a file
+      <input id="file" type="file" accept=".tsx,.ts,.jsx,.js" hidden />
+    </label>
+    <div id="error"></div>
+
+    <script type="module">
+      import * as esbuild from 'https://unpkg.com/esbuild-wasm@0.25.9/esm/browser.min.js'
+
+      const hint = document.getElementById('hint')
+      const errorEl = document.getElementById('error')
+
+      // Load React from the SAME explicit URLs the import map uses, so the host
+      // page and the dropped component share one React instance. This is what
+      // makes the sandbox work whether it's served by a plain static server or
+      // by Vite — full URLs are never rewritten, whereas a bare `import 'react'`
+      // here would be replaced by Vite's own React and break hooks (null
+      // dispatcher) against the import-map React the dropped module uses.
+      // Kept inside an async init (not top-level await) so the production build
+      // target accepts it.
+      let createElement
+      let root
+      const ready = (async () => {
+        const [react, reactDom] = await Promise.all([
+          import('https://esm.sh/react@19'),
+          import('https://esm.sh/react-dom@19/client?external=react'),
+          esbuild.initialize({
+            wasmURL: 'https://unpkg.com/esbuild-wasm@0.25.9/esbuild.wasm',
+          }),
+        ])
+        createElement = react.createElement
+        root = reactDom.createRoot(document.getElementById('root'))
+      })()
+
+      async function render(file) {
+        errorEl.textContent = ''
+        try {
+          await ready
+          const source = await file.text()
+          // Strip TS types + compile JSX. Imports (react, react/jsx-runtime)
+          // are left as bare specifiers and resolved via the import map above.
+          const { code } = await esbuild.transform(source, {
+            loader: 'tsx',
+            jsx: 'automatic',
+            format: 'esm',
+            target: 'es2020',
+          })
+          const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }))
+          const mod = await import(url)
+          URL.revokeObjectURL(url)
+
+          const Component = mod.default
+          if (typeof Component !== 'function') {
+            throw new Error('No default-exported React component found in that file.')
+          }
+          hint.style.display = 'none'
+          root.render(createElement(Component))
+        } catch (err) {
+          console.error(err)
+          errorEl.textContent = String(err?.message ?? err)
+        }
+      }
+
+      window.addEventListener('dragover', (e) => {
+        e.preventDefault()
+        document.body.classList.add('dragging')
+      })
+      window.addEventListener('dragleave', (e) => {
+        if (e.relatedTarget === null) document.body.classList.remove('dragging')
+      })
+      window.addEventListener('drop', (e) => {
+        e.preventDefault()
+        document.body.classList.remove('dragging')
+        const file = e.dataTransfer?.files?.[0]
+        if (file) render(file)
+      })
+
+      document.getElementById('file').addEventListener('change', (e) => {
+        const file = e.target.files?.[0]
+        if (file) render(file)
+      })
+    </script>
+  </body>
+</html>
