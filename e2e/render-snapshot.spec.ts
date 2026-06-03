@@ -61,6 +61,43 @@ async function extractZipEntry(zipBuffer: Buffer, name: string): Promise<Buffer>
   return entry.async('nodebuffer')
 }
 
+/**
+ * Flip the "Include background" switch to the desired state. Its underlying
+ * checkbox is `pointer-events: none`, so the click target is the track div.
+ */
+async function setIncludeBackground(page: Page, on: boolean): Promise<void> {
+  const row = page.locator('.ui-switch', { hasText: 'Include background' })
+  const input = row.locator('input[type="checkbox"]')
+  if ((await input.isChecked()) !== on) {
+    await row.locator('.ui-switch__track').click()
+  }
+  await expect(input).toBeChecked({ checked: on })
+}
+
+/**
+ * Decode a PNG inside the browser and report whether any pixel is fully
+ * transparent (alpha 0). A backgroundless export leaves the padding/empty
+ * cells transparent; an export with the background filled has none.
+ */
+async function pngHasTransparentPixels(page: Page, pngBuffer: Buffer): Promise<boolean> {
+  return page.evaluate(async (base64) => {
+    const img = new Image()
+    img.src = `data:image/png;base64,${base64}`
+    await img.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = img.width
+    canvas.height = img.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('no 2d context')
+    ctx.drawImage(img, 0, 0)
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] === 0) return true
+    }
+    return false
+  }, pngBuffer.toString('base64'))
+}
+
 test.describe('ascii render snapshots', () => {
   test('static template renders deterministically to canvas', async ({ page }) => {
     // `numbers` has animationLength 1 — fully static, no time/frame dependence.
@@ -75,6 +112,10 @@ test.describe('ascii render snapshots', () => {
   test('PNG export matches snapshot', async ({ page }) => {
     await page.goto('/?template=numbers')
     await waitForRender(page)
+
+    // The baseline was captured with the background filled, so enable it (the
+    // toggle defaults to off / transparent).
+    await setIncludeBackground(page, true)
 
     // Static templates default the export format to PNG and label the button
     // "Export Image".
@@ -190,6 +231,10 @@ test.describe('ascii render snapshots', () => {
     await page.goto('/?template=coins')
     await waitForRender(page)
 
+    // The baseline was captured with the background filled, so enable it (the
+    // toggle defaults to off / transparent).
+    await setIncludeBackground(page, true)
+
     // Animated templates default the format to "PNGs" (frames) labelled
     // "Export Frames".
     const exportButton = page.getByRole('button', { name: 'Export Frames' })
@@ -207,5 +252,161 @@ test.describe('ascii render snapshots', () => {
     expect(frame.subarray(0, 8)).toEqual(PNG_MAGIC)
     expect(frame.length).toBeGreaterThan(1000)
     expect(frame).toMatchSnapshot('coins-frame-export.png')
+  })
+
+  // Pixel-diff the default (transparent) export for each deterministic example
+  // template. `clock` renders the live wall-clock time and `unpkgDemo` seeds
+  // simplex noise from Math.random, so neither is reproducible; `custom` is an
+  // empty project. The rest render purely from the frame index, so frame 0 is
+  // stable.
+  const TRANSPARENT_EXAMPLES: { template: string; animated: boolean }[] = [
+    { template: 'numbers', animated: false },
+    { template: 'localPattern', animated: false },
+    { template: 'sin', animated: true },
+    { template: 'coins', animated: true },
+    { template: 'imageCode', animated: true },
+  ]
+
+  for (const { template, animated } of TRANSPARENT_EXAMPLES) {
+    test(`${template} exports a transparent PNG by default`, async ({ page }) => {
+      // Animated templates capture every frame into a zip, which is slow.
+      test.setTimeout(120_000)
+      await page.goto(`/?template=${template}`)
+      await waitForRender(page)
+
+      // "Include background" defaults to off, so the export leaves the
+      // padding/empty cells transparent rather than filling the canvas.
+      const includeBackground = page
+        .locator('.ui-switch', { hasText: 'Include background' })
+        .locator('input[type="checkbox"]')
+      await expect(includeBackground).not.toBeChecked()
+
+      const exportButton = page.getByRole('button', {
+        name: animated ? 'Export Frames' : 'Export Image',
+      })
+      await expect(exportButton).toBeEnabled()
+
+      const [download] = await Promise.all([
+        page.waitForEvent('download', { timeout: 120_000 }),
+        exportButton.click(),
+      ])
+
+      // Static templates download a PNG directly; animated ones download a ZIP
+      // whose first frame is the deterministic frame 0.
+      const downloaded = await downloadToBuffer(download)
+      const png = animated
+        ? await extractZipEntry(downloaded, 'frame_0000.png')
+        : downloaded
+
+      expect(png.subarray(0, 8)).toEqual(PNG_MAGIC)
+      expect(await pngHasTransparentPixels(page, png)).toBe(true)
+      expect(png).toMatchSnapshot(`${template}-transparent.png`)
+    })
+  }
+
+  test('PNG export is opaque when background is on', async ({ page }) => {
+    await page.goto('/?template=numbers')
+    await waitForRender(page)
+
+    await setIncludeBackground(page, true)
+
+    const exportButton = page.getByRole('button', { name: 'Export Image' })
+    await expect(exportButton).toBeEnabled()
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      exportButton.click(),
+    ])
+
+    const buffer = await downloadToBuffer(download)
+    expect(buffer.subarray(0, 8)).toEqual(PNG_MAGIC)
+    // The background fill covers every pixel, so nothing is left transparent.
+    expect(await pngHasTransparentPixels(page, buffer)).toBe(false)
+  })
+
+  test('SVG export omits the background rect when background is off', async ({
+    page,
+  }) => {
+    await page.goto('/?template=numbers')
+    await waitForRender(page)
+
+    await page
+      .locator('.ui-select', { hasText: 'Format' })
+      .locator('select')
+      .selectOption('svg')
+
+    const exportButton = page.getByRole('button', { name: 'Export Image' })
+    await expect(exportButton).toBeEnabled()
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      exportButton.click(),
+    ])
+
+    const svg = (await downloadToBuffer(download)).toString('utf-8')
+    expect(svg).toContain('<svg')
+    // No full-canvas background rect ⇒ transparent SVG.
+    expect(svg).not.toContain('<rect')
+  })
+
+  test('SVG export includes the background rect when background is on', async ({
+    page,
+  }) => {
+    // The "Include background" toggle only renders for the raster formats, so
+    // set it while PNG is selected, then switch to SVG (the flag persists).
+    await page.goto('/?template=numbers')
+    await waitForRender(page)
+
+    await setIncludeBackground(page, true)
+
+    await page
+      .locator('.ui-select', { hasText: 'Format' })
+      .locator('select')
+      .selectOption('svg')
+
+    const exportButton = page.getByRole('button', { name: 'Export Image' })
+    await expect(exportButton).toBeEnabled()
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      exportButton.click(),
+    ])
+
+    const svg = (await downloadToBuffer(download)).toString('utf-8')
+    expect(svg).toContain('<svg')
+    expect(svg).toContain('<rect width="100%" height="100%"')
+  })
+
+  test('MP4 export keeps its background even when the toggle is off', async ({
+    page,
+  }) => {
+    // Transparency isn't possible for video, so the "Include background" toggle
+    // is disabled for MP4 and the format always renders an opaque frame.
+    test.setTimeout(120_000)
+    await page.goto('/?template=sin')
+    await waitForRender(page)
+
+    await page
+      .locator('.ui-select', { hasText: 'Format' })
+      .locator('select')
+      .selectOption('mp4')
+
+    const includeBackground = page
+      .locator('.ui-switch', { hasText: 'Include background' })
+      .locator('input[type="checkbox"]')
+    await expect(includeBackground).not.toBeChecked()
+    await expect(includeBackground).toBeDisabled()
+
+    const exportButton = page.getByRole('button', { name: 'Export as MP4' })
+    await expect(exportButton).toBeEnabled()
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 120_000 }),
+      exportButton.click(),
+    ])
+
+    const buffer = await downloadToBuffer(download)
+    expect(buffer.length).toBeGreaterThan(1000)
+    expect(buffer.subarray(0, 16).includes(Buffer.from('ftyp'))).toBe(true)
   })
 })
