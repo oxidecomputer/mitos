@@ -78,6 +78,7 @@ const EMPTY_CURSOR: Cursor = {
 
 export interface Cell {
   char: string
+  color?: string
 }
 
 export interface Coord {

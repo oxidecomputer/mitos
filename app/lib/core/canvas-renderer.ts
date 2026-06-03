@@ -72,12 +72,24 @@ export default function createRenderer() {
     ctx.font = `${m.fontSize}px ${m.fontFamily}`
     ctx.textBaseline = 'top'
 
+    // Track the active fill colour so we only touch fillStyle when a cell's
+    // colour differs from the previous one (matching the span-run approach of
+    // the DOM renderer). Cells without an explicit colour fall back to the
+    // stock text colour.
+    let currentColor = textColor
+
     // Render cells with padding offset
     for (let j = 0; j < context.rows; j++) {
       for (let i = 0; i < context.cols; i++) {
         const cell = buffer[j * context.cols + i]
         const x = i * m.cellWidth + padding
         const y = j * m.lineHeight + padding
+
+        const color = cell?.color || textColor
+        if (color !== currentColor) {
+          ctx.fillStyle = color
+          currentColor = color
+        }
 
         ctx.fillText(cell?.char || ' ', x, y)
       }
