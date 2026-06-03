@@ -324,9 +324,7 @@ test.describe('ascii render snapshots', () => {
     expect(await pngHasTransparentPixels(page, buffer)).toBe(false)
   })
 
-  test('SVG export omits the background rect when background is off', async ({
-    page,
-  }) => {
+  test('SVG export omits the background rect when background is off', async ({ page }) => {
     await page.goto('/?template=numbers')
     await waitForRender(page)
 
@@ -377,9 +375,7 @@ test.describe('ascii render snapshots', () => {
     expect(svg).toContain('<rect width="100%" height="100%"')
   })
 
-  test('MP4 export keeps its background even when the toggle is off', async ({
-    page,
-  }) => {
+  test('MP4 export keeps its background even when the toggle is off', async ({ page }) => {
     // Transparency isn't possible for video, so the "Include background" toggle
     // is disabled for MP4 and the format always renders an opaque frame.
     test.setTimeout(120_000)
