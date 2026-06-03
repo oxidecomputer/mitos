@@ -14,7 +14,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
 import type { Cell, Program } from '~/lib/animation'
-import { getContent } from '~/lib/buffer-text'
+import { getColoredRows, getContent } from '~/lib/buffer-text'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
@@ -47,53 +47,6 @@ interface AssetExportProps {
     backgroundColor: string
     padding: number
   }
-}
-
-// Walk the rendered ASCII DOM and group each row into runs of same-coloured
-// text, so SVG export can reproduce the per-cell colours scripts emit (the live
-// preview wraps coloured runs in <span style="color:…">). Cells without an
-// explicit colour fall back to the stock text colour.
-function extractColoredRows(
-  preEl: Element,
-  width: number,
-  height: number,
-  defaultColor: string,
-): { text: string; color: string }[][] {
-  const rows: { text: string; color: string }[][] = []
-  const rowEls = preEl.children
-
-  for (let r = 0; r < height; r++) {
-    const segments: { text: string; color: string }[] = []
-    const rowEl = rowEls[r]
-    let col = 0
-
-    const pushText = (text: string, color: string) => {
-      if (col >= width || !text) return
-      const slice = text.slice(0, width - col)
-      if (!slice) return
-      col += slice.length
-      const last = segments[segments.length - 1]
-      if (last && last.color === color) last.text += slice
-      else segments.push({ text: slice, color })
-    }
-
-    if (rowEl) {
-      rowEl.childNodes.forEach((node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          pushText(node.textContent || '', defaultColor)
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const el = node as HTMLElement
-          pushText(el.textContent || '', el.style?.color || defaultColor)
-        }
-      })
-    }
-
-    // Pad short rows so vertical positioning stays aligned.
-    if (col < width) pushText(' '.repeat(width - col), defaultColor)
-    rows.push(segments)
-  }
-
-  return rows
 }
 
 export function AssetExport({
@@ -240,19 +193,16 @@ export function AssetExport({
   }
 
   const generateSvgContent = () => {
-    const asciiElement = document.querySelector('.ascii-animation pre')
-
-    if (!asciiElement) {
+    if (!animationController) {
       toast('Could not find ASCII content')
       return null
     }
 
     try {
       const { width, height } = dimensions
-      const coloredRows = extractColoredRows(
-        asciiElement,
-        width,
-        height,
+      const coloredRows = getColoredRows(
+        dimensions,
+        animationController,
         exportSettings.textColor,
       )
 
@@ -357,9 +307,6 @@ export function AssetExport({
     try {
       setIsExporting(true)
 
-      // Allow DOM to update
-      await new Promise((resolve) => setTimeout(resolve, 50))
-
       const svgContent = generateSvgContent()
       if (!svgContent) return
 
@@ -434,6 +381,11 @@ export function AssetExport({
     const scale = lineHeight / baseLineHeight
     const fontSize = Math.round(baseFontSize * scale)
 
+    // Wipe the canvas before painting. fillRect alone composites source-over,
+    // so a transparent background would leave the previous frame's pixels
+    // behind (the canvas is reused across frames) — clearRect resets to
+    // transparent first.
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = settings.backgroundColor
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = settings.textColor

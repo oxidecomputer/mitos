@@ -41,3 +41,46 @@ export const getContent = (
 
   return formattedLines.join('\n')
 }
+
+/** A run of same-coloured characters within a single row. */
+export interface ColoredSegment {
+  text: string
+  color: string
+}
+
+/**
+ * Group the flat cell buffer into per-row runs of same-coloured text, so SVG
+ * export can reproduce the per-cell colours scripts emit. Cells without an
+ * explicit colour fall back to `defaultColor`. Each returned row is exactly
+ * `width` characters wide (short rows are padded with spaces) so vertical
+ * positioning stays aligned, matching `getContent`.
+ */
+export const getColoredRows = (
+  dimensions: { width: number; height: number },
+  source: BufferSource | null,
+  defaultColor: string,
+): ColoredSegment[][] => {
+  if (!source) return []
+
+  const buffer = source.getBuffer()
+  const { width, height } = dimensions
+  const rows: ColoredSegment[][] = []
+
+  for (let r = 0; r < height; r++) {
+    const segments: ColoredSegment[] = []
+
+    for (let c = 0; c < width; c++) {
+      const cell = buffer[r * width + c]
+      const char = cell?.char || ' '
+      const color = cell?.color || defaultColor
+
+      const last = segments[segments.length - 1]
+      if (last && last.color === color) last.text += char
+      else segments.push({ text: char, color })
+    }
+
+    rows.push(segments)
+  }
+
+  return rows
+}

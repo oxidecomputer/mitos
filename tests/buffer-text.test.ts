@@ -8,7 +8,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import type { Cell } from '~/lib/animation'
-import { getContent, type BufferSource } from '~/lib/buffer-text'
+import { getColoredRows, getContent, type BufferSource } from '~/lib/buffer-text'
 
 /** Build a BufferSource from a flat list of characters. */
 const source = (chars: string[]): BufferSource => ({
@@ -83,5 +83,73 @@ describe('getContent', () => {
     const art = ['  /\\  ', ' /  \\ ', '/____\\']
     const result = getContent({ width: 6, height: 3 }, grid(art))
     expect(result).toBe(art.join('\n'))
+  })
+})
+
+/** Build a BufferSource from cells with optional per-cell colour. */
+const colored = (cells: { char: string; color?: string }[]): BufferSource => ({
+  getBuffer: () => cells.map((c): Cell => ({ char: c.char, color: c.color })),
+})
+
+describe('getColoredRows', () => {
+  test('returns one segment array per row', () => {
+    const rows = getColoredRows({ width: 2, height: 3 }, grid(['ab', 'cd', 'ef']), '#000')
+    expect(rows).toHaveLength(3)
+  })
+
+  test('falls back to the default colour for uncoloured cells', () => {
+    const rows = getColoredRows({ width: 3, height: 1 }, grid(['abc']), '#000')
+    expect(rows[0]).toEqual([{ text: 'abc', color: '#000' }])
+  })
+
+  test('merges a run of same-coloured cells into one segment', () => {
+    const rows = getColoredRows(
+      { width: 3, height: 1 },
+      colored([
+        { char: 'a', color: 'red' },
+        { char: 'b', color: 'red' },
+        { char: 'c', color: 'red' },
+      ]),
+      '#000',
+    )
+    expect(rows[0]).toEqual([{ text: 'abc', color: 'red' }])
+  })
+
+  test('splits into separate segments when the colour changes', () => {
+    const rows = getColoredRows(
+      { width: 4, height: 1 },
+      colored([
+        { char: 'a', color: 'red' },
+        { char: 'b', color: 'red' },
+        { char: 'c', color: 'blue' },
+        { char: 'd' },
+      ]),
+      '#000',
+    )
+    expect(rows[0]).toEqual([
+      { text: 'ab', color: 'red' },
+      { text: 'c', color: 'blue' },
+      { text: 'd', color: '#000' },
+    ])
+  })
+
+  test('pads short rows with default-coloured spaces to full width', () => {
+    const rows = getColoredRows({ width: 4, height: 1 }, source(['a']), '#000')
+    const text = rows[0].map((s) => s.text).join('')
+    expect(text).toBe('a   ')
+    expect(text).toHaveLength(4)
+  })
+
+  test('reads the buffer in row-major order', () => {
+    const rows = getColoredRows(
+      { width: 2, height: 2 },
+      source(['1', '2', '3', '4']),
+      '#000',
+    )
+    expect(rows.map((r) => r.map((s) => s.text).join(''))).toEqual(['12', '34'])
+  })
+
+  test('returns an empty array when the controller is null', () => {
+    expect(getColoredRows({ width: 4, height: 4 }, null, '#000')).toEqual([])
   })
 })
