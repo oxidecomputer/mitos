@@ -15,10 +15,10 @@ import { toast } from 'sonner'
 
 import type { EsbuildService } from '~/hooks/use-esbuild'
 import type { Cell, Program } from '~/lib/animation'
-import type { AsciiImageData } from '~/lib/types'
 import { getColoredRows, getContent } from '~/lib/buffer-text'
 import { generateReactComponentSource } from '~/lib/react-export'
 import { glyphRunToPathData, loadAsciiFont, type Font } from '~/lib/svg-font'
+import type { AsciiImageData } from '~/lib/types'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 

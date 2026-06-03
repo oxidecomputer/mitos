@@ -7,6 +7,8 @@
  */
 import type { BuildResult, Plugin } from 'esbuild-wasm'
 
+import { CHAR_WIDTH } from '~/components/dimension-utils'
+import type { EsbuildService } from '~/hooks/use-esbuild'
 // The runtime is pulled in as source (Vite `?raw`) and handed to esbuild-wasm so
 // the generated component bundles the *program*, not pre-rendered frames. Keeping
 // these as raw imports means the export always tracks the real runtime files.
@@ -14,9 +16,6 @@ import animationSource from '~/lib/animation.ts?raw'
 import fpsSource from '~/lib/core/fps.ts?raw'
 import textRendererSource from '~/lib/core/text-renderer.ts?raw'
 import * as localUtils from '~/lib/localUtils'
-
-import { CHAR_WIDTH } from '~/components/dimension-utils'
-import type { EsbuildService } from '~/hooks/use-esbuild'
 import type { AsciiImageData } from '~/lib/types'
 
 // Image grids are baked as one byte per cell (a printable char), not JSON
