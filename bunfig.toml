@@ -1,0 +1,5 @@
+[test]
+# Playwright specs live in e2e/ and are run via `bun run test:e2e`.
+# Scope Bun's own test runner to tests/ so a bare `bun test` doesn't try to
+# execute (and choke on) the Playwright e2e specs.
+root = "tests"

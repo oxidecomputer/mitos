@@ -142,7 +142,7 @@ export function AsciiPreview({
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [autoFit, setAutoFit] = useState(false)
+  const [autoFit, setAutoFit] = useState(true)
   const prevDimensionsRef = useRef(dimensions)
 
   const containerSize = useSize(container)
@@ -153,7 +153,7 @@ export function AsciiPreview({
     const zoomFactor = 0.035 * (e.deltaY > 0 ? 1 : 1.1)
 
     if (e.deltaY < 0) {
-      setZoomLevel((prev) => Math.min(prev * (1 + zoomFactor), 5))
+      setZoomLevel((prev) => Math.min(prev * (1 + zoomFactor), 3))
     } else {
       setZoomLevel((prev) => Math.max(prev / (1 + zoomFactor), 0.5))
     }
@@ -331,7 +331,7 @@ export function AsciiPreview({
           </div>
         )}
         <div
-          className="duration-50 relative transform-gpu overflow-hidden rounded-[1%] transition-transform ease-out"
+          className="duration-50 relative transform-gpu rounded-[1%] transition-transform ease-out"
           style={{
             transform: isExporting
               ? 'none'
@@ -349,6 +349,11 @@ export function AsciiPreview({
               setAnimationController={setAnimationController}
               textColor={settings.textColor}
               backgroundColor={settings.backgroundColor}
+              canvasBackgroundColor={
+                showUnderlyingImage && underlyingImageUrl && !isExporting
+                  ? 'transparent'
+                  : settings.backgroundColor
+              }
               padding={paddingPixels}
             >
               {/* Show underlying image if enabled */}
@@ -388,34 +393,6 @@ export function AsciiPreview({
       )}
     </div>
   )
-}
-
-export const getContent = (dimensions: { width: number; height: number }) => {
-  const asciiElement = document.querySelector('.ascii-animation pre')
-
-  if (asciiElement) {
-    const rawContent = asciiElement.textContent || ''
-    const { width, height } = dimensions
-
-    // Process the raw content into properly formatted lines
-    const formattedLines = []
-
-    for (let i = 0; i < height; i++) {
-      // Extract exactly width characters for each line
-      const lineStart = i * width
-      const lineEnd = lineStart + width
-
-      // Ensure we don't go out of bounds
-      if (lineStart < rawContent.length) {
-        const line = rawContent.substring(lineStart, Math.min(lineEnd, rawContent.length))
-        // Add the line without right trimming to preserve spaces
-        formattedLines.push(line)
-      }
-    }
-
-    // Join the lines with newlines
-    return formattedLines.join('\n')
-  }
 }
 
 function FrameSlider({

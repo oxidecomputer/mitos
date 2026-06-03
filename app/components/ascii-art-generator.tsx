@@ -717,8 +717,9 @@ export function AsciiArtGenerator() {
       setTemplateType('custom')
 
       toast(`${projectData.name} has been loaded successfully.`)
-    } catch (_error) {
+    } catch (error) {
       toast('The selected file is not a valid project file')
+      console.error(error)
     }
   }
 

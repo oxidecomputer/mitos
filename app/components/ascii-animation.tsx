@@ -19,6 +19,7 @@ export default function AsciiAnimation({
   setAnimationController,
   textColor,
   backgroundColor,
+  canvasBackgroundColor = backgroundColor,
   padding,
   children,
 }: {
@@ -29,10 +30,14 @@ export default function AsciiAnimation({
   setAnimationController: (controller: AnimationController) => void
   textColor: string
   backgroundColor: string
+  // Background used to fill the canvas itself. Defaults to `backgroundColor`,
+  // but can be set to 'transparent' so the underlying image (rendered behind
+  // the canvas but in front of the container background) shows through.
+  canvasBackgroundColor?: string
   padding: number
   children: ReactNode
 }) {
-  const asciiEl = useRef<HTMLPreElement>(null)
+  const asciiEl = useRef<HTMLCanvasElement>(null)
   const controllerRef = useRef(animationController)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -48,8 +53,8 @@ export default function AsciiAnimation({
       const element = asciiEl.current
       if (!container || !element) return
 
-      const width = Math.floor(element.offsetWidth + padding * 2)
-      const height = Math.floor(element.offsetHeight + padding * 2)
+      const width = Math.floor(element.offsetWidth)
+      const height = Math.floor(element.offsetHeight)
 
       container.style.width = `${width}px`
       container.style.height = `${height}px`
@@ -94,6 +99,9 @@ export default function AsciiAnimation({
         element: asciiEl.current,
         onFrameUpdate: onFrameUpdate ? onFrameUpdate : undefined,
         maxFrames,
+        textColor,
+        backgroundColor: canvasBackgroundColor,
+        padding,
       })
 
       animController.togglePlay(wasPlaying)
@@ -103,26 +111,34 @@ export default function AsciiAnimation({
     } catch (error) {
       console.error('Error creating animation controller:', error)
     }
-  }, [program, maxFrames, onFrameUpdate, setAnimationController])
+  }, [
+    program,
+    maxFrames,
+    onFrameUpdate,
+    setAnimationController,
+    textColor,
+    canvasBackgroundColor,
+    padding,
+  ])
 
   return (
     <div
       ref={containerRef}
-      className="ascii-animation relative flex items-center justify-center [font-size:0px]"
+      className="ascii-animation relative flex items-center justify-center overflow-hidden rounded-[1%] [font-size:0px]"
       aria-hidden
       role="img"
       style={{
         backgroundColor,
-        padding,
       }}
     >
-      <pre
+      <canvas
         ref={asciiEl}
-        className="pointer-events-none relative z-10 m-0 select-none whitespace-pre p-0 font-mono leading-[1.2]"
+        id="ascii-canvas"
+        className="pointer-events-none relative z-10 m-0 select-none"
         style={{
-          fontFamily: '"GT America Mono",monospace',
+          fontFamily: '"GT America Mono", monospace',
           fontSize: '12px',
-          color: textColor,
+          lineHeight: '1.2',
         }}
       />
       {children}

@@ -26,3 +26,9 @@ dist-ssr
 claude.md
 
 package-lock.json
+
+# Playwright (baselines under e2e/**-snapshots are committed; artifacts are not)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
