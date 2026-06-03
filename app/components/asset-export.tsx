@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 
 import type { EsbuildService } from '~/hooks/use-esbuild'
 import type { Cell, Program } from '~/lib/animation'
+import type { AsciiImageData } from '~/lib/types'
 import { getColoredRows, getContent } from '~/lib/buffer-text'
 import { generateReactComponentSource } from '~/lib/react-export'
 import { glyphRunToPathData, loadAsciiFont, type Font } from '~/lib/svg-font'
@@ -55,6 +56,9 @@ interface AssetExportProps {
   characterSet: string
   frameRate: number
   esbuildService: EsbuildService | null
+  // Processed 0–1 value grid(s) for image/GIF sources, baked into the export.
+  imageData: AsciiImageData | null
+  frames: AsciiImageData[] | null
 }
 
 export function AssetExport({
@@ -70,6 +74,8 @@ export function AssetExport({
   characterSet,
   frameRate,
   esbuildService,
+  imageData,
+  frames,
 }: AssetExportProps) {
   const [exportFormat, setExportFormat] = useState<ExportFormat>(
     animationLength > 1 ? 'frames' : 'png',
@@ -689,6 +695,8 @@ export function AssetExport({
       animationLength,
       fps: frameRate,
       settings: exportSettings,
+      imageData: imageData ?? undefined,
+      frames,
     })
   }
 

@@ -809,6 +809,8 @@ export function AsciiArtGenerator() {
                 characterSet={settings.output.characterSet}
                 frameRate={settings.animation.frameRate}
                 esbuildService={esbuildService}
+                imageData={currentImageData}
+                frames={currentFrames}
               />
             </div>
             <div className="flex grow items-end p-3 pb-3">

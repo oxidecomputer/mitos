@@ -17,6 +17,16 @@ import * as localUtils from '~/lib/localUtils'
 
 import { CHAR_WIDTH } from '~/components/dimension-utils'
 import type { EsbuildService } from '~/hooks/use-esbuild'
+import type { AsciiImageData } from '~/lib/types'
+
+// Image grids are baked as one byte per cell (a printable char), not JSON
+// numbers — this strips all the array punctuation and decimals, which dominates
+// the size for multi-frame (GIF) sources. Each cell is quantised to one of
+// IMAGE_LEVELS brightness steps. The char range [IMAGE_CHAR_BASE, +LEVELS) stays
+// inside printable ASCII and avoids `"`(34) and `\`(92), so the packed strings
+// never need JSON escaping (guaranteed exactly one byte per cell).
+const IMAGE_CHAR_BASE = 35
+const IMAGE_LEVELS = 57
 
 /** Matches the canvas/SVG export + preview. */
 const ASCII_FONT_SIZE_PX = 12
@@ -43,6 +53,71 @@ export interface GenerateReactComponentSourceParams {
   settings: ReactExportVisualSettings
   /** PascalCase component name; invalid values fall back to AsciiArtEmbed. */
   componentName?: string
+  /**
+   * Processed per-cell 0–1 values for image sources, exposed to the program via
+   * `@/imageData`. We bake this derived grid — not the source image — so image
+   * exports stay small. Omit for purely generative programs.
+   */
+  imageData?: AsciiImageData
+  /** One value grid per frame for animated (GIF) image sources. */
+  frames?: AsciiImageData[] | null
+}
+
+// Pack the sparse `{ [x]: { [y]: number } }` grid into a flat string, one byte
+// per cell, column-major (so index = x * rows + y). Decoded back to a dense
+// `number[][]` at runtime (see imageDataModule), which is what getImageValue()
+// reads via `data[x][y]`.
+function encodeGrid(
+  data: AsciiImageData | undefined,
+  columns: number,
+  rows: number,
+): string {
+  const max = IMAGE_LEVELS - 1
+  let out = ''
+  for (let x = 0; x < columns; x++) {
+    const source = data?.[x]
+    for (let y = 0; y < rows; y++) {
+      const value = source?.[y]
+      const clamped = value === undefined ? 0 : value < 0 ? 0 : value > 1 ? 1 : value
+      out += String.fromCharCode(IMAGE_CHAR_BASE + Math.round(clamped * max))
+    }
+  }
+  return out
+}
+
+// The `@/imageData` module source: packed strings plus a decoder that rebuilds
+// the 0–1 `number[][]` grids the program expects. Empty for generative sources.
+function imageDataModule(params: {
+  columns: number
+  rows: number
+  imageData?: AsciiImageData
+  frames?: AsciiImageData[] | null
+}): string {
+  if (!params.imageData) {
+    return `export const imageData = {};\nexport const frames = null;`
+  }
+
+  const img = JSON.stringify(encodeGrid(params.imageData, params.columns, params.rows))
+  const frames =
+    params.frames && params.frames.length > 0
+      ? `[${params.frames.map((f) => JSON.stringify(encodeGrid(f, params.columns, params.rows))).join(',')}]`
+      : 'null'
+
+  return `const __COLS = ${params.columns}, __ROWS = ${params.rows}
+const __BASE = ${IMAGE_CHAR_BASE}, __MAX = ${IMAGE_LEVELS - 1}
+function __decode(s) {
+  const grid = []
+  let i = 0
+  for (let x = 0; x < __COLS; x++) {
+    const col = new Array(__ROWS)
+    for (let y = 0; y < __ROWS; y++) col[y] = (s.charCodeAt(i++) - __BASE) / __MAX
+    grid.push(col)
+  }
+  return grid
+}
+const __frames = ${frames}
+export const imageData = __decode(${img})
+export const frames = __frames === null ? null : __frames.map(__decode)`
 }
 
 function sanitizeComponentName(name: string): string {
@@ -64,6 +139,10 @@ function buildVirtualModules(params: {
   characterSet: string
   textColor: string
   backgroundColor: string
+  columns: number
+  rows: number
+  imageData?: AsciiImageData
+  frames?: AsciiImageData[] | null
 }): Record<string, string> {
   // Reuse the in-app convention: stringify each util fn so the bundle behaves
   // exactly like the live preview's `@/utils`.
@@ -100,7 +179,12 @@ export function mount(element, options) {
 export const textColor = ${JSON.stringify(params.textColor)};
 export const backgroundColor = ${JSON.stringify(params.backgroundColor)};
 export const settings = {};`,
-    'mitos:imageData': `export const imageData = {};\nexport const frames = null;`,
+    'mitos:imageData': imageDataModule({
+      columns: params.columns,
+      rows: params.rows,
+      imageData: params.imageData,
+      frames: params.frames,
+    }),
   }
 }
 
@@ -204,7 +288,9 @@ async function bundleRuntime(
 /**
  * Produce a self-contained .tsx source string that runs the user's program live
  * (via the bundled Mitos runtime + text renderer) inside a <pre>. The runtime is
- * a small fixed cost; nothing is fetched at runtime and no frames are baked.
+ * a small fixed cost and nothing is fetched at runtime. For image sources the
+ * derived 0–1 value grid is baked in (not the source image), so the program
+ * runs live against it just like the in-app preview.
  */
 export async function generateReactComponentSource(
   params: GenerateReactComponentSourceParams,
@@ -219,6 +305,10 @@ export async function generateReactComponentSource(
       characterSet: params.characterSet,
       textColor: params.settings.textColor,
       backgroundColor: params.settings.backgroundColor,
+      columns: params.columns,
+      rows: params.rows,
+      imageData: params.imageData,
+      frames: params.frames,
     }),
   )
 
