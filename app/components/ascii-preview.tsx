@@ -153,7 +153,7 @@ export function AsciiPreview({
     const zoomFactor = 0.035 * (e.deltaY > 0 ? 1 : 1.1)
 
     if (e.deltaY < 0) {
-      setZoomLevel((prev) => Math.min(prev * (1 + zoomFactor), 5))
+      setZoomLevel((prev) => Math.min(prev * (1 + zoomFactor), 3))
     } else {
       setZoomLevel((prev) => Math.max(prev / (1 + zoomFactor), 0.5))
     }

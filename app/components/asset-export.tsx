@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 
 import type { Cell, Program } from '~/lib/animation'
 import { getColoredRows, getContent } from '~/lib/buffer-text'
+import { glyphRunToPathData, loadAsciiFont, type Font } from '~/lib/svg-font'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
@@ -70,6 +71,9 @@ export function AssetExport({
   const [trimEnabled, setTrimEnabled] = useState(false)
   const [trimX, setTrimX] = useState(0)
   const [trimY, setTrimY] = useState(0)
+
+  // When on, SVG export outlines glyphs to <path> data
+  const [flattenSvg, setFlattenSvg] = useState(false)
 
   // Set export height based on character dimensions including padding
   useEffect(() => {
@@ -192,7 +196,7 @@ export function AssetExport({
     toast('Frame has been exported as PNG')
   }
 
-  const generateSvgContent = () => {
+  const generateSvgContent = async () => {
     if (!animationController) {
       toast('Could not find ASCII content')
       return null
@@ -205,6 +209,17 @@ export function AssetExport({
         animationController,
         exportSettings.textColor,
       )
+
+      // Outlining is opt-in and needs the parsed font
+      let font: Font | null = null
+      if (flattenSvg) {
+        try {
+          font = await loadAsciiFont()
+        } catch (error) {
+          console.error('Could not load font for flattening:', error)
+          toast('Could not load font to flatten — exporting as text')
+        }
+      }
 
       const padding = exportSettings.padding * CHAR_WIDTH
 
@@ -259,28 +274,57 @@ export function AssetExport({
         svgContent += '  </g>\n'
       }
 
-      svgContent += `  <text x="${padding}" y="${padding + fontSize}" class="ascii-text">\n`
+      if (font) {
+        // Flattened: emit one <path> of outlined glyphs per colour run. Glyphs
+        // sit on a fixed monospace grid (measuredCellWidth) so they line up
+        // with the cells exactly
+        svgContent += '  <g class="ascii-text">\n'
 
-      coloredRows.forEach((segments, index) => {
-        if (segments.length === 0) {
-          // Keep the (blank) line so following rows stay vertically aligned.
-          svgContent += `    <tspan x="${padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}"> </tspan>\n`
-          return
-        }
+        coloredRows.forEach((segments, index) => {
+          const baselineY = padding + fontSize + index * cellHeight
+          let col = 0
 
-        // Each row is one or more tspans flowing left-to-right. Only the first
-        // tspan of a row sets x (left margin) and advances dy to the next line;
-        // the rest inherit the position so colour runs stay contiguous.
-        segments.forEach((seg, segIndex) => {
-          const processed = seg.text.replace(/ /g, '\u00A0') // preserve spacing
-          const isFirst = segIndex === 0
-          const xAttr = isFirst ? ` x="${padding}"` : ''
-          const dyAttr = ` dy="${isFirst && index !== 0 ? cellHeight : 0}"`
-          svgContent += `    <tspan${xAttr}${dyAttr} fill="${seg.color}">${escapeXml(processed)}</tspan>\n`
+          segments.forEach((seg) => {
+            const startX = padding + col * measuredCellWidth
+            col += seg.text.length
+            const d = glyphRunToPathData(
+              font,
+              seg.text,
+              startX,
+              baselineY,
+              fontSize,
+              measuredCellWidth,
+            )
+            if (d) svgContent += `    <path d="${d}" fill="${seg.color}"/>\n`
+          })
         })
-      })
 
-      svgContent += '  </text>\n'
+        svgContent += '  </g>\n'
+      } else {
+        svgContent += `  <text x="${padding}" y="${padding + fontSize}" class="ascii-text">\n`
+
+        coloredRows.forEach((segments, index) => {
+          if (segments.length === 0) {
+            // Keep the (blank) line so following rows stay vertically aligned.
+            svgContent += `    <tspan x="${padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}"> </tspan>\n`
+            return
+          }
+
+          // Each row is one or more tspans flowing left-to-right. Only the first
+          // tspan of a row sets x (left margin) and advances dy to the next line;
+          // the rest inherit the position so colour runs stay contiguous.
+          segments.forEach((seg, segIndex) => {
+            const processed = seg.text.replace(/ /g, '\u00A0') // preserve spacing
+            const isFirst = segIndex === 0
+            const xAttr = isFirst ? ` x="${padding}"` : ''
+            const dyAttr = ` dy="${isFirst && index !== 0 ? cellHeight : 0}"`
+            svgContent += `    <tspan${xAttr}${dyAttr} fill="${seg.color}">${escapeXml(processed)}</tspan>\n`
+          })
+        })
+
+        svgContent += '  </text>\n'
+      }
+
       svgContent += '</svg>'
 
       return svgContent
@@ -292,7 +336,7 @@ export function AssetExport({
   }
 
   const exportAsSvg = async () => {
-    const svgContent = generateSvgContent()
+    const svgContent = await generateSvgContent()
     if (!svgContent) return
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml' })
@@ -307,7 +351,7 @@ export function AssetExport({
     try {
       setIsExporting(true)
 
-      const svgContent = generateSvgContent()
+      const svgContent = await generateSvgContent()
       if (!svgContent) return
 
       // Copy SVG content to clipboard
@@ -715,6 +759,14 @@ export function AssetExport({
                 </InputNumber>
               </div>
             )}
+
+            <InputSwitch
+              checked={flattenSvg}
+              onChange={setFlattenSvg}
+              disabled={isExporting}
+            >
+              Flatten SVG
+            </InputSwitch>
           </div>
         </div>
       )}
