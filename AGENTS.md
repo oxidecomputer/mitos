@@ -5,7 +5,10 @@
 - **Build**: `bun run build` (tsc + vite)
 - **Lint**: `bun run lint` (eslint app)
 - **Format**: `bun run fmt` (write) or `bun run fmt:check` (check)
-- **Test**: `bun test` (all) or `bun test <file>` (single test)
+- **Test**: `bun test` (unit, in `tests/`) or `bun test <file>` (single test)
+- **E2E**: `bun run test:e2e` (Playwright render snapshots in `e2e/`; needs
+  `bunx playwright install chromium` once). Regenerate baselines per-platform with
+  `bun run test:e2e:update`.
 - **Dev**: `bun run dev`
 - **CI**: `bun run ci` (runs fmt:check, tsc, lint, test)
 

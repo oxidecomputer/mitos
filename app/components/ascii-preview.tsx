@@ -390,27 +390,6 @@ export function AsciiPreview({
   )
 }
 
-export const getContent = (
-  dimensions: { width: number; height: number },
-  animationController: AnimationController,
-) => {
-  if (!animationController) return ''
-
-  const buffer = animationController.getBuffer()
-  const { width, height } = dimensions
-  const formattedLines = []
-
-  for (let i = 0; i < height; i++) {
-    const lineStart = i * width
-    const lineEnd = lineStart + width
-    const lineCells = buffer.slice(lineStart, lineEnd)
-    const line = lineCells.map((cell) => cell.char || ' ').join('')
-    formattedLines.push(line)
-  }
-
-  return formattedLines.join('\n')
-}
-
 function FrameSlider({
   frame,
   totalFrames,

@@ -67,6 +67,15 @@ interface Cursor {
   }
 }
 
+// A neutral cursor used when there is no pointer interaction
+// (e.g. during automatic frame exports).
+const EMPTY_CURSOR: Cursor = {
+  x: 0,
+  y: 0,
+  pressed: false,
+  p: { x: 0, y: 0, pressed: false },
+}
+
 export interface Cell {
   char: string
 }
@@ -264,12 +273,6 @@ export function createAnimation(
     // Timing update
     timeSample = t - (delta % interval) // adjust timeSample
     state.time = t + timeOffset // increment time + initial offs
-    if (!settings.maxFrames || state.frame < settings.maxFrames) {
-      state.frame++ // increment frame counter
-    } else {
-      state.frame = 0
-    }
-    settings.onFrameUpdate && settings.onFrameUpdate(state.frame)
 
     // Cursor update
     const cursor = {
@@ -291,39 +294,81 @@ export function createAnimation(
 
     // 1. --------------------------------------------------------------
     // In case of resize / init normalize the buffer
-    if (cols !== context.cols || rows !== context.rows) {
-      cols = context.cols
-      rows = context.rows
+    normalizeBuffer(context)
 
-      // Add validation to ensure valid array length
-      const newLength = context.cols * context.rows
-      if (newLength > 0 && newLength < 10000000 && isFinite(newLength)) {
-        // Set a reasonable upper limit
-        buffer.length = newLength
-        for (let i = 0; i < buffer.length; i++) {
-          buffer[i] = { char: EMPTY_CELL }
-        }
-      } else {
-        console.error(`Invalid buffer dimensions: ${context.cols} x ${context.rows}`)
-        // Use a safe fallback
-        cols = cols || 1
-        rows = rows || 1
-        const safeLength = cols * rows
-        buffer.length = safeLength
-        for (let i = 0; i < buffer.length; i++) {
-          buffer[i] = { char: EMPTY_CELL }
-        }
+    // 2. --------------------------------------------------------------
+    // Run pre()/main()/post() and render to the canvas
+    renderProgram(context, cursor)
+
+    // 6. --------------------------------------------------------------
+    // Queued events
+    while (eventQueue.length > 0) {
+      const type = eventQueue.shift()
+      if (type && typeof program[type] === 'function') {
+        program[type](context, cursor, buffer)
       }
     }
 
-    // 2. --------------------------------------------------------------
-    // Call pre(), if defined
+    // 7. --------------------------------------------------------------
+    // Increment frame counter AFTER rendering (so we start at frame 0)
+    if (!settings.maxFrames || state.frame < settings.maxFrames - 1) {
+      state.frame++ // increment frame counter
+    } else {
+      state.frame = 0
+    }
+    settings.onFrameUpdate && settings.onFrameUpdate(state.frame)
+
+    // 8. --------------------------------------------------------------
+    // Loop (eventually)
+    if (state.playing) requestAnimationFrame(loop)
+  }
+
+  function togglePlay(playing: boolean) {
+    state.playing = playing
+    if (playing) {
+      requestAnimationFrame(loop)
+    }
+  }
+
+  function setFrame(frame: number) {
+    state.frame = frame
+    requestAnimationFrame(loop)
+  }
+
+  // In case of resize / init, (re)allocate the cell buffer to fit the grid.
+  function normalizeBuffer(context: Context) {
+    if (cols === context.cols && rows === context.rows && buffer.length > 0) return
+
+    cols = context.cols
+    rows = context.rows
+
+    // Add validation to ensure valid array length
+    const newLength = context.cols * context.rows
+    if (newLength > 0 && newLength < 10000000 && isFinite(newLength)) {
+      // Set a reasonable upper limit
+      buffer.length = newLength
+      for (let i = 0; i < buffer.length; i++) {
+        buffer[i] = { char: EMPTY_CELL }
+      }
+    } else {
+      console.error(`Invalid buffer dimensions: ${context.cols} x ${context.rows}`)
+      // Use a safe fallback
+      cols = cols || 1
+      rows = rows || 1
+      const safeLength = cols * rows
+      buffer.length = safeLength
+      for (let i = 0; i < buffer.length; i++) {
+        buffer[i] = { char: EMPTY_CELL }
+      }
+    }
+  }
+
+  // Run pre()/main()/post() over the buffer and render it to the canvas.
+  function renderProgram(context: Context, cursor: Cursor) {
     if (typeof program.pre === 'function') {
       program.pre(context, cursor, buffer, userDataRef)
     }
 
-    // 3. --------------------------------------------------------------
-    // Call main(), if defined
     if (typeof program.main === 'function') {
       for (let j = 0; j < context.rows; j++) {
         const offs = j * context.cols
@@ -349,39 +394,24 @@ export function createAnimation(
       }
     }
 
-    // 4. --------------------------------------------------------------
-    // Call post(), if defined
     if (typeof program.post === 'function') {
       program.post(context, cursor, buffer, userDataRef)
     }
 
-    // 5. --------------------------------------------------------------
     renderer.render(context, buffer)
-
-    // 6. --------------------------------------------------------------
-    // Queued events
-    while (eventQueue.length > 0) {
-      const type = eventQueue.shift()
-      if (type && typeof program[type] === 'function') {
-        program[type](context, cursor, buffer)
-      }
-    }
-
-    // 7. --------------------------------------------------------------
-    // Loop (eventually)
-    if (state.playing) requestAnimationFrame(loop)
   }
 
-  function togglePlay(playing: boolean) {
-    state.playing = playing
-    if (playing) {
-      requestAnimationFrame(loop)
-    }
-  }
+  // Synchronous render for exports. Unlike setFrame(), this runs the program
+  // immediately (no requestAnimationFrame) so the buffer can be read right
+  // after. No cursor is supplied as exporting is an automatic process.
+  function renderFrame(frame: number) {
+    if (!metrics) return
 
-  function setFrame(frame: number) {
     state.frame = frame
-    requestAnimationFrame(loop)
+    const context = getContext(state, settings, metrics, fps)
+
+    normalizeBuffer(context)
+    renderProgram(context, EMPTY_CURSOR)
   }
 
   function cleanup() {
@@ -418,10 +448,12 @@ export function createAnimation(
     togglePlay,
     cleanup,
     setFrame,
+    renderFrame,
     updateSettings,
     getState,
     getBuffer: () => buffer,
     getMetrics: () => metrics,
+    isReady: () => !!metrics,
   }
 }
 

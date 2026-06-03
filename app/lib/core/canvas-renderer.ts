@@ -7,6 +7,11 @@
  */
 import { invariant, type Cell, type Context } from '../animation'
 
+// Supersample the backing bitmap above the device pixel ratio so the canvas
+// stays crisp when the preview is zoomed in (zoom goes up to 5x). Text is
+// vector, so the extra resolution costs only memory/fill, not fidelity.
+const SUPERSAMPLE = 3
+
 export default function createRenderer() {
   function render(context: Context, buffer: Cell[]): void {
     const canvas = context.settings.element as HTMLCanvasElement
@@ -30,7 +35,7 @@ export default function createRenderer() {
       return
     }
 
-    const scale = devicePixelRatio
+    const scale = devicePixelRatio * SUPERSAMPLE
     const m = context.metrics
 
     // Validate metrics

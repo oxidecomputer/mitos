@@ -14,10 +14,11 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
 import type { Cell, Program } from '~/lib/animation'
+import { getContent } from '~/lib/buffer-text'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
-import { getContent, type AnimationController } from './ascii-preview'
+import { type AnimationController } from './ascii-preview'
 import { Container } from './container'
 import {
   calculateAspectRatio,
@@ -439,11 +440,25 @@ export function AssetExport({
       const scale = finalHeight / previewTotalHeight
       const exportPadding = paddingPixels * scale
 
+      // Render frame 0 before starting (start() captures the canvas as frame 0)
+      animationController.renderFrame(0)
+      const firstBuffer = animationController.getBuffer()
+      renderBufferToCanvas(
+        exportCanvas,
+        firstBuffer,
+        dimensions,
+        exportSettings,
+        metrics.fontSize,
+        metrics.lineHeight,
+        exportPadding,
+      )
+
+      // Start recording (this encodes the current canvas state as frame 0)
       await recorder.start()
 
-      for (let i = 0; i < totalFrames; i++) {
-        animationController.setFrame(i)
-        await new Promise((resolve) => setTimeout(resolve, 50))
+      // Render and record remaining frames
+      for (let i = 1; i < totalFrames; i++) {
+        animationController.renderFrame(i)
 
         const buffer = animationController.getBuffer()
         renderBufferToCanvas(
@@ -465,14 +480,13 @@ export function AssetExport({
         }
       }
 
-      const blob = (await recorder.stop()) as unknown as Blob
+      // Automatically saves
+      recorder.stop()
 
       animationController.setFrame(currentFrame)
       if (wasPlaying) {
         animationController.togglePlay(true)
       }
-
-      saveAs(blob, 'ascii-animation.mp4')
       toast.success('Video export complete!', { id: 'video-export' })
     } catch (error) {
       console.error('Error encoding video:', error)
@@ -520,8 +534,7 @@ export function AssetExport({
     const exportPadding = paddingPixels * scale
 
     for (let i = 0; i < totalFrames; i++) {
-      animationController.setFrame(i)
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      animationController.renderFrame(i)
 
       const buffer = animationController.getBuffer()
       renderBufferToCanvas(
@@ -559,7 +572,7 @@ export function AssetExport({
 
     const zipBlob = await zip.generateAsync({ type: 'blob' })
     saveAs(zipBlob, 'ascii-animation-frames.zip')
-    toast.success('Export complete!', { id: 'export-progress' })
+    toast.success('Export complete!', { id: 'video-export' })
   }
 
   // Copy with cmd+c

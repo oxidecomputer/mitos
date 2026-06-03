@@ -131,7 +131,6 @@ export default function AsciiAnimation({
         id="ascii-canvas"
         className="pointer-events-none relative z-10 m-0 select-none"
         style={{
-          imageRendering: 'pixelated',
           fontFamily: '"GT America Mono", monospace',
           fontSize: '12px',
           lineHeight: '1.2',
