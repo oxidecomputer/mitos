@@ -6,8 +6,12 @@
  * Copyright Oxide Computer Company
  */
 import { expect, test, type Download, type Locator, type Page } from '@playwright/test'
+import JSZip from 'jszip'
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+const COIN_GREEN = '#238A5E'
+const COIN_BG = '#2D3335'
 
 /**
  * Wait until the ASCII canvas has actually painted. The renderer sets the
@@ -47,6 +51,14 @@ async function downloadToBuffer(download: Download): Promise<Buffer> {
   const chunks: Buffer[] = []
   for await (const chunk of stream) chunks.push(chunk as Buffer)
   return Buffer.concat(chunks)
+}
+
+/** Pull a single named entry out of a downloaded ZIP archive. */
+async function extractZipEntry(zipBuffer: Buffer, name: string): Promise<Buffer> {
+  const zip = await JSZip.loadAsync(zipBuffer)
+  const entry = zip.file(name)
+  if (!entry) throw new Error(`Zip is missing expected entry: ${name}`)
+  return entry.async('nodebuffer')
 }
 
 test.describe('ascii render snapshots', () => {
@@ -111,5 +123,89 @@ test.describe('ascii render snapshots', () => {
     expect(buffer.length).toBeGreaterThan(1000)
     // MP4/ISO-BMFF files carry an 'ftyp' box marker near the start.
     expect(buffer.subarray(0, 16).includes(Buffer.from('ftyp'))).toBe(true)
+  })
+
+  test('SVG export produces valid vector text', async ({ page }) => {
+    // `numbers` is static, so the format select offers svg/png. SVG bytes embed
+    // float metrics from live font measurement (not pixel-stable across runs),
+    // so we assert structure rather than pixel-diffing.
+    await page.goto('/?template=numbers')
+    await waitForRender(page)
+
+    await page
+      .locator('.ui-select', { hasText: 'Format' })
+      .locator('select')
+      .selectOption('svg')
+
+    const exportButton = page.getByRole('button', { name: 'Export Image' })
+    await expect(exportButton).toBeEnabled()
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      exportButton.click(),
+    ])
+
+    expect(download.suggestedFilename()).toBe('ascii-art.svg')
+
+    const svg = (await downloadToBuffer(download)).toString('utf-8')
+    expect(svg).toContain('<svg')
+    expect(svg).toContain('</svg>')
+    // Default (non-flattened) export emits selectable <text>/<tspan> glyphs...
+    expect(svg).toContain('<text')
+    expect(svg).toContain('<tspan')
+    // ...all in the stock text colour, since `numbers` sets no per-cell colour.
+    expect(svg).toContain('fill="#d7d8d9"')
+  })
+
+  test('Copy SVG preserves per-cell colours', async ({ page, context }) => {
+    // `coins` returns { char, color } per cell, so its SVG carries multiple
+    // colour runs. The SVG format isn't offered for animated templates, but the
+    // "Copy SVG" action works regardless and exercises the same generator.
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.goto('/?template=coins')
+    await waitForRender(page)
+
+    await page.getByRole('button', { name: 'Copy SVG' }).click()
+
+    // The copy runs through an async font/measurement step, so wait for the SVG
+    // to actually land on the clipboard before reading it back.
+    await expect
+      .poll(() => page.evaluate(() => navigator.clipboard.readText()), {
+        timeout: 15_000,
+      })
+      .toContain('<svg')
+    const svg = await page.evaluate(() => navigator.clipboard.readText())
+
+    // Both coin colours present ⇒ per-cell colour runs survived into the SVG.
+    expect(svg).toContain(`fill="${COIN_GREEN}"`)
+    expect(svg).toContain(`fill="${COIN_BG}"`)
+  })
+
+  test('multi-colour frame export matches snapshot', async ({ page }) => {
+    // Visual-diff the multi-colour raster path: `coins` exports a ZIP of PNG
+    // frames, each rendered deterministically from the frame index (no time or
+    // randomness), so frame 0 is reproducible. Pixel-diffing it guards the
+    // per-cell colour rendering in renderBufferToCanvas.
+    test.setTimeout(120_000)
+    await page.goto('/?template=coins')
+    await waitForRender(page)
+
+    // Animated templates default the format to "PNGs" (frames) labelled
+    // "Export Frames".
+    const exportButton = page.getByRole('button', { name: 'Export Frames' })
+    await expect(exportButton).toBeEnabled()
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 120_000 }),
+      exportButton.click(),
+    ])
+
+    expect(download.suggestedFilename()).toBe('ascii-animation-frames.zip')
+
+    const zip = await downloadToBuffer(download)
+    const frame = await extractZipEntry(zip, 'frame_0000.png')
+    expect(frame.subarray(0, 8)).toEqual(PNG_MAGIC)
+    expect(frame.length).toBeGreaterThan(1000)
+    expect(frame).toMatchSnapshot('coins-frame-export.png')
   })
 })
