@@ -311,11 +311,17 @@ export function createAnimation(
     }
 
     // 7. --------------------------------------------------------------
-    // Increment frame counter AFTER rendering (so we start at frame 0)
-    if (!settings.maxFrames || state.frame < settings.maxFrames - 1) {
-      state.frame++ // increment frame counter
-    } else {
-      state.frame = 0
+    // Increment frame counter AFTER rendering (so we start at frame 0).
+    // Only advance while playing — when paused the loop is kicked by
+    // setFrame() to render a specific frame, and must stay on that frame
+    // (otherwise scrubbing or re-initializing on a settings change would
+    // bump the frame by one).
+    if (state.playing) {
+      if (!settings.maxFrames || state.frame < settings.maxFrames - 1) {
+        state.frame++ // increment frame counter
+      } else {
+        state.frame = 0
+      }
     }
     settings.onFrameUpdate && settings.onFrameUpdate(state.frame)
 

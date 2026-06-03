@@ -19,6 +19,7 @@ export default function AsciiAnimation({
   setAnimationController,
   textColor,
   backgroundColor,
+  canvasBackgroundColor = backgroundColor,
   padding,
   children,
 }: {
@@ -29,6 +30,10 @@ export default function AsciiAnimation({
   setAnimationController: (controller: AnimationController) => void
   textColor: string
   backgroundColor: string
+  // Background used to fill the canvas itself. Defaults to `backgroundColor`,
+  // but can be set to 'transparent' so the underlying image (rendered behind
+  // the canvas but in front of the container background) shows through.
+  canvasBackgroundColor?: string
   padding: number
   children: ReactNode
 }) {
@@ -95,7 +100,7 @@ export default function AsciiAnimation({
         onFrameUpdate: onFrameUpdate ? onFrameUpdate : undefined,
         maxFrames,
         textColor,
-        backgroundColor,
+        backgroundColor: canvasBackgroundColor,
         padding,
       })
 
@@ -112,7 +117,7 @@ export default function AsciiAnimation({
     onFrameUpdate,
     setAnimationController,
     textColor,
-    backgroundColor,
+    canvasBackgroundColor,
     padding,
   ])
 

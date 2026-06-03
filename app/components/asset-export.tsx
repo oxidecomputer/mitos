@@ -75,6 +75,10 @@ export function AssetExport({
   // When on, SVG export outlines glyphs to <path> data
   const [flattenSvg, setFlattenSvg] = useState(false)
 
+  // When off, the export has a transparent background (where the format allows
+  // it — MP4 can't, so it always keeps the background colour).
+  const [includeBackground, setIncludeBackground] = useState(false)
+
   // Set export height based on character dimensions including padding
   useEffect(() => {
     const { totalWidth, totalHeight } = calculateContentDimensions(
@@ -183,6 +187,7 @@ export function AssetExport({
       metrics.fontSize,
       metrics.lineHeight,
       exportPadding,
+      includeBackground,
     )
 
     exportCanvas.toBlob(
@@ -248,7 +253,9 @@ export function AssetExport({
       svgContent +=
         '    .grid-line { stroke: #666666; stroke-width: 0.5; stroke-opacity: 0.5; }\n'
       svgContent += '  </style>\n'
-      svgContent += `  <rect width="100%" height="100%" fill="${exportSettings.backgroundColor}"/>\n`
+      if (includeBackground) {
+        svgContent += `  <rect width="100%" height="100%" fill="${exportSettings.backgroundColor}"/>\n`
+      }
 
       const gridElement = document.querySelector('.grid-overlay')
       const gridType = gridElement?.getAttribute('data-grid-type') || 'none'
@@ -410,6 +417,7 @@ export function AssetExport({
     baseFontSize: number,
     baseLineHeight: number,
     padding: number = 0,
+    includeBackground: boolean = true,
   ) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -430,8 +438,10 @@ export function AssetExport({
     // behind (the canvas is reused across frames) — clearRect resets to
     // transparent first.
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = settings.backgroundColor
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    if (includeBackground) {
+      ctx.fillStyle = settings.backgroundColor
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+    }
     ctx.fillStyle = settings.textColor
     ctx.font = `${fontSize}px "GT America Mono", monospace`
     ctx.textBaseline = 'top'
@@ -626,6 +636,7 @@ export function AssetExport({
         metrics.fontSize,
         metrics.lineHeight,
         exportPadding,
+        includeBackground,
       )
 
       const blob = await new Promise<Blob>((resolve) =>
@@ -759,6 +770,14 @@ export function AssetExport({
                 </InputNumber>
               </div>
             )}
+
+            <InputSwitch
+              checked={includeBackground}
+              onChange={setIncludeBackground}
+              disabled={isExporting || exportFormat === 'mp4'}
+            >
+              Include background
+            </InputSwitch>
 
             <InputSwitch
               checked={flattenSvg}

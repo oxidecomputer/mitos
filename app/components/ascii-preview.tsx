@@ -142,7 +142,7 @@ export function AsciiPreview({
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [autoFit, setAutoFit] = useState(false)
+  const [autoFit, setAutoFit] = useState(true)
   const prevDimensionsRef = useRef(dimensions)
 
   const containerSize = useSize(container)
@@ -349,6 +349,11 @@ export function AsciiPreview({
               setAnimationController={setAnimationController}
               textColor={settings.textColor}
               backgroundColor={settings.backgroundColor}
+              canvasBackgroundColor={
+                showUnderlyingImage && underlyingImageUrl && !isExporting
+                  ? 'transparent'
+                  : settings.backgroundColor
+              }
               padding={paddingPixels}
             >
               {/* Show underlying image if enabled */}
