@@ -518,9 +518,14 @@ export function CodeSidebar({
   const renderControl = (control: ControlVariable) => {
     const controlKey = control.objectPath || control.name
 
+    const controlLabel = control.name
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+
     const controlProps = {
       onChange: (val: string | number | boolean) => updateControlVariable(controlKey, val),
-      children: control.name,
+      children: controlLabel,
     }
 
     switch (control.type) {
