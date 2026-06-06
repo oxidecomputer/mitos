@@ -13,9 +13,12 @@ import { useEffect, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
+import type { EsbuildService } from '~/hooks/use-esbuild'
 import type { Cell, Program } from '~/lib/animation'
 import { getColoredRows, getContent } from '~/lib/buffer-text'
+import { generateReactComponentSource } from '~/lib/react-export'
 import { glyphRunToPathData, loadAsciiFont, type Font } from '~/lib/svg-font'
+import type { AsciiImageData } from '~/lib/types'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
@@ -48,6 +51,14 @@ interface AssetExportProps {
     backgroundColor: string
     padding: number
   }
+  // Needed to bundle a self-contained React component (program + runtime).
+  sourceCode: string
+  characterSet: string
+  frameRate: number
+  esbuildService: EsbuildService | null
+  // Processed 0–1 value grid(s) for image/GIF sources, baked into the export.
+  imageData: AsciiImageData | null
+  frames: AsciiImageData[] | null
 }
 
 export function AssetExport({
@@ -59,6 +70,12 @@ export function AssetExport({
   dimensions,
   disabled,
   exportSettings,
+  sourceCode,
+  characterSet,
+  frameRate,
+  esbuildService,
+  imageData,
+  frames,
 }: AssetExportProps) {
   const [exportFormat, setExportFormat] = useState<ExportFormat>(
     animationLength > 1 ? 'frames' : 'png',
@@ -667,6 +684,54 @@ export function AssetExport({
     toast.success('Export complete!', { id: 'video-export' })
   }
 
+  const buildReactComponentSource = async (): Promise<string | null> => {
+    if (!program || !esbuildService) return null
+    return generateReactComponentSource({
+      esbuildService,
+      code: sourceCode,
+      characterSet,
+      columns: dimensions.width,
+      rows: dimensions.height,
+      animationLength,
+      fps: frameRate,
+      settings: exportSettings,
+      imageData: imageData ?? undefined,
+      frames,
+    })
+  }
+
+  const exportReactComponent = async (mode: 'download' | 'copy') => {
+    if (!program) return
+    if (!esbuildService) {
+      toast('esbuild is still initializing — try again in a moment')
+      return
+    }
+    try {
+      setIsExporting(true)
+      toast.loading('Bundling React component…', { id: 'react-export' })
+      const source = await buildReactComponentSource()
+      if (!source) {
+        toast('Could not generate React component', { id: 'react-export' })
+        return
+      }
+      if (mode === 'download') {
+        const blob = new Blob([source], { type: 'text/typescript;charset=utf-8' })
+        saveAs(blob, 'ascii-art.tsx')
+        toast.success('React component downloaded', { id: 'react-export' })
+      } else {
+        await navigator.clipboard.writeText(source)
+        toast.success('React component copied to clipboard', { id: 'react-export' })
+      }
+    } catch (error) {
+      console.error('Error exporting React component:', error)
+      toast.error('Failed to export React component', { id: 'react-export' })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const reactExportDisabled = isExporting || disabled || !esbuildService
+
   // Copy with cmd+c
   useHotkeys('meta+c', () => copyText(), { preventDefault: true }, [])
 
@@ -821,6 +886,15 @@ export function AssetExport({
             Copy SVG
           </InputButton>
         </div>
+
+        <InputButton
+          variant="secondary"
+          className="w-full"
+          onClick={() => exportReactComponent('download')}
+          disabled={reactExportDisabled}
+        >
+          Download React
+        </InputButton>
       </div>
     </Container>
   )

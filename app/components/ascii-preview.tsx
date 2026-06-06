@@ -145,19 +145,58 @@ export function AsciiPreview({
   const [autoFit, setAutoFit] = useState(true)
   const prevDimensionsRef = useRef(dimensions)
 
+  // Mirror zoom/position in refs so rapid wheel events accumulate from the
+  // latest values rather than a stale render closure.
+  const zoomRef = useRef(zoomLevel)
+  const positionRef = useRef(position)
+  useEffect(() => {
+    zoomRef.current = zoomLevel
+  }, [zoomLevel])
+  useEffect(() => {
+    positionRef.current = position
+  }, [position])
+
   const containerSize = useSize(container)
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    setAutoFit(false)
+  // Zoom toward the cursor (Figma-style) on scroll wheel. Attached as a
+  // non-passive native listener so preventDefault stops the container from
+  // also scrolling.
+  useEffect(() => {
+    if (!container) return
 
-    const zoomFactor = 0.035 * (e.deltaY > 0 ? 1 : 1.1)
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      setAutoFit(false)
 
-    if (e.deltaY < 0) {
-      setZoomLevel((prev) => Math.min(prev * (1 + zoomFactor), 3))
-    } else {
-      setZoomLevel((prev) => Math.max(prev / (1 + zoomFactor), 0.5))
+      const rect = container.getBoundingClientRect()
+      // Cursor position relative to the container center (the transform origin).
+      const mouseX = e.clientX - rect.left - rect.width / 2
+      const mouseY = e.clientY - rect.top - rect.height / 2
+
+      const currentZoom = zoomRef.current
+      const currentPos = positionRef.current
+
+      const zoomFactor = 0.035 * (e.deltaY > 0 ? 1 : 1.1)
+      const newZoom =
+        e.deltaY < 0
+          ? Math.min(currentZoom * (1 + zoomFactor), 3)
+          : Math.max(currentZoom / (1 + zoomFactor), 0.5)
+
+      const ratio = newZoom / currentZoom
+      const newPos = {
+        x: mouseX * (1 - ratio) + ratio * currentPos.x,
+        y: mouseY * (1 - ratio) + ratio * currentPos.y,
+      }
+
+      zoomRef.current = newZoom
+      positionRef.current = newPos
+      setZoomLevel(newZoom)
+      setPosition(newPos)
     }
-  }
+
+    container.addEventListener('wheel', onWheel, { passive: false })
+    return () => container.removeEventListener('wheel', onWheel)
+  }, [container])
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true)
@@ -314,7 +353,6 @@ export function AsciiPreview({
       {/* ASCII preview container */}
       <div
         ref={setContainer}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         className="relative flex flex-1 items-center justify-center overflow-auto"
@@ -331,7 +369,7 @@ export function AsciiPreview({
           </div>
         )}
         <div
-          className="duration-50 relative transform-gpu rounded-[1%] transition-transform ease-out"
+          className="duration-25 relative transform-gpu rounded-[1%] transition-transform ease-out"
           style={{
             transform: isExporting
               ? 'none'
