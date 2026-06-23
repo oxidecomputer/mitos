@@ -157,6 +157,61 @@ export function AsciiArtGenerator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esbuildInitialized, esbuildInitializing])
 
+  // Load project from a GitHub gist passed as a URL parameter on mount
+  useEffect(() => {
+    if (!esbuildInitialized || esbuildInitializing) return
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const gistParam = urlParams.get('gist')
+
+    if (!gistParam) return
+
+    // Accept either a bare gist id or a full gist URL and extract the id
+    const gistId = gistParam.trim().replace(/\/$/, '').split('/').pop()
+
+    if (!gistId) {
+      toast('The gist URL is not valid')
+      return
+    }
+
+    const loadGist = async () => {
+      try {
+        const response = await fetch(`https://api.github.com/gists/${gistId}`)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch gist: ${response.status}`)
+        }
+
+        const gist = await response.json()
+        const files = Object.values(gist.files || {}) as Array<{
+          filename: string
+          content: string
+        }>
+
+        // Prefer a .json file, otherwise fall back to the first file
+        const file =
+          files.find((f) => f.filename?.toLowerCase().endsWith('.json')) ?? files[0]
+
+        if (!file?.content) {
+          throw new Error('Gist contains no usable file')
+        }
+
+        handleLoadProject(file.content)
+      } catch (error) {
+        toast('Could not load the project from the provided gist')
+        console.error(error)
+      } finally {
+        // Remove gist parameter from URL after attempting to load it
+        const url = new URL(window.location.href)
+        url.searchParams.delete('gist')
+        window.history.replaceState({}, '', url.toString())
+      }
+    }
+
+    loadGist()
+    // only need to run on load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esbuildInitialized, esbuildInitializing])
+
   useEffect(() => {
     // Check if the user has loaded some media or modified the code
     const isSourceDirty = settings.source.data !== null || pendingCode !== ''
