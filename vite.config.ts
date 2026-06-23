@@ -6,12 +6,36 @@
  * Copyright Oxide Computer Company
  */
 
+import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
+
+// Serve the /sandbox page (no trailing slash) in dev. Vite's static handling
+// only resolves the directory index for `/sandbox/`, so rewrite the bare path.
+// The deployed equivalent lives in vercel.json.
+function sandboxCleanUrl(): Plugin {
+  return {
+    name: 'sandbox-clean-url',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        if (req.url === '/sandbox') req.url = '/sandbox/'
+        next()
+      })
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react(), tsconfigPaths(), sandboxCleanUrl()],
   server: { port: 3000 },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, 'index.html'),
+        sandbox: resolve(import.meta.dirname, 'sandbox/index.html'),
+      },
+    },
+  },
 })
