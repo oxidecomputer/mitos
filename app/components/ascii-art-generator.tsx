@@ -20,6 +20,7 @@ import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
 import { exampleImage } from '~/exampleImage'
 import { useEsbuild } from '~/hooks/use-esbuild'
+import { useMcpBridge } from '~/hooks/use-mcp-bridge'
 import type { Program } from '~/lib/animation'
 import { createProgramFromProcessor, generateImageCode } from '~/lib/ascii-program'
 import { clearStaleImageData, processCodeModule } from '~/lib/code-processor'
@@ -98,6 +99,7 @@ export function AsciiArtGenerator() {
   const [templateType, setTemplateType] = useState<TemplateType | ''>('')
   const [currentImageData, setCurrentImageData] = useState<AsciiImageData | null>(null)
   const [currentFrames, setCurrentFrames] = useState<AsciiImageData[] | null>(null)
+  const [codeError, setCodeError] = useState<string | null>(null)
 
   // Processing state
   const [isExporting, setIsExporting] = useState(false)
@@ -449,7 +451,10 @@ export function AsciiArtGenerator() {
       })
 
       if (!result.success || !result.module) {
-        toast(result.error || 'Could not process your code. Check for syntax errors.')
+        const message =
+          result.error || 'Could not process your code. Check for syntax errors.'
+        setCodeError(message)
+        toast(message)
         return
       }
 
@@ -459,8 +464,10 @@ export function AsciiArtGenerator() {
         frameRate: currentSettings.animation.frameRate,
       })
 
+      setCodeError(null)
       setProgram(newProgram)
     } catch (error) {
+      setCodeError(error instanceof Error ? error.message : String(error))
       handleProcessingError('processing code', error)
     }
   }
@@ -611,6 +618,22 @@ export function AsciiArtGenerator() {
     },
     [],
   )
+
+  // Expose the canvas to MCP clients (Claude Code etc.) via the local
+  // WebSocket bridge — dev-only, see app/hooks/use-mcp-bridge.tsx
+  useMcpBridge({
+    pendingCode,
+    applyCode: (code) => {
+      setPendingCode(code)
+      setShowCodeSidebar(true)
+      updateSettings('source', { code })
+    },
+    settings,
+    setSettings,
+    animationController,
+    codeError,
+    loadTemplate,
+  })
 
   const setAspectRatioFromImage = (
     imageUrl: string,
