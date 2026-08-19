@@ -16,28 +16,39 @@ import { useEffect, useRef } from 'react'
 
 import type { AsciiSettings } from '~/components/ascii-art-generator'
 import type { AnimationController } from '~/components/ascii-preview'
-import { TEMPLATES, TemplateType } from '~/templates'
+import { getContent } from '~/lib/buffer-text'
+import { DEFAULT_SETTINGS, TEMPLATES, TemplateType } from '~/templates'
 
-const BRIDGE_URL = 'ws://localhost:6486'
+// Must match the MCP server's port (MITOS_BRIDGE_PORT). Override in the tab
+// with ?mcp=<port> when the server runs on a non-default port.
+const DEFAULT_BRIDGE_PORT = 6486
 const RECONNECT_DELAY_MS = 2000
+const MAX_RECONNECT_DELAY_MS = 60_000
 
-const SETTINGS_SECTIONS = [
-  'meta',
-  'source',
-  'preprocessing',
-  'output',
-  'export',
-  'animation',
-] as const
+// setCode/loadTemplate wait for the compile pipeline to settle before replying,
+// so the server reads back the frame the new code actually produced.
+// processCodeModule's own timeout is 5s; the mount delay covers React
+// committing the new program and remounting the animation controller.
+const PROCESS_POLL_MS = 50
+const PROCESS_TIMEOUT_MS = 6000
+const MOUNT_SETTLE_MS = 150
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const SETTINGS_SECTIONS = Object.keys(DEFAULT_SETTINGS) as (keyof AsciiSettings)[]
 
 interface McpBridge {
   pendingCode: string
   applyCode: (code: string) => void
   settings: AsciiSettings
-  setSettings: React.Dispatch<React.SetStateAction<AsciiSettings>>
+  updateSettings: <K extends keyof AsciiSettings>(
+    section: K,
+    newValues: Partial<AsciiSettings[K]>,
+  ) => void
   animationController: AnimationController
   codeError: string | null
   loadTemplate: (template: TemplateType) => void
+  getProcessSeq: () => number
 }
 
 interface BridgeMessage {
@@ -46,27 +57,43 @@ interface BridgeMessage {
   payload?: Record<string, unknown>
 }
 
-function renderFrameText(controller: AnimationController, frame?: number) {
+function renderFrameText(
+  controller: AnimationController,
+  codeError: string | null,
+  frame?: number,
+) {
   if (!controller || !controller.isReady()) {
-    throw new Error('No program is rendering yet. Set some code or load a template first.')
+    throw new Error(
+      codeError
+        ? `The code failed to compile: ${codeError}`
+        : 'No program is rendering yet. Set some code or load a template first.',
+    )
   }
 
-  const targetFrame = frame ?? controller.getState().frame
+  const previousFrame = controller.getState().frame
+  const targetFrame = frame ?? previousFrame
   controller.renderFrame(targetFrame)
 
   const { cols, rows } = controller.getState()
-  const buffer = controller.getBuffer()
-  const lines: string[] = []
+  const text = getContent({ width: cols, height: rows }, controller)
 
-  for (let y = 0; y < rows; y++) {
-    let line = ''
-    for (let x = 0; x < cols; x++) {
-      line += buffer[y * cols + x]?.char ?? ' '
-    }
-    lines.push(line)
+  // Put the canvas back where the user had it — sampling frames for an MCP
+  // client must not move visible playback
+  if (targetFrame !== previousFrame) {
+    controller.renderFrame(previousFrame)
   }
 
-  return { frame: targetFrame, cols, rows, text: lines.join('\n') }
+  return { frame: targetFrame, cols, rows, text }
+}
+
+function requireTemplateName(payload: Record<string, unknown>): TemplateType {
+  const name = payload.name
+  if (typeof name !== 'string' || !(name in TEMPLATES)) {
+    throw new Error(
+      `Unknown template "${String(name)}". Use list_templates to see valid keys.`,
+    )
+  }
+  return name as TemplateType
 }
 
 export function useMcpBridge(bridge: McpBridge) {
@@ -79,11 +106,26 @@ export function useMcpBridge(bridge: McpBridge) {
     const enabled = import.meta.env.DEV || params.has('mcp')
     if (!enabled) return
 
+    // ?mcp=<port> points the tab at a server started with MITOS_BRIDGE_PORT
+    const port = Number(params.get('mcp')) || DEFAULT_BRIDGE_PORT
+    const bridgeUrl = `ws://localhost:${port}`
+
     let ws: WebSocket | null = null
     let reconnectTimer: number | undefined
+    let reconnectDelay = RECONNECT_DELAY_MS
     let disposed = false
 
-    const handle = (type: string, payload: Record<string, unknown> = {}) => {
+    // Wait until the settings-processing pipeline has run once more (or time
+    // out), so replies to setCode/loadTemplate reflect the applied code
+    const waitForProcessing = async (seqBefore: number) => {
+      const deadline = Date.now() + PROCESS_TIMEOUT_MS
+      while (bridgeRef.current.getProcessSeq() === seqBefore && Date.now() < deadline) {
+        await sleep(PROCESS_POLL_MS)
+      }
+      await sleep(MOUNT_SETTLE_MS)
+    }
+
+    const handle = async (type: string, payload: Record<string, unknown> = {}) => {
       const current = bridgeRef.current
 
       switch (type) {
@@ -107,13 +149,15 @@ export function useMcpBridge(bridge: McpBridge) {
           if (typeof payload.code !== 'string') {
             throw new Error('setCode expects a string "code" payload')
           }
+          const seqBefore = current.getProcessSeq()
           current.applyCode(payload.code)
+          await waitForProcessing(seqBefore)
           return { applied: true }
         }
         case 'getFrame': {
           const frame = typeof payload.frame === 'number' ? payload.frame : undefined
           return {
-            ...renderFrameText(current.animationController, frame),
+            ...renderFrameText(current.animationController, current.codeError, frame),
             error: current.codeError,
           }
         }
@@ -122,7 +166,11 @@ export function useMcpBridge(bridge: McpBridge) {
             throw new Error('getFrames expects a "frames" array payload')
           }
           return payload.frames.map((frame) => ({
-            ...renderFrameText(current.animationController, Number(frame)),
+            ...renderFrameText(
+              current.animationController,
+              current.codeError,
+              Number(frame),
+            ),
             error: current.codeError,
           }))
         }
@@ -134,7 +182,7 @@ export function useMcpBridge(bridge: McpBridge) {
             throw new Error('patchSettings expects a "settings" object payload')
           }
           const unknownKeys = Object.keys(patch).filter(
-            (key) => !SETTINGS_SECTIONS.includes(key as (typeof SETTINGS_SECTIONS)[number]),
+            (key) => !SETTINGS_SECTIONS.includes(key as keyof AsciiSettings),
           )
           if (unknownKeys.length > 0) {
             throw new Error(
@@ -142,15 +190,24 @@ export function useMcpBridge(bridge: McpBridge) {
                 `Valid sections: ${SETTINGS_SECTIONS.join(', ')}`,
             )
           }
-          current.setSettings((prev) => {
-            const next = { ...prev }
-            for (const section of SETTINGS_SECTIONS) {
-              if (patch[section]) {
-                next[section] = { ...prev[section], ...patch[section] } as never
+          for (const section of SETTINGS_SECTIONS) {
+            const values = patch[section]
+            if (!values) continue
+            // Code changes must go through applyCode so the editor
+            // (pendingCode) stays in sync with what runs
+            if (
+              section === 'source' &&
+              typeof (values as { code?: unknown }).code === 'string'
+            ) {
+              const { code, ...rest } = values as { code: string } & Record<string, unknown>
+              current.applyCode(code)
+              if (Object.keys(rest).length > 0) {
+                current.updateSettings('source', rest as never)
               }
+              continue
             }
-            return next
-          })
+            current.updateSettings(section, values as never)
+          }
           return { applied: true }
         }
         case 'listTemplates':
@@ -159,23 +216,14 @@ export function useMcpBridge(bridge: McpBridge) {
             name: template.meta.name,
           }))
         case 'getTemplateCode': {
-          const name = payload.name
-          if (typeof name !== 'string' || !(name in TEMPLATES)) {
-            throw new Error(
-              `Unknown template "${String(name)}". Use list_templates to see valid keys.`,
-            )
-          }
-          const code = TEMPLATES[name as TemplateType].source.code
+          const code = TEMPLATES[requireTemplateName(payload)].source.code
           return code || '(this template has no code — it is settings-only)'
         }
         case 'loadTemplate': {
-          const name = payload.name
-          if (typeof name !== 'string' || !(name in TEMPLATES)) {
-            throw new Error(
-              `Unknown template "${String(name)}". Use list_templates to see valid keys.`,
-            )
-          }
-          current.loadTemplate(name as TemplateType)
+          const name = requireTemplateName(payload)
+          const seqBefore = current.getProcessSeq()
+          current.loadTemplate(name)
+          await waitForProcessing(seqBefore)
           return { applied: true }
         }
         default:
@@ -186,9 +234,13 @@ export function useMcpBridge(bridge: McpBridge) {
     const connect = () => {
       if (disposed) return
 
-      ws = new WebSocket(BRIDGE_URL)
+      ws = new WebSocket(bridgeUrl)
 
-      ws.onmessage = (event) => {
+      ws.onopen = () => {
+        reconnectDelay = RECONNECT_DELAY_MS
+      }
+
+      ws.onmessage = async (event) => {
         let msg: BridgeMessage
         try {
           msg = JSON.parse(event.data)
@@ -196,11 +248,14 @@ export function useMcpBridge(bridge: McpBridge) {
           return
         }
 
+        // handle() can await the compile pipeline, so reply on the socket the
+        // request came in on, not whatever ws points at afterwards
+        const socket = ws
         try {
-          const result = handle(msg.type, msg.payload)
-          ws?.send(JSON.stringify({ id: msg.id, ok: true, result }))
+          const result = await handle(msg.type, msg.payload)
+          socket?.send(JSON.stringify({ id: msg.id, ok: true, result }))
         } catch (error) {
-          ws?.send(
+          socket?.send(
             JSON.stringify({
               id: msg.id,
               ok: false,
@@ -213,7 +268,10 @@ export function useMcpBridge(bridge: McpBridge) {
       ws.onclose = () => {
         ws = null
         if (!disposed) {
-          reconnectTimer = window.setTimeout(connect, RECONNECT_DELAY_MS)
+          reconnectTimer = window.setTimeout(connect, reconnectDelay)
+          // Back off while nothing is listening so idle dev tabs don't spend
+          // the whole session hammering a closed port
+          reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY_MS)
         }
       }
 

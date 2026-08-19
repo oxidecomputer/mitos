@@ -29,17 +29,19 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import type { ServerWebSocket } from 'bun'
 import { z } from 'zod'
 
-const PORT = Number(process.env.MITOS_BRIDGE_PORT ?? 6486)
+// The tab defaults to 6486 too; when overriding, open the app with ?mcp=<port>
+// so both sides agree (see app/hooks/use-mcp-bridge.tsx).
+const DEFAULT_PORT = 6486
+const PORT = Number(process.env.MITOS_BRIDGE_PORT ?? DEFAULT_PORT)
+
+// setCode/loadTemplate block in the tab until the compile pipeline settles
+// (up to ~6s), so this must comfortably exceed that.
 const REQUEST_TIMEOUT_MS = 10_000
 
 // How long a relay waits before trying to take over the port, and how long a
 // tool call waits for the relay socket to come up before giving up.
 const RELAY_RETRY_MS = 500
 const RELAY_READY_TIMEOUT_MS = 2_000
-
-// How long to wait after applying code before rendering a frame back to the
-// client. Covers esbuild-wasm compile plus a couple of animation frames.
-const APPLY_SETTLE_MS = 700
 
 interface PendingRequest {
   resolve: (value: unknown) => void
@@ -73,7 +75,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const NOT_CONNECTED_MESSAGE =
   `No Mitos tab is connected to the bridge (ws://localhost:${PORT}). ` +
   'Start the dev server with `bun run dev` and open the app in a browser ' +
-  '(the bridge connects automatically in dev, or add ?mcp to the URL).'
+  (PORT === DEFAULT_PORT
+    ? '(the bridge connects automatically in dev, or add ?mcp to the URL).'
+    : `(this bridge is on a non-default port — open the app with ?mcp=${PORT}).`)
 
 const NO_UPSTREAM_MESSAGE =
   `Another process owns the Mitos bridge (ws://localhost:${PORT}) but this ` +
@@ -135,6 +139,18 @@ function rejectAllPending(reason: string) {
   }
 }
 
+/** Settle the matching request from a response sent by the tab (or, in relay mode, the host). */
+function handleResponse(raw: string, from: string) {
+  try {
+    const msg = JSON.parse(raw)
+    if (msg && typeof msg.id === 'string') {
+      settlePending(msg.id, msg.ok === true, msg.result, msg.error)
+    }
+  } catch (error) {
+    console.error(`[mitos-mcp] could not parse message from ${from}:`, error)
+  }
+}
+
 /** Host side: run a relay's request against the tab and send the answer back. */
 async function forwardFromRelay(relay: ServerWebSocket<SocketData>, raw: string) {
   let id: string | undefined
@@ -185,25 +201,21 @@ function startHost(): boolean {
             console.error(`[mitos-mcp] relay disconnected (${relays.size} left)`)
             return
           }
+          // Only the current tab's disconnect kills pending requests — a
+          // socket replaced by a newer tab closes late, after requests are
+          // already routed to its replacement
           if (appSocket === ws) {
             appSocket = null
             console.error('[mitos-mcp] app disconnected')
+            rejectAllPending('The Mitos tab disconnected')
           }
-          rejectAllPending('The Mitos tab disconnected')
         },
         message(ws, raw) {
           if (ws.data.role === 'relay') {
             void forwardFromRelay(ws, String(raw))
             return
           }
-          try {
-            const msg = JSON.parse(String(raw))
-            if (msg && typeof msg.id === 'string') {
-              settlePending(msg.id, msg.ok === true, msg.result, msg.error)
-            }
-          } catch (error) {
-            console.error('[mitos-mcp] could not parse message from app:', error)
-          }
+          handleResponse(String(raw), 'app')
         },
       },
     })
@@ -227,16 +239,7 @@ function startRelay() {
 
   ws.onopen = () => console.error(`[mitos-mcp] relaying via ws://localhost:${PORT}`)
 
-  ws.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(String(event.data))
-      if (msg && typeof msg.id === 'string') {
-        settlePending(msg.id, msg.ok === true, msg.result, msg.error)
-      }
-    } catch (error) {
-      console.error('[mitos-mcp] could not parse message from host:', error)
-    }
-  }
+  ws.onmessage = (event) => handleResponse(String(event.data), 'host')
 
   // A failed connect fires error then close; recovery happens in onclose only.
   ws.onerror = () => {}
@@ -340,8 +343,9 @@ server.tool(
   'Replace the contents of the Mitos code editor and run it. Returns the rendered ASCII frame (or the compile error) so you can see the result. Call get_docs first if you are not familiar with the script API, and get_template_code for working examples.',
   { code: z.string().describe('The full script source to put in the editor') },
   async ({ code }) => {
+    // The tab answers setCode only once the compile pipeline has settled, so
+    // the frame read back here reflects the applied code
     await request('setCode', { code })
-    await sleep(APPLY_SETTLE_MS)
     const frame = await request<FrameResult>('getFrame', {})
     return text(formatFrame(frame))
   },
@@ -418,7 +422,6 @@ server.tool(
   { name: z.string().describe('Template key from list_templates') },
   async ({ name }) => {
     await request('loadTemplate', { name })
-    await sleep(APPLY_SETTLE_MS)
     const frame = await request<FrameResult>('getFrame', {})
     return text(formatFrame(frame))
   },

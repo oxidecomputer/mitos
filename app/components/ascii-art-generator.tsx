@@ -109,6 +109,9 @@ export function AsciiArtGenerator() {
 
   const prevSettings = useRef<AsciiSettings | null>(null)
   const isInitialMount = useRef(true)
+  // Bumped each time the settings-processing pipeline finishes (success or
+  // failure), so the MCP bridge can wait for a compile to settle
+  const processSeq = useRef(0)
 
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
     // Trigger the warning dialog when the user closes or navigates the tab
@@ -119,6 +122,9 @@ export function AsciiArtGenerator() {
   const loadTemplate = useCallback(
     (template: TemplateType) => {
       setTemplateType(template)
+      // Clear the settings cache so re-applying the current template still
+      // reprocesses instead of being skipped as unchanged
+      prevSettings.current = null
       setSettings(TEMPLATES[template] as AsciiSettings)
       setProjectName(TEMPLATES[template].meta.name)
 
@@ -246,7 +252,9 @@ export function AsciiArtGenerator() {
     }
 
     // Process the current settings
-    processCurrentSettings()
+    void processCurrentSettings().finally(() => {
+      processSeq.current += 1
+    })
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings])
@@ -626,13 +634,17 @@ export function AsciiArtGenerator() {
     applyCode: (code) => {
       setPendingCode(code)
       setShowCodeSidebar(true)
+      // Clear the settings cache so identical code still recompiles —
+      // retrying after a transient failure must not be a no-op
+      prevSettings.current = null
       updateSettings('source', { code })
     },
     settings,
-    setSettings,
+    updateSettings,
     animationController,
     codeError,
     loadTemplate,
+    getProcessSeq: () => processSeq.current,
   })
 
   const setAspectRatioFromImage = (
