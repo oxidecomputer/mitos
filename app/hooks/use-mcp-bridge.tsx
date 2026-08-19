@@ -12,7 +12,7 @@
  * read rendered frames back as text. Active in dev builds, or when the page
  * is opened with ?mcp. Reconnects until the server is running.
  */
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { AsciiSettings } from '~/components/ascii-art-generator'
 import type { AnimationController } from '~/components/ascii-preview'
@@ -33,7 +33,15 @@ const PROCESS_POLL_MS = 50
 const PROCESS_TIMEOUT_MS = 6000
 const MOUNT_SETTLE_MS = 150
 
+// Close codes from mcp/server.ts: REPLACED means another tab explicitly took
+// the connection from us, OCCUPIED means we connected while another tab holds
+// it. Either way this tab is inactive until the user clicks the MCP chip.
+const REPLACED_CLOSE_CODE = 4000
+const OCCUPIED_CLOSE_CODE = 4001
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+export type McpBridgeStatus = 'disabled' | 'disconnected' | 'active' | 'inactive'
 
 const SETTINGS_SECTIONS = Object.keys(DEFAULT_SETTINGS) as (keyof AsciiSettings)[]
 
@@ -101,10 +109,15 @@ export function useMcpBridge(bridge: McpBridge) {
   const bridgeRef = useRef(bridge)
   bridgeRef.current = bridge
 
+  const [status, setStatus] = useState<McpBridgeStatus>('disabled')
+  const takeOverRef = useRef<() => void>(() => {})
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const enabled = import.meta.env.DEV || params.has('mcp')
     if (!enabled) return
+
+    setStatus('disconnected')
 
     // ?mcp=<port> points the tab at a server started with MITOS_BRIDGE_PORT
     const port = Number(params.get('mcp')) || DEFAULT_BRIDGE_PORT
@@ -231,20 +244,26 @@ export function useMcpBridge(bridge: McpBridge) {
       }
     }
 
-    const connect = () => {
+    const connect = (takeover = false) => {
       if (disposed) return
 
-      ws = new WebSocket(bridgeUrl)
-
-      ws.onopen = () => {
-        reconnectDelay = RECONNECT_DELAY_MS
-      }
+      // ?takeover=1 asks the server to bump whichever tab currently holds the
+      // connection — only ever sent from an explicit user action
+      ws = new WebSocket(takeover ? `${bridgeUrl}/?takeover=1` : bridgeUrl)
 
       ws.onmessage = async (event) => {
         let msg: BridgeMessage
         try {
           msg = JSON.parse(event.data)
         } catch {
+          return
+        }
+
+        // The server confirms activation explicitly — a socket can open and
+        // immediately be parked, so onopen alone doesn't mean we're active
+        if (msg.type === 'activated') {
+          reconnectDelay = RECONNECT_DELAY_MS
+          setStatus('active')
           return
         }
 
@@ -265,14 +284,25 @@ export function useMcpBridge(bridge: McpBridge) {
         }
       }
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         ws = null
-        if (!disposed) {
-          reconnectTimer = window.setTimeout(connect, reconnectDelay)
-          // Back off while nothing is listening so idle dev tabs don't spend
-          // the whole session hammering a closed port
-          reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY_MS)
-        }
+        if (disposed) return
+
+        // Another tab holds the connection: show the inactive chip. We still
+        // probe below — never with takeover, so the connection can't move
+        // without a click — which lets this tab pick the connection up once
+        // it's unowned (the active tab closed). The reason-string fallback
+        // covers MCP server processes older than these close codes.
+        const inactive =
+          event.code === REPLACED_CLOSE_CODE ||
+          event.code === OCCUPIED_CLOSE_CODE ||
+          event.reason.includes('Replaced')
+        setStatus(inactive ? 'inactive' : 'disconnected')
+
+        reconnectTimer = window.setTimeout(() => connect(), reconnectDelay)
+        // Back off so idle tabs don't spend the whole session hammering the
+        // port; reset only on activation, so parked tabs slow down too
+        reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY_MS)
       }
 
       // Suppress the browser's console noise while the server isn't running;
@@ -280,12 +310,27 @@ export function useMcpBridge(bridge: McpBridge) {
       ws.onerror = () => {}
     }
 
+    // Explicitly claim the connection — the only path that can take it from
+    // another tab, triggered by the user clicking the MCP chip
+    takeOverRef.current = () => {
+      if (disposed || ws) return
+      window.clearTimeout(reconnectTimer)
+      reconnectDelay = RECONNECT_DELAY_MS
+      connect(true)
+    }
+
     connect()
 
     return () => {
       disposed = true
+      takeOverRef.current = () => {}
       window.clearTimeout(reconnectTimer)
       ws?.close()
     }
   }, [])
+
+  return {
+    status,
+    takeOver: useCallback(() => takeOverRef.current(), []),
+  }
 }

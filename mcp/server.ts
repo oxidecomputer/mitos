@@ -34,6 +34,13 @@ import { z } from 'zod'
 const DEFAULT_PORT = 6486
 const PORT = Number(process.env.MITOS_BRIDGE_PORT ?? DEFAULT_PORT)
 
+// Custom close codes, matched in app/hooks/use-mcp-bridge.tsx. The connection
+// only moves between tabs on an explicit user action: a connecting tab that
+// didn't ask to take over is parked (OCCUPIED), and only a ?takeover connect
+// bumps the current tab (REPLACED).
+const REPLACED_CLOSE_CODE = 4000
+const OCCUPIED_CLOSE_CODE = 4001
+
 // setCode/loadTemplate block in the tab until the compile pipeline settles
 // (up to ~6s), so this must comfortably exceed that.
 const REQUEST_TIMEOUT_MS = 10_000
@@ -56,6 +63,7 @@ interface Sink {
 
 interface SocketData {
   role: 'app' | 'relay'
+  takeover: boolean
 }
 
 // Host mode: the tab we drive, plus any relaying server processes.
@@ -175,8 +183,10 @@ function startHost(): boolean {
     Bun.serve<SocketData, Record<string, never>>({
       port: PORT,
       fetch(req, server) {
-        const role = new URL(req.url).searchParams.get('role') === 'relay' ? 'relay' : 'app'
-        if (server.upgrade(req, { data: { role } })) return undefined
+        const params = new URL(req.url).searchParams
+        const role = params.get('role') === 'relay' ? 'relay' : 'app'
+        const takeover = params.has('takeover')
+        if (server.upgrade(req, { data: { role, takeover } })) return undefined
         return new Response('Mitos MCP bridge — expected a WebSocket connection', {
           status: 400,
         })
@@ -188,11 +198,20 @@ function startHost(): boolean {
             console.error(`[mitos-mcp] relay connected (${relays.size} total)`)
             return
           }
-          // A single tab drives the canvas; the most recent connection wins
+          // A single tab drives the canvas, and the connection only moves on
+          // an explicit takeover (the MCP chip in the app) — a tab that just
+          // connected is parked, not promoted
+          if (appSocket && appSocket !== ws && !ws.data.takeover) {
+            ws.close(OCCUPIED_CLOSE_CODE, 'Another Mitos tab holds the connection')
+            return
+          }
           if (appSocket && appSocket !== ws) {
-            appSocket.close(1000, 'Replaced by a newer Mitos tab')
+            appSocket.close(REPLACED_CLOSE_CODE, 'Replaced by another Mitos tab')
           }
           appSocket = ws
+          // Explicit confirmation so the tab only shows "active" once it
+          // really holds the connection (a parked socket also opens briefly)
+          ws.send(JSON.stringify({ type: 'activated' }))
           console.error('[mitos-mcp] app connected')
         },
         close(ws) {

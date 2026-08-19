@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { AsciiPreview, type AnimationController } from '~/components/ascii-preview'
 import { AssetExport } from '~/components/asset-export'
 import { ExportOptions } from '~/components/export-options'
+import { McpIndicator } from '~/components/mcp-indicator'
 import { OutputOptions } from '~/components/output-options'
 import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
@@ -629,7 +630,7 @@ export function AsciiArtGenerator() {
 
   // Expose the canvas to MCP clients (Claude Code etc.) via the local
   // WebSocket bridge — dev-only, see app/hooks/use-mcp-bridge.tsx
-  useMcpBridge({
+  const { status: mcpStatus, takeOver: mcpTakeOver } = useMcpBridge({
     pendingCode,
     applyCode: (code) => {
       setPendingCode(code)
@@ -896,6 +897,13 @@ export function AsciiArtGenerator() {
                 disabled={!program}
                 exportSettings={settings.export}
               />
+              {/* MCP connection */}
+              {mcpStatus !== 'disabled' && (
+                <>
+                  <hr />
+                  <McpIndicator status={mcpStatus} takeOver={mcpTakeOver} />
+                </>
+              )}
             </div>
             <div className="flex grow items-end p-3 pb-3">
               <a
