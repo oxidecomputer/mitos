@@ -15,11 +15,13 @@ import { toast } from 'sonner'
 import { AsciiPreview, type AnimationController } from '~/components/ascii-preview'
 import { AssetExport } from '~/components/asset-export'
 import { ExportOptions } from '~/components/export-options'
+import { McpIndicator } from '~/components/mcp-indicator'
 import { OutputOptions } from '~/components/output-options'
 import { PreprocessingOptions } from '~/components/preprocessing-options'
 import { SourceSelector } from '~/components/source-selector'
 import { exampleImage } from '~/exampleImage'
 import { useEsbuild } from '~/hooks/use-esbuild'
+import { useMcpBridge } from '~/hooks/use-mcp-bridge'
 import type { Program } from '~/lib/animation'
 import { createProgramFromProcessor, generateImageCode } from '~/lib/ascii-program'
 import { clearStaleImageData, processCodeModule } from '~/lib/code-processor'
@@ -98,6 +100,7 @@ export function AsciiArtGenerator() {
   const [templateType, setTemplateType] = useState<TemplateType | ''>('')
   const [currentImageData, setCurrentImageData] = useState<AsciiImageData | null>(null)
   const [currentFrames, setCurrentFrames] = useState<AsciiImageData[] | null>(null)
+  const [codeError, setCodeError] = useState<string | null>(null)
 
   // Processing state
   const [isExporting, setIsExporting] = useState(false)
@@ -107,6 +110,9 @@ export function AsciiArtGenerator() {
 
   const prevSettings = useRef<AsciiSettings | null>(null)
   const isInitialMount = useRef(true)
+  // Bumped each time the settings-processing pipeline finishes (success or
+  // failure), so the MCP bridge can wait for a compile to settle
+  const processSeq = useRef(0)
 
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
     // Trigger the warning dialog when the user closes or navigates the tab
@@ -117,6 +123,9 @@ export function AsciiArtGenerator() {
   const loadTemplate = useCallback(
     (template: TemplateType) => {
       setTemplateType(template)
+      // Clear the settings cache so re-applying the current template still
+      // reprocesses instead of being skipped as unchanged
+      prevSettings.current = null
       setSettings(TEMPLATES[template] as AsciiSettings)
       setProjectName(TEMPLATES[template].meta.name)
 
@@ -244,7 +253,9 @@ export function AsciiArtGenerator() {
     }
 
     // Process the current settings
-    processCurrentSettings()
+    void processCurrentSettings().finally(() => {
+      processSeq.current += 1
+    })
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings])
@@ -449,7 +460,10 @@ export function AsciiArtGenerator() {
       })
 
       if (!result.success || !result.module) {
-        toast(result.error || 'Could not process your code. Check for syntax errors.')
+        const message =
+          result.error || 'Could not process your code. Check for syntax errors.'
+        setCodeError(message)
+        toast(message)
         return
       }
 
@@ -459,8 +473,10 @@ export function AsciiArtGenerator() {
         frameRate: currentSettings.animation.frameRate,
       })
 
+      setCodeError(null)
       setProgram(newProgram)
     } catch (error) {
+      setCodeError(error instanceof Error ? error.message : String(error))
       handleProcessingError('processing code', error)
     }
   }
@@ -611,6 +627,26 @@ export function AsciiArtGenerator() {
     },
     [],
   )
+
+  // Expose the canvas to MCP clients (Claude Code etc.) via the local
+  // WebSocket bridge — dev-only, see app/hooks/use-mcp-bridge.tsx
+  const { status: mcpStatus, takeOver: mcpTakeOver } = useMcpBridge({
+    pendingCode,
+    applyCode: (code) => {
+      setPendingCode(code)
+      setShowCodeSidebar(true)
+      // Clear the settings cache so identical code still recompiles —
+      // retrying after a transient failure must not be a no-op
+      prevSettings.current = null
+      updateSettings('source', { code })
+    },
+    settings,
+    updateSettings,
+    animationController,
+    codeError,
+    loadTemplate,
+    getProcessSeq: () => processSeq.current,
+  })
 
   const setAspectRatioFromImage = (
     imageUrl: string,
@@ -861,6 +897,13 @@ export function AsciiArtGenerator() {
                 disabled={!program}
                 exportSettings={settings.export}
               />
+              {/* MCP connection */}
+              {mcpStatus !== 'disabled' && (
+                <>
+                  <hr />
+                  <McpIndicator status={mcpStatus} takeOver={mcpTakeOver} />
+                </>
+              )}
             </div>
             <div className="flex grow items-end p-3 pb-3">
               <a

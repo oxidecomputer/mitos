@@ -12,6 +12,19 @@
 - **Dev**: `bun run dev`
 - **CI**: `bun run ci` (runs fmt:check, tsc, lint, test)
 
+## MCP Server
+
+The repo ships an MCP server (`mcp/server.ts`, registered via `.mcp.json`) that lets agents
+drive the running app: read/write the code editor, patch settings, load templates, and read
+rendered frames back as plain text. It requires a Mitos tab connected to the bridge — run
+`bun run dev` and open the app (the bridge connects automatically in dev builds, or add
+`?mcp` to the URL). Prefer `set_code` + `get_frame` over guessing: the returned ASCII text
+shows exactly what the canvas renders, and responses include the last compile error.
+
+When writing scripts, read `docs/scripting.md` (also served by the `get_docs` tool) for the
+script API, imports, and `//~` control syntax; fetch working examples with
+`get_template_code`.
+
 ## Code Style
 
 - **Formatting**: Prettier with 92 char width, no semicolons, single quotes, trailing commas
