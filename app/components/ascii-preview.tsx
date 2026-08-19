@@ -25,7 +25,7 @@ import { InputButton, InputNumber } from '~/lib/ui/src'
 import { TEMPLATES, type TemplateType } from '~/templates'
 
 import AsciiAnimation from './ascii-animation'
-import type { GridType } from './ascii-art-generator'
+import type { AsciiSettings, GridType } from './ascii-art-generator'
 import { calculateContentDimensions } from './dimension-utils'
 import { GridOverlay } from './grid-overlay'
 
@@ -35,14 +35,7 @@ interface AsciiPreviewProps {
   gridType: GridType
   showUnderlyingImage: boolean
   underlyingImageUrl: string | null
-  settings: {
-    animationLength: number
-    frameRate: number
-    textColor: string
-    backgroundColor: string
-    padding: number
-    lineHeight: number
-  }
+  settings: AsciiSettings['animation'] & AsciiSettings['export']
   animationController: AnimationController
   setAnimationController: (controller: AnimationController) => void
   isExporting: boolean
@@ -274,6 +267,7 @@ export function AsciiPreview({
   const paddingPixels = calculateContentDimensions(
     dimensions,
     settings.padding,
+    settings.lineHeight,
   ).paddingPixels
 
   return (
@@ -379,9 +373,7 @@ export function AsciiPreview({
                 grid={gridType}
                 cols={cols}
                 rows={rows}
-                padding={
-                  calculateContentDimensions(dimensions, settings.padding).paddingPixels
-                }
+                padding={paddingPixels}
               />
             )}
           </div>

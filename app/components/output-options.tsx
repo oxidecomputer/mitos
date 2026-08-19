@@ -39,6 +39,9 @@ interface OutputOptionsProps {
     }>,
   ) => void
   sourceImageDimensions?: { width: number; height: number }
+  // Cell height depends on the export line height, so the aspect-ratio lock
+  // needs it to keep locked ratios true to the rendered output
+  lineHeight: number
 }
 
 export const predefinedCharacterSets = {
@@ -85,6 +88,7 @@ export function OutputOptions({
   settings,
   updateSettings,
   sourceImageDimensions,
+  lineHeight,
 }: OutputOptionsProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
 
@@ -159,6 +163,7 @@ export function OutputOptions({
           }
         }}
         onAspectRatioChange={(value) => updateSettings({ aspectRatio: value })}
+        lineHeight={lineHeight}
       />
 
       <InputSelect<GridType>

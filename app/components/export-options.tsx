@@ -12,23 +12,13 @@ import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 import { InputText } from '~/lib/ui/src/components/InputText/InputText'
 import { DEFAULT_SETTINGS } from '~/templates'
 
+import type { AsciiSettings } from './ascii-art-generator'
 import { Container } from './container'
+import { LINE_HEIGHT_MAX, LINE_HEIGHT_MIN } from './dimension-utils'
 
 interface ExportOptionsProps {
-  settings: {
-    textColor: string
-    backgroundColor: string
-    padding: number
-    lineHeight: number
-  }
-  updateSettings: (
-    settings: Partial<{
-      textColor: string
-      backgroundColor: string
-      padding: number
-      lineHeight: number
-    }>,
-  ) => void
+  settings: AsciiSettings['export']
+  updateSettings: (settings: Partial<AsciiSettings['export']>) => void
 }
 
 export const predefinedColorSets = {
@@ -143,8 +133,8 @@ export function ExportOptions({ settings, updateSettings }: ExportOptionsProps) 
         Padding
       </InputNumber>
       <InputNumber
-        min={0.8}
-        max={1.6}
+        min={LINE_HEIGHT_MIN}
+        max={LINE_HEIGHT_MAX}
         step={0.01}
         value={settings.lineHeight}
         onChange={(val) => updateSettings({ lineHeight: val })}

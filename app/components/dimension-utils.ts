@@ -10,7 +10,15 @@
 export const CHAR_WIDTH = 7.45
 export const FONT_SIZE = 12
 export const DEFAULT_LINE_HEIGHT = 1.2
-export const CHAR_HEIGHT = FONT_SIZE * DEFAULT_LINE_HEIGHT
+export const LINE_HEIGHT_MIN = 0.8
+export const LINE_HEIGHT_MAX = 1.6
+
+// Project files and gists are arbitrary JSON, so the line height they carry
+// can be missing, out of range, or not a number at all
+export const clampLineHeight = (value: unknown): number =>
+  typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(LINE_HEIGHT_MAX, Math.max(LINE_HEIGHT_MIN, value))
+    : DEFAULT_LINE_HEIGHT
 
 /**
  * Calculate content dimensions including padding
@@ -18,7 +26,7 @@ export const CHAR_HEIGHT = FONT_SIZE * DEFAULT_LINE_HEIGHT
 export const calculateContentDimensions = (
   dimensions: { width: number; height: number },
   padding: number,
-  lineHeight: number = DEFAULT_LINE_HEIGHT,
+  lineHeight: number,
 ) => {
   const pixelWidth = dimensions.width * CHAR_WIDTH
   const pixelHeight = dimensions.height * FONT_SIZE * lineHeight
@@ -44,7 +52,7 @@ export const calculateAspectRatio = (totalWidth: number, totalHeight: number) =>
 export const calculateExportDimensions = (
   dimensions: { width: number; height: number },
   padding: number,
-  lineHeight: number = DEFAULT_LINE_HEIGHT,
+  lineHeight: number,
   baseWidth?: number,
   baseHeight?: number,
 ) => {

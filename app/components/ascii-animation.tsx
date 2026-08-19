@@ -10,6 +10,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { createAnimation, type Program } from '~/lib/animation'
 
 import { AnimationController } from './ascii-preview'
+import { FONT_SIZE } from './dimension-utils'
 
 export default function AsciiAnimation({
   program,
@@ -140,10 +141,13 @@ export default function AsciiAnimation({
         className="pointer-events-none relative z-10 m-0 select-none"
         style={{
           fontFamily: '"GT America Mono", monospace',
-          fontSize: '12px',
+          fontSize: `${FONT_SIZE}px`,
           // calcMetrics reads the computed line-height off this element, so
-          // the nudge flows through to the rendered cell height
-          lineHeight: String(lineHeight),
+          // the nudge flows through to the rendered cell height. Explicit px
+          // keeps it exactly equal to the FONT_SIZE * lineHeight the export
+          // dimension math uses, rather than whatever the browser resolves a
+          // unitless value to
+          lineHeight: `${FONT_SIZE * lineHeight}px`,
         }}
       />
       {children}

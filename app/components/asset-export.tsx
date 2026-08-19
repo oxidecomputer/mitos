@@ -19,6 +19,7 @@ import { glyphRunToPathData, loadAsciiFont, type Font } from '~/lib/svg-font'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 
+import type { AsciiSettings } from './ascii-art-generator'
 import { type AnimationController } from './ascii-preview'
 import { Container } from './container'
 import {
@@ -26,6 +27,7 @@ import {
   calculateContentDimensions,
   calculateExportDimensions,
   CHAR_WIDTH,
+  FONT_SIZE,
 } from './dimension-utils'
 
 export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4'
@@ -43,12 +45,7 @@ interface AssetExportProps {
   setIsExporting: (exporting: boolean) => void
   dimensions: { width: number; height: number }
   disabled: boolean
-  exportSettings: {
-    textColor: string
-    backgroundColor: string
-    padding: number
-    lineHeight: number
-  }
+  exportSettings: AsciiSettings['export']
 }
 
 export function AssetExport({
@@ -79,6 +76,18 @@ export function AssetExport({
   // When off, the export has a transparent background (where the format allows
   // it — MP4 can't, so it always keeps the background colour).
   const [includeBackground, setIncludeBackground] = useState(false)
+
+  // Scale the preview-space padding into export-space pixels for a given
+  // export height
+  const getExportPadding = (finalHeight: number) => {
+    const { pixelHeight, paddingPixels } = calculateContentDimensions(
+      dimensions,
+      exportSettings.padding,
+      exportSettings.lineHeight,
+    )
+    const previewTotalHeight = pixelHeight + paddingPixels * 2
+    return paddingPixels * (finalHeight / previewTotalHeight)
+  }
 
   // Set export height based on character dimensions including padding
   useEffect(() => {
@@ -172,15 +181,7 @@ export function AssetExport({
       return
     }
 
-    // Calculate padding for export using calculateContentDimensions
-    const { pixelHeight, paddingPixels } = calculateContentDimensions(
-      dimensions,
-      exportSettings.padding,
-      exportSettings.lineHeight,
-    )
-    const previewTotalHeight = pixelHeight + paddingPixels * 2
-    const scale = finalHeight / previewTotalHeight
-    const exportPadding = paddingPixels * scale
+    const exportPadding = getExportPadding(finalHeight)
 
     renderBufferToCanvas(
       exportCanvas,
@@ -231,7 +232,7 @@ export function AssetExport({
 
       const padding = exportSettings.padding * CHAR_WIDTH
 
-      const fontSize = 12
+      const fontSize = FONT_SIZE
       const cellHeight = fontSize * exportSettings.lineHeight
       const svgHeight = height * cellHeight
       const paddedSvgHeight = svgHeight + padding * 2
@@ -516,15 +517,7 @@ export function AssetExport({
         return
       }
 
-      // Calculate padding for export using calculateContentDimensions
-      const { pixelHeight, paddingPixels } = calculateContentDimensions(
-        dimensions,
-        exportSettings.padding,
-        exportSettings.lineHeight,
-      )
-      const previewTotalHeight = pixelHeight + paddingPixels * 2
-      const scale = finalHeight / previewTotalHeight
-      const exportPadding = paddingPixels * scale
+      const exportPadding = getExportPadding(finalHeight)
 
       // Render frame 0 before starting (start() captures the canvas as frame 0)
       animationController.renderFrame(0)
@@ -619,15 +612,7 @@ export function AssetExport({
       return
     }
 
-    // Calculate padding for export using calculateContentDimensions
-    const { pixelHeight, paddingPixels } = calculateContentDimensions(
-      dimensions,
-      exportSettings.padding,
-      exportSettings.lineHeight,
-    )
-    const previewTotalHeight = pixelHeight + paddingPixels * 2
-    const scale = finalHeight / previewTotalHeight
-    const exportPadding = paddingPixels * scale
+    const exportPadding = getExportPadding(finalHeight)
 
     for (let i = 0; i < totalFrames; i++) {
       animationController.renderFrame(i)
