@@ -15,6 +15,12 @@
  * requests to the tab: read/write the code editor, patch settings, and read
  * back rendered ASCII frames as plain text.
  *
+ * Each MCP client spawns its own copy of this file, but only one process can
+ * own the bridge port. The first one to bind becomes the host and talks to the
+ * tab directly; later ones connect back to the host as relays (?role=relay)
+ * and have their requests forwarded, so a second Claude Code session does not
+ * die on EADDRINUSE. If the host goes away, a relay takes over the port.
+ *
  * Register with Claude Code via the repo's .mcp.json, then run `bun run dev`
  * and open the app. Logs go to stderr (stdout carries the MCP protocol).
  */
@@ -26,6 +32,11 @@ import { z } from 'zod'
 const PORT = Number(process.env.MITOS_BRIDGE_PORT ?? 6486)
 const REQUEST_TIMEOUT_MS = 10_000
 
+// How long a relay waits before trying to take over the port, and how long a
+// tool call waits for the relay socket to come up before giving up.
+const RELAY_RETRY_MS = 500
+const RELAY_READY_TIMEOUT_MS = 2_000
+
 // How long to wait after applying code before rendering a frame back to the
 // client. Covers esbuild-wasm compile plus a couple of animation frames.
 const APPLY_SETTLE_MS = 700
@@ -36,18 +47,58 @@ interface PendingRequest {
   timer: ReturnType<typeof setTimeout>
 }
 
-let socket: ServerWebSocket<unknown> | null = null
+/** Anything we can write a bridge message to: the tab, or the host we relay through. */
+interface Sink {
+  send: (data: string) => void
+}
+
+interface SocketData {
+  role: 'app' | 'relay'
+}
+
+// Host mode: the tab we drive, plus any relaying server processes.
+let appSocket: ServerWebSocket<SocketData> | null = null
+const relays = new Set<ServerWebSocket<SocketData>>()
+
+// Relay mode: our client connection to whichever process owns the port.
+let upstream: WebSocket | null = null
+
+let mode: 'host' | 'relay' = 'host'
+
 const pending = new Map<string, PendingRequest>()
 let nextId = 1
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const NOT_CONNECTED_MESSAGE =
   `No Mitos tab is connected to the bridge (ws://localhost:${PORT}). ` +
   'Start the dev server with `bun run dev` and open the app in a browser ' +
   '(the bridge connects automatically in dev, or add ?mcp to the URL).'
 
-function request<T>(type: string, payload?: unknown): Promise<T> {
-  if (!socket) {
-    return Promise.reject(new Error(NOT_CONNECTED_MESSAGE))
+const NO_UPSTREAM_MESSAGE =
+  `Another process owns the Mitos bridge (ws://localhost:${PORT}) but this ` +
+  'server could not reach it. It will keep retrying — try again in a moment.'
+
+/**
+ * The socket that carries our requests: the tab when we are the host, the host
+ * when we are a relay. Relay connections come up asynchronously, so wait
+ * briefly for one rather than failing a tool call that arrives during startup.
+ */
+async function bridge(): Promise<Sink | null> {
+  if (mode === 'host') return appSocket
+
+  const attempts = Math.ceil(RELAY_READY_TIMEOUT_MS / 100)
+  for (let i = 0; i < attempts; i++) {
+    if (upstream?.readyState === WebSocket.OPEN) return upstream
+    await sleep(100)
+  }
+  return upstream?.readyState === WebSocket.OPEN ? upstream : null
+}
+
+async function request<T>(type: string, payload?: unknown): Promise<T> {
+  const target = await bridge()
+  if (!target) {
+    throw new Error(mode === 'host' ? NOT_CONNECTED_MESSAGE : NO_UPSTREAM_MESSAGE)
   }
 
   const id = String(nextId++)
@@ -60,7 +111,7 @@ function request<T>(type: string, payload?: unknown): Promise<T> {
     }, REQUEST_TIMEOUT_MS)
 
     pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer })
-    socket?.send(message)
+    target.send(message)
   })
 }
 
@@ -78,46 +129,133 @@ function settlePending(id: string, ok: boolean, result: unknown, error?: string)
   }
 }
 
-Bun.serve({
-  port: PORT,
-  fetch(req, server) {
-    if (server.upgrade(req)) return undefined
-    return new Response('Mitos MCP bridge — expected a WebSocket connection', {
-      status: 400,
-    })
-  },
-  websocket: {
-    open(ws) {
-      // A single tab drives the canvas; the most recent connection wins
-      if (socket && socket !== ws) {
-        socket.close(1000, 'Replaced by a newer Mitos tab')
-      }
-      socket = ws
-      console.error('[mitos-mcp] app connected')
-    },
-    close(ws) {
-      if (socket === ws) {
-        socket = null
-        console.error('[mitos-mcp] app disconnected')
-      }
-      for (const [id] of pending) {
-        settlePending(id, false, null, 'The Mitos tab disconnected')
-      }
-    },
-    message(_ws, raw) {
-      try {
-        const msg = JSON.parse(String(raw))
-        if (msg && typeof msg.id === 'string') {
-          settlePending(msg.id, msg.ok === true, msg.result, msg.error)
-        }
-      } catch (error) {
-        console.error('[mitos-mcp] could not parse message from app:', error)
-      }
-    },
-  },
-})
+function rejectAllPending(reason: string) {
+  for (const [id] of pending) {
+    settlePending(id, false, null, reason)
+  }
+}
 
-console.error(`[mitos-mcp] bridge listening on ws://localhost:${PORT}`)
+/** Host side: run a relay's request against the tab and send the answer back. */
+async function forwardFromRelay(relay: ServerWebSocket<SocketData>, raw: string) {
+  let id: string | undefined
+  try {
+    const msg = JSON.parse(raw)
+    if (typeof msg?.id !== 'string' || typeof msg?.type !== 'string') return
+    id = msg.id
+    const result = await request(msg.type, msg.payload)
+    relay.send(JSON.stringify({ id, ok: true, result }))
+  } catch (error) {
+    if (id === undefined) {
+      console.error('[mitos-mcp] could not parse message from relay:', error)
+      return
+    }
+    relay.send(JSON.stringify({ id, ok: false, error: (error as Error).message }))
+  }
+}
+
+/** Try to own the bridge port. Returns false if another process already does. */
+function startHost(): boolean {
+  try {
+    Bun.serve<SocketData, Record<string, never>>({
+      port: PORT,
+      fetch(req, server) {
+        const role = new URL(req.url).searchParams.get('role') === 'relay' ? 'relay' : 'app'
+        if (server.upgrade(req, { data: { role } })) return undefined
+        return new Response('Mitos MCP bridge — expected a WebSocket connection', {
+          status: 400,
+        })
+      },
+      websocket: {
+        open(ws) {
+          if (ws.data.role === 'relay') {
+            relays.add(ws)
+            console.error(`[mitos-mcp] relay connected (${relays.size} total)`)
+            return
+          }
+          // A single tab drives the canvas; the most recent connection wins
+          if (appSocket && appSocket !== ws) {
+            appSocket.close(1000, 'Replaced by a newer Mitos tab')
+          }
+          appSocket = ws
+          console.error('[mitos-mcp] app connected')
+        },
+        close(ws) {
+          if (ws.data.role === 'relay') {
+            relays.delete(ws)
+            console.error(`[mitos-mcp] relay disconnected (${relays.size} left)`)
+            return
+          }
+          if (appSocket === ws) {
+            appSocket = null
+            console.error('[mitos-mcp] app disconnected')
+          }
+          rejectAllPending('The Mitos tab disconnected')
+        },
+        message(ws, raw) {
+          if (ws.data.role === 'relay') {
+            void forwardFromRelay(ws, String(raw))
+            return
+          }
+          try {
+            const msg = JSON.parse(String(raw))
+            if (msg && typeof msg.id === 'string') {
+              settlePending(msg.id, msg.ok === true, msg.result, msg.error)
+            }
+          } catch (error) {
+            console.error('[mitos-mcp] could not parse message from app:', error)
+          }
+        },
+      },
+    })
+    mode = 'host'
+    console.error(`[mitos-mcp] bridge listening on ws://localhost:${PORT}`)
+    return true
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'EADDRINUSE') throw error
+    return false
+  }
+}
+
+/**
+ * Connect to the process that owns the port and forward our requests through
+ * it. On disconnect, try to become the host ourselves before reconnecting.
+ */
+function startRelay() {
+  mode = 'relay'
+  const ws = new WebSocket(`ws://localhost:${PORT}?role=relay`)
+  upstream = ws
+
+  ws.onopen = () => console.error(`[mitos-mcp] relaying via ws://localhost:${PORT}`)
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(String(event.data))
+      if (msg && typeof msg.id === 'string') {
+        settlePending(msg.id, msg.ok === true, msg.result, msg.error)
+      }
+    } catch (error) {
+      console.error('[mitos-mcp] could not parse message from host:', error)
+    }
+  }
+
+  // A failed connect fires error then close; recovery happens in onclose only.
+  ws.onerror = () => {}
+
+  ws.onclose = () => {
+    if (upstream !== ws) return
+    upstream = null
+    rejectAllPending('The Mitos bridge host went away')
+    setTimeout(() => {
+      if (upstream) return
+      if (!startHost()) startRelay()
+    }, RELAY_RETRY_MS)
+  }
+}
+
+if (!startHost()) {
+  console.error(`[mitos-mcp] port ${PORT} is taken — connecting as a relay`)
+  startRelay()
+}
 
 // -- Shared response shapes -----------------------------------------------------
 
@@ -138,8 +276,6 @@ function formatFrame(frame: FrameResult): string {
   const error = frame.error ? `\n\nLast code error: ${frame.error}` : ''
   return `${header}\n\n\`\`\`\n${frame.text}\n\`\`\`${error}`
 }
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // -- MCP server -------------------------------------------------------------------
 
@@ -244,7 +380,7 @@ server.tool(
 
 server.tool(
   'patch_settings',
-  'Deep-merge a partial settings object into the current Mitos settings. Top-level keys: output (columns, rows, characterSet, grid, colorMapping), animation (animationLength, frameRate), preprocessing (brightness, whitePoint, blackPoint, invert, dithering), export (textColor, backgroundColor, padding).',
+  'Deep-merge a partial settings object into the current Mitos settings. Top-level keys: output (columns, rows, characterSet, grid, colorMapping), animation (animationLength, frameRate), preprocessing (brightness, whitePoint, blackPoint, invert, dithering), export (textColor, backgroundColor, padding, lineHeight).',
   {
     settings: z
       .record(z.string(), z.record(z.string(), z.unknown()))
