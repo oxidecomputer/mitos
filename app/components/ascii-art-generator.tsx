@@ -73,6 +73,7 @@ export interface AsciiSettings {
     textColor: string
     backgroundColor: string
     padding: number
+    lineHeight: number
   }
   animation: {
     animationLength: number
@@ -759,7 +760,13 @@ export function AsciiArtGenerator() {
       setProjectName(projectData.name || 'Imported Project')
 
       if (projectData.settings) {
-        setSettings(projectData.settings as AsciiSettings)
+        const loaded = projectData.settings as AsciiSettings
+        // Older project files predate some export settings (e.g. lineHeight),
+        // so fill any gaps from the defaults
+        setSettings({
+          ...loaded,
+          export: { ...DEFAULT_SETTINGS.export, ...loaded.export },
+        })
 
         // If the imported project has code, show the code sidebar
         if (projectData.settings.source.code) {

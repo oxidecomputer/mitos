@@ -21,6 +21,7 @@ export default function AsciiAnimation({
   backgroundColor,
   canvasBackgroundColor = backgroundColor,
   padding,
+  lineHeight,
   children,
 }: {
   program: Program
@@ -35,6 +36,7 @@ export default function AsciiAnimation({
   // the canvas but in front of the container background) shows through.
   canvasBackgroundColor?: string
   padding: number
+  lineHeight: number
   children: ReactNode
 }) {
   const asciiEl = useRef<HTMLCanvasElement>(null)
@@ -119,6 +121,7 @@ export default function AsciiAnimation({
     textColor,
     canvasBackgroundColor,
     padding,
+    lineHeight,
   ])
 
   return (
@@ -138,7 +141,9 @@ export default function AsciiAnimation({
         style={{
           fontFamily: '"GT America Mono", monospace',
           fontSize: '12px',
-          lineHeight: '1.2',
+          // calcMetrics reads the computed line-height off this element, so
+          // the nudge flows through to the rendered cell height
+          lineHeight: String(lineHeight),
         }}
       />
       {children}

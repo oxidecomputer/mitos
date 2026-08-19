@@ -41,6 +41,7 @@ interface AsciiPreviewProps {
     textColor: string
     backgroundColor: string
     padding: number
+    lineHeight: number
   }
   animationController: AnimationController
   setAnimationController: (controller: AnimationController) => void
@@ -203,6 +204,7 @@ export function AsciiPreview({
       const { totalWidth, totalHeight } = calculateContentDimensions(
         dimensions,
         settings.padding,
+        settings.lineHeight,
       )
 
       const scaleX = containerSize.width / totalWidth
@@ -213,7 +215,7 @@ export function AsciiPreview({
       setZoomLevel(newZoom)
       setPosition({ x: 0, y: 0 })
     }
-  }, [autoFit, dimensions, program, containerSize, settings.padding])
+  }, [autoFit, dimensions, program, containerSize, settings.padding, settings.lineHeight])
 
   useEffect(() => {
     if (
@@ -355,6 +357,7 @@ export function AsciiPreview({
                   : settings.backgroundColor
               }
               padding={paddingPixels}
+              lineHeight={settings.lineHeight}
             >
               {/* Show underlying image if enabled */}
               {showUnderlyingImage && underlyingImageUrl && !isExporting && program && (

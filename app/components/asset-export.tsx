@@ -47,6 +47,7 @@ interface AssetExportProps {
     textColor: string
     backgroundColor: string
     padding: number
+    lineHeight: number
   }
 }
 
@@ -84,13 +85,14 @@ export function AssetExport({
     const { totalWidth, totalHeight } = calculateContentDimensions(
       dimensions,
       exportSettings.padding,
+      exportSettings.lineHeight,
     )
     const aspectRatio = calculateAspectRatio(totalWidth, totalHeight)
     setExportDimensions((prev) => ({
       ...prev,
       height: Math.round(prev.width * aspectRatio),
     }))
-  }, [dimensions, exportSettings.padding])
+  }, [dimensions, exportSettings.padding, exportSettings.lineHeight])
 
   useEffect(() => {
     const isAnimated = animationLength > 1
@@ -174,6 +176,7 @@ export function AssetExport({
     const { pixelHeight, paddingPixels } = calculateContentDimensions(
       dimensions,
       exportSettings.padding,
+      exportSettings.lineHeight,
     )
     const previewTotalHeight = pixelHeight + paddingPixels * 2
     const scale = finalHeight / previewTotalHeight
@@ -229,7 +232,7 @@ export function AssetExport({
       const padding = exportSettings.padding * CHAR_WIDTH
 
       const fontSize = 12
-      const cellHeight = fontSize * 1.2
+      const cellHeight = fontSize * exportSettings.lineHeight
       const svgHeight = height * cellHeight
       const paddedSvgHeight = svgHeight + padding * 2
 
@@ -517,6 +520,7 @@ export function AssetExport({
       const { pixelHeight, paddingPixels } = calculateContentDimensions(
         dimensions,
         exportSettings.padding,
+        exportSettings.lineHeight,
       )
       const previewTotalHeight = pixelHeight + paddingPixels * 2
       const scale = finalHeight / previewTotalHeight
@@ -619,6 +623,7 @@ export function AssetExport({
     const { pixelHeight, paddingPixels } = calculateContentDimensions(
       dimensions,
       exportSettings.padding,
+      exportSettings.lineHeight,
     )
     const previewTotalHeight = pixelHeight + paddingPixels * 2
     const scale = finalHeight / previewTotalHeight
@@ -714,6 +719,7 @@ export function AssetExport({
                 const newDimensions = calculateExportDimensions(
                   dimensions,
                   exportSettings.padding,
+                  exportSettings.lineHeight,
                   newWidth,
                 )
                 setExportDimensions(newDimensions)
@@ -732,6 +738,7 @@ export function AssetExport({
                 const newDimensions = calculateExportDimensions(
                   dimensions,
                   exportSettings.padding,
+                  exportSettings.lineHeight,
                   undefined,
                   newHeight,
                 )

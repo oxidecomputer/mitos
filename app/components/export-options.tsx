@@ -19,12 +19,14 @@ interface ExportOptionsProps {
     textColor: string
     backgroundColor: string
     padding: number
+    lineHeight: number
   }
   updateSettings: (
     settings: Partial<{
       textColor: string
       backgroundColor: string
       padding: number
+      lineHeight: number
     }>,
   ) => void
 }
@@ -139,6 +141,15 @@ export function ExportOptions({ settings, updateSettings }: ExportOptionsProps) 
         onChange={(val) => updateSettings({ padding: val })}
       >
         Padding
+      </InputNumber>
+      <InputNumber
+        min={0.8}
+        max={1.6}
+        step={0.01}
+        value={settings.lineHeight}
+        onChange={(val) => updateSettings({ lineHeight: val })}
+      >
+        Line Height
       </InputNumber>
     </Container>
   )
