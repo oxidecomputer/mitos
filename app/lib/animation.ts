@@ -164,6 +164,7 @@ export function createAnimation(
   let interval = 0
   let timeOffset = 0
   let pointer: Pointer
+  let removePointerListeners = () => {}
   const renderer = createRenderer()
   const fps: FPSType = new FPS()
   let EMPTY_CELL: string
@@ -187,22 +188,32 @@ export function createAnimation(
 
     if (!element) return
 
-    element.addEventListener('pointermove', (e) => {
+    const handlePointerMove = (e: PointerEvent) => {
       const rect = element.getBoundingClientRect()
       pointer.x = e.clientX - rect.left
       pointer.y = e.clientY - rect.top
       eventQueue.push('pointerMove')
-    })
+    }
 
-    element.addEventListener('pointerdown', () => {
+    const handlePointerDown = () => {
       pointer.pressed = true
       eventQueue.push('pointerDown')
-    })
+    }
 
-    element.addEventListener('pointerup', () => {
+    const handlePointerUp = () => {
       pointer.pressed = false
       eventQueue.push('pointerUp')
-    })
+    }
+
+    element.addEventListener('pointermove', handlePointerMove)
+    element.addEventListener('pointerdown', handlePointerDown)
+    element.addEventListener('pointerup', handlePointerUp)
+
+    removePointerListeners = () => {
+      element.removeEventListener('pointermove', handlePointerMove)
+      element.removeEventListener('pointerdown', handlePointerDown)
+      element.removeEventListener('pointerup', handlePointerUp)
+    }
   }
 
   function prepareFonts() {
@@ -424,13 +435,7 @@ export function createAnimation(
   function cleanup() {
     state.dead = true
 
-    // 2. Remove event listeners from the element
-    // if (settings.element) {
-    //   settings.element.removeEventListener('pointermove', handlePointerMove);
-    //   settings.element.removeEventListener('pointerdown', handlePointerDown);
-    //   settings.element.removeEventListener('pointerup', handlePointerUp);
-    // }
-    //
+    removePointerListeners()
 
     buffer = []
 

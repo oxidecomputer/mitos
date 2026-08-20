@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { InputNumber, InputSwitch } from '~/lib/ui/src'
 
-import { CHAR_HEIGHT, CHAR_WIDTH } from './dimension-utils'
+import { CHAR_WIDTH, FONT_SIZE } from './dimension-utils'
 
 export interface AspectRatioInputNumberProps {
   width: number
@@ -20,6 +20,7 @@ export interface AspectRatioInputNumberProps {
   onAspectRatioFromImgChange?: (value: boolean) => void
   aspectRatio?: number
   onAspectRatioChange: (value: number | undefined) => void
+  lineHeight: number
   minWidth?: number
   maxWidth?: number
   minHeight?: number
@@ -28,11 +29,12 @@ export interface AspectRatioInputNumberProps {
   className?: string
 }
 
-const calculateAspectRatio = (w: number, h: number) => (w * CHAR_WIDTH) / (h * CHAR_HEIGHT)
-const getHeightFromWidth = (w: number, ratio: number) =>
-  Math.round((w * CHAR_WIDTH) / (ratio * CHAR_HEIGHT))
-const getWidthFromHeight = (h: number, ratio: number) =>
-  Math.round((ratio * h * CHAR_HEIGHT) / CHAR_WIDTH)
+const calculateAspectRatio = (w: number, h: number, lineHeight: number) =>
+  (w * CHAR_WIDTH) / (h * FONT_SIZE * lineHeight)
+const getHeightFromWidth = (w: number, ratio: number, lineHeight: number) =>
+  Math.round((w * CHAR_WIDTH) / (ratio * FONT_SIZE * lineHeight))
+const getWidthFromHeight = (h: number, ratio: number, lineHeight: number) =>
+  Math.round((ratio * h * FONT_SIZE * lineHeight) / CHAR_WIDTH)
 
 const clamp = (val: number, min: number, max: number) => Math.min(max, Math.max(min, val))
 
@@ -45,6 +47,7 @@ export const AspectRatioInputNumber = ({
   onAspectRatioFromImgChange,
   aspectRatio,
   onAspectRatioChange,
+  lineHeight,
   disabled = false,
 }: AspectRatioInputNumberProps) => {
   const [isLocked, setIsLocked] = useState(aspectRatio !== undefined)
@@ -61,12 +64,28 @@ export const AspectRatioInputNumber = ({
     }
 
     return {
-      minWidth: clamp(getWidthFromHeight(minHeight, aspectRatio), minWidth, maxWidth),
-      maxWidth: clamp(getWidthFromHeight(maxHeight, aspectRatio), minWidth, maxWidth),
-      minHeight: clamp(getHeightFromWidth(minWidth, aspectRatio), minHeight, maxHeight),
-      maxHeight: clamp(getHeightFromWidth(maxWidth, aspectRatio), minHeight, maxHeight),
+      minWidth: clamp(
+        getWidthFromHeight(minHeight, aspectRatio, lineHeight),
+        minWidth,
+        maxWidth,
+      ),
+      maxWidth: clamp(
+        getWidthFromHeight(maxHeight, aspectRatio, lineHeight),
+        minWidth,
+        maxWidth,
+      ),
+      minHeight: clamp(
+        getHeightFromWidth(minWidth, aspectRatio, lineHeight),
+        minHeight,
+        maxHeight,
+      ),
+      maxHeight: clamp(
+        getHeightFromWidth(maxWidth, aspectRatio, lineHeight),
+        minHeight,
+        maxHeight,
+      ),
     }
-  }, [aspectRatio, isLocked, minWidth, maxWidth, minHeight, maxHeight])
+  }, [aspectRatio, isLocked, lineHeight, minWidth, maxWidth, minHeight, maxHeight])
 
   // When width changes and ratio is locked, update height
   const handleWidthChange = useCallback(
@@ -78,14 +97,14 @@ export const AspectRatioInputNumber = ({
 
       if (isLocked && aspectRatio) {
         const newHeight = clamp(
-          getHeightFromWidth(clampedWidth, aspectRatio),
+          getHeightFromWidth(clampedWidth, aspectRatio, lineHeight),
           ranges.minHeight,
           ranges.maxHeight,
         )
         onHeightChange(newHeight)
       }
     },
-    [isLocked, aspectRatio, dimensionRanges, onWidthChange, onHeightChange],
+    [isLocked, aspectRatio, lineHeight, dimensionRanges, onWidthChange, onHeightChange],
   )
 
   // When height changes and ratio is locked, update width
@@ -98,14 +117,14 @@ export const AspectRatioInputNumber = ({
 
       if (isLocked && aspectRatio) {
         const newWidth = clamp(
-          getWidthFromHeight(clampedHeight, aspectRatio),
+          getWidthFromHeight(clampedHeight, aspectRatio, lineHeight),
           ranges.minWidth,
           ranges.maxWidth,
         )
         onWidthChange(newWidth)
       }
     },
-    [isLocked, aspectRatio, dimensionRanges, onHeightChange, onWidthChange],
+    [isLocked, aspectRatio, lineHeight, dimensionRanges, onHeightChange, onWidthChange],
   )
 
   // When ratio changes directly, adjust dimensions while keeping width stable
@@ -114,10 +133,14 @@ export const AspectRatioInputNumber = ({
       onAspectRatioChange(newRatio)
 
       // When ratio changes, adjust height based on current width
-      const newHeight = clamp(getHeightFromWidth(width, newRatio), minHeight, maxHeight)
+      const newHeight = clamp(
+        getHeightFromWidth(width, newRatio, lineHeight),
+        minHeight,
+        maxHeight,
+      )
       onHeightChange(newHeight)
     },
-    [width, onAspectRatioChange, onHeightChange, minHeight, maxHeight],
+    [width, lineHeight, onAspectRatioChange, onHeightChange, minHeight, maxHeight],
   )
 
   const handleLockToggle = useCallback(
@@ -125,28 +148,28 @@ export const AspectRatioInputNumber = ({
       setIsLocked(checked)
       if (checked) {
         // When locking, calculate and set aspect ratio based on current dimensions
-        onAspectRatioChange(calculateAspectRatio(width, height))
+        onAspectRatioChange(calculateAspectRatio(width, height, lineHeight))
       } else {
         // When unlocking, clear the aspect ratio
         onAspectRatioChange(undefined)
       }
     },
-    [width, height, onAspectRatioChange],
+    [width, height, lineHeight, onAspectRatioChange],
   )
 
   useEffect(() => {
     if (aspectRatioFromImg && !aspectRatio) {
       // Set aspect ratio from image dimensions when enabled
-      onAspectRatioChange(calculateAspectRatio(width, height))
+      onAspectRatioChange(calculateAspectRatio(width, height, lineHeight))
     }
-  }, [aspectRatioFromImg, aspectRatio, width, height, onAspectRatioChange])
+  }, [aspectRatioFromImg, aspectRatio, width, height, lineHeight, onAspectRatioChange])
 
   // Syncing dimensions when aspect ratio changes externally
   useEffect(() => {
     if (isLocked && aspectRatio) {
       const ranges = dimensionRanges()
       const newHeight = clamp(
-        getHeightFromWidth(width, aspectRatio),
+        getHeightFromWidth(width, aspectRatio, lineHeight),
         ranges.minHeight,
         ranges.maxHeight,
       )
@@ -156,7 +179,7 @@ export const AspectRatioInputNumber = ({
         onHeightChange(newHeight)
       }
     }
-  }, [aspectRatio, isLocked, width, height, dimensionRanges, onHeightChange])
+  }, [aspectRatio, isLocked, width, height, lineHeight, dimensionRanges, onHeightChange])
 
   const ranges = dimensionRanges()
 

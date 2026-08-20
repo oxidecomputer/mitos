@@ -75,6 +75,7 @@ export interface AsciiSettings {
     textColor: string
     backgroundColor: string
     padding: number
+    lineHeight: number
   }
   animation: {
     animationLength: number
@@ -869,6 +870,7 @@ export function AsciiArtGenerator() {
                 settings={settings.output}
                 updateSettings={(changes) => updateSettings('output', changes)}
                 sourceImageDimensions={settings.source.imageDimensions}
+                lineHeight={settings.export.lineHeight}
               />
               {/* Animation Options (always visible) */}
               <hr />
