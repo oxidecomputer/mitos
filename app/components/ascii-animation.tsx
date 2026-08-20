@@ -10,6 +10,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { createAnimation, type Program } from '~/lib/animation'
 
 import { AnimationController } from './ascii-preview'
+import { FONT_SIZE } from './dimension-utils'
 
 export default function AsciiAnimation({
   program,
@@ -21,6 +22,7 @@ export default function AsciiAnimation({
   backgroundColor,
   canvasBackgroundColor = backgroundColor,
   padding,
+  lineHeight,
   children,
 }: {
   program: Program
@@ -35,6 +37,7 @@ export default function AsciiAnimation({
   // the canvas but in front of the container background) shows through.
   canvasBackgroundColor?: string
   padding: number
+  lineHeight: number
   children: ReactNode
 }) {
   const asciiEl = useRef<HTMLCanvasElement>(null)
@@ -119,6 +122,7 @@ export default function AsciiAnimation({
     textColor,
     canvasBackgroundColor,
     padding,
+    lineHeight,
   ])
 
   return (
@@ -137,8 +141,8 @@ export default function AsciiAnimation({
         className="pointer-events-none relative z-10 m-0 select-none"
         style={{
           fontFamily: '"GT America Mono", monospace',
-          fontSize: '12px',
-          lineHeight: '1.2',
+          fontSize: `${FONT_SIZE}px`,
+          lineHeight: `${FONT_SIZE * lineHeight}px`,
         }}
       />
       {children}

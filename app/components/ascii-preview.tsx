@@ -25,7 +25,7 @@ import { InputButton, InputNumber } from '~/lib/ui/src'
 import { TEMPLATES, type TemplateType } from '~/templates'
 
 import AsciiAnimation from './ascii-animation'
-import type { GridType } from './ascii-art-generator'
+import type { AsciiSettings, GridType } from './ascii-art-generator'
 import { calculateContentDimensions } from './dimension-utils'
 import { GridOverlay } from './grid-overlay'
 
@@ -35,13 +35,7 @@ interface AsciiPreviewProps {
   gridType: GridType
   showUnderlyingImage: boolean
   underlyingImageUrl: string | null
-  settings: {
-    animationLength: number
-    frameRate: number
-    textColor: string
-    backgroundColor: string
-    padding: number
-  }
+  settings: AsciiSettings['animation'] & AsciiSettings['export']
   animationController: AnimationController
   setAnimationController: (controller: AnimationController) => void
   isExporting: boolean
@@ -203,6 +197,7 @@ export function AsciiPreview({
       const { totalWidth, totalHeight } = calculateContentDimensions(
         dimensions,
         settings.padding,
+        settings.lineHeight,
       )
 
       const scaleX = containerSize.width / totalWidth
@@ -213,7 +208,7 @@ export function AsciiPreview({
       setZoomLevel(newZoom)
       setPosition({ x: 0, y: 0 })
     }
-  }, [autoFit, dimensions, program, containerSize, settings.padding])
+  }, [autoFit, dimensions, program, containerSize, settings.padding, settings.lineHeight])
 
   useEffect(() => {
     if (
@@ -272,6 +267,7 @@ export function AsciiPreview({
   const paddingPixels = calculateContentDimensions(
     dimensions,
     settings.padding,
+    settings.lineHeight,
   ).paddingPixels
 
   return (
@@ -355,6 +351,7 @@ export function AsciiPreview({
                   : settings.backgroundColor
               }
               padding={paddingPixels}
+              lineHeight={settings.lineHeight}
             >
               {/* Show underlying image if enabled */}
               {showUnderlyingImage && underlyingImageUrl && !isExporting && program && (
@@ -376,9 +373,7 @@ export function AsciiPreview({
                 grid={gridType}
                 cols={cols}
                 rows={rows}
-                padding={
-                  calculateContentDimensions(dimensions, settings.padding).paddingPixels
-                }
+                padding={paddingPixels}
               />
             )}
           </div>

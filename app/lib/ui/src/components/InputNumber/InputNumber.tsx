@@ -98,8 +98,10 @@ export const InputNumber = ({
 
   const clampValue = useCallback(
     (val: number) => {
-      // Round to step precision
-      const rounded = Math.round(val / step) * step
+      // Round to step precision, snapping away float noise from the multiply
+      // (e.g. 82 * 0.01 -> 0.8200000000000001)
+      const decimals = (String(step).split('.')[1] || '').length
+      const rounded = Number((Math.round(val / step) * step).toFixed(decimals))
 
       // Apply min/max constraints
       return Math.min(max, Math.max(min, rounded))

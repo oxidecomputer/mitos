@@ -8,7 +8,9 @@
 
 // Asssuming output is using "GT America Mono"
 export const CHAR_WIDTH = 7.45
-export const CHAR_HEIGHT = 14.4
+export const FONT_SIZE = 12
+export const LINE_HEIGHT_MIN = 0.8
+export const LINE_HEIGHT_MAX = 1.6
 
 /**
  * Calculate content dimensions including padding
@@ -16,9 +18,10 @@ export const CHAR_HEIGHT = 14.4
 export const calculateContentDimensions = (
   dimensions: { width: number; height: number },
   padding: number,
+  lineHeight: number,
 ) => {
   const pixelWidth = dimensions.width * CHAR_WIDTH
-  const pixelHeight = dimensions.height * CHAR_HEIGHT
+  const pixelHeight = dimensions.height * FONT_SIZE * lineHeight
   const paddingPixels = padding * CHAR_WIDTH
   return {
     pixelWidth,
@@ -41,10 +44,15 @@ export const calculateAspectRatio = (totalWidth: number, totalHeight: number) =>
 export const calculateExportDimensions = (
   dimensions: { width: number; height: number },
   padding: number,
+  lineHeight: number,
   baseWidth?: number,
   baseHeight?: number,
 ) => {
-  const { totalWidth, totalHeight } = calculateContentDimensions(dimensions, padding)
+  const { totalWidth, totalHeight } = calculateContentDimensions(
+    dimensions,
+    padding,
+    lineHeight,
+  )
   const aspectRatio = calculateAspectRatio(totalWidth, totalHeight)
 
   if (baseWidth) {
