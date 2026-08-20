@@ -6,6 +6,7 @@
  * Copyright Oxide Computer Company
  */
 import { invariant, type Cell, type Context } from '../animation'
+import { get2dContext } from '../utils'
 
 // Supersample the backing bitmap above the device pixel ratio so the canvas
 // stays crisp when the preview is zoomed in (zoom goes up to 5x). Text is
@@ -18,7 +19,7 @@ export default function createRenderer() {
 
     invariant(!!canvas, 'Canvas element is required')
 
-    const ctx = canvas.getContext('2d')
+    const ctx = get2dContext(canvas)
     if (!ctx) {
       console.error('Could not get canvas context')
       return
