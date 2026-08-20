@@ -142,11 +142,6 @@ export default function AsciiAnimation({
         style={{
           fontFamily: '"GT America Mono", monospace',
           fontSize: `${FONT_SIZE}px`,
-          // calcMetrics reads the computed line-height off this element, so
-          // the nudge flows through to the rendered cell height. Explicit px
-          // keeps it exactly equal to the FONT_SIZE * lineHeight the export
-          // dimension math uses, rather than whatever the browser resolves a
-          // unitless value to
           lineHeight: `${FONT_SIZE * lineHeight}px`,
         }}
       />

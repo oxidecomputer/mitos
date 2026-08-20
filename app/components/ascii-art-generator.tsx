@@ -36,7 +36,6 @@ import { DEFAULT_SETTINGS, TEMPLATES, TemplateType } from '~/templates'
 
 import { AnimationOptions } from './animation-options'
 import { CodeSidebar } from './code-sidebar'
-import { clampLineHeight } from './dimension-utils'
 import { ProjectManagement } from './project-management'
 import { DelayedSpinner } from './spinner'
 
@@ -797,27 +796,12 @@ export function AsciiArtGenerator() {
       setProjectName(projectData.name || 'Imported Project')
 
       if (projectData.settings) {
-        // Project files and gists are arbitrary JSON: older files predate some
-        // settings (e.g. lineHeight), so fill gaps from the defaults per
-        // section, and clamp values that feed geometry math
-        const loaded = projectData.settings as Partial<AsciiSettings>
-        setSettings({
-          meta: { ...DEFAULT_SETTINGS.meta, ...loaded.meta },
-          source: { ...DEFAULT_SETTINGS.source, ...loaded.source },
-          preprocessing: { ...DEFAULT_SETTINGS.preprocessing, ...loaded.preprocessing },
-          output: { ...DEFAULT_SETTINGS.output, ...loaded.output },
-          export: {
-            ...DEFAULT_SETTINGS.export,
-            ...loaded.export,
-            lineHeight: clampLineHeight(loaded.export?.lineHeight),
-          },
-          animation: { ...DEFAULT_SETTINGS.animation, ...loaded.animation },
-        })
+        setSettings(projectData.settings as AsciiSettings)
 
         // If the imported project has code, show the code sidebar
-        if (loaded.source?.code) {
+        if (projectData.settings.source.code) {
           // Pass this information up to the parent
-          handleCodeProjectLoaded(loaded.source.code)
+          handleCodeProjectLoaded(projectData.settings.source.code)
         }
       }
 

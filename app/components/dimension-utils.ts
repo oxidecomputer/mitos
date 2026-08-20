@@ -9,16 +9,8 @@
 // Asssuming output is using "GT America Mono"
 export const CHAR_WIDTH = 7.45
 export const FONT_SIZE = 12
-export const DEFAULT_LINE_HEIGHT = 1.2
 export const LINE_HEIGHT_MIN = 0.8
 export const LINE_HEIGHT_MAX = 1.6
-
-// Project files and gists are arbitrary JSON, so the line height they carry
-// can be missing, out of range, or not a number at all
-export const clampLineHeight = (value: unknown): number =>
-  typeof value === 'number' && Number.isFinite(value)
-    ? Math.min(LINE_HEIGHT_MAX, Math.max(LINE_HEIGHT_MIN, value))
-    : DEFAULT_LINE_HEIGHT
 
 /**
  * Calculate content dimensions including padding
