@@ -37,7 +37,9 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
     columns: 80,
     rows: 40,
     useImageAspectRatio: false,
-    colorMapping: 'brightness',
+    characterMapping: 'brightness',
+    motionThreshold: 0.05,
+    motionDecay: 0.9,
   },
   export: {
     textColor: '#d7d8d9',

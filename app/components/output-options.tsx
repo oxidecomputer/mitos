@@ -8,10 +8,11 @@
 import { useEffect, useState } from 'react'
 
 import { InputSwitch } from '~/lib/ui/src'
+import { InputNumber } from '~/lib/ui/src/components/InputNumber/InputNumber'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 import { InputText } from '~/lib/ui/src/components/InputText/InputText'
 
-import type { ColorMappingType, GridType } from './ascii-art-generator'
+import type { CharacterMappingType, GridType } from './ascii-art-generator'
 import { AspectRatioInputNumber } from './aspect-ratio-input-number'
 import { Container } from './container'
 
@@ -24,7 +25,9 @@ interface OutputOptionsProps {
     rows: number
     aspectRatio?: number
     useImageAspectRatio: boolean
-    colorMapping: ColorMappingType
+    characterMapping: CharacterMappingType
+    motionThreshold: number
+    motionDecay: number
   }
   updateSettings: (
     settings: Partial<{
@@ -35,10 +38,13 @@ interface OutputOptionsProps {
       rows: number
       aspectRatio?: number
       useImageAspectRatio: boolean
-      colorMapping: ColorMappingType
+      characterMapping: CharacterMappingType
+      motionThreshold: number
+      motionDecay: number
     }>,
   ) => void
   sourceImageDimensions?: { width: number; height: number }
+  isAnimatedSource: boolean
 }
 
 export const predefinedCharacterSets = {
@@ -70,7 +76,7 @@ type CharacterSet = keyof typeof predefinedCharacterSets | 'custom'
 
 const gridOptions: GridType[] = ['none', 'horizontal', 'vertical', 'both']
 
-const colorMappingOptions: ColorMappingType[] = ['brightness', 'hue', 'saturation']
+const characterMappingOptions: CharacterMappingType[] = ['brightness', 'hue', 'saturation']
 
 const findMatchingCharacterSet = (characterSet: string): CharacterSet => {
   for (const [key, value] of Object.entries(predefinedCharacterSets)) {
@@ -85,6 +91,7 @@ export function OutputOptions({
   settings,
   updateSettings,
   sourceImageDimensions,
+  isAnimatedSource,
 }: OutputOptionsProps) {
   const [selectedCharSet, setSelectedCharSet] = useState('standard')
 
@@ -127,21 +134,50 @@ export function OutputOptions({
         />
       </div>
 
-      <InputSelect<ColorMappingType>
-        value={settings.colorMapping}
-        onChange={(value) => updateSettings({ colorMapping: value })}
-        options={colorMappingOptions}
+      <InputSelect<CharacterMappingType>
+        value={settings.characterMapping}
+        onChange={(value) => updateSettings({ characterMapping: value })}
+        options={
+          isAnimatedSource
+            ? [...characterMappingOptions, 'motion' as const]
+            : characterMappingOptions
+        }
         labelize={(option) => {
           const labels = {
             brightness: 'Brightness',
             hue: 'Hue',
             saturation: 'Saturation',
+            motion: 'Motion',
           }
           return labels[option]
         }}
       >
-        Color Mapping
+        Character Mapping
       </InputSelect>
+
+      {settings.characterMapping === 'motion' && (
+        <div className="dedent space-y-2">
+          <InputNumber
+            min={0.01}
+            max={0.5}
+            step={0.01}
+            value={settings.motionThreshold}
+            onChange={(value) => updateSettings({ motionThreshold: value })}
+          >
+            Motion Threshold
+          </InputNumber>
+
+          <InputNumber
+            min={0.5}
+            max={0.99}
+            step={0.01}
+            value={settings.motionDecay}
+            onChange={(value) => updateSettings({ motionDecay: value })}
+          >
+            Trail Decay
+          </InputNumber>
+        </div>
+      )}
 
       <AspectRatioInputNumber
         width={settings.columns}

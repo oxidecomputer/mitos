@@ -40,7 +40,7 @@ import { ProjectManagement } from './project-management'
 import { DelayedSpinner } from './spinner'
 
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
-export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
+export type CharacterMappingType = 'brightness' | 'hue' | 'saturation' | 'motion'
 
 export interface AsciiSettings {
   meta: {
@@ -69,7 +69,9 @@ export interface AsciiSettings {
     rows: number
     aspectRatio?: number
     useImageAspectRatio: boolean
-    colorMapping: ColorMappingType
+    characterMapping: CharacterMappingType
+    motionThreshold: number
+    motionDecay: number
   }
   export: {
     textColor: string
@@ -79,6 +81,29 @@ export interface AsciiSettings {
   animation: {
     animationLength: number
     frameRate: number
+  }
+}
+
+// Upgrade settings from older saved projects (colorMapping was renamed to
+// characterMapping, and new fields get defaults)
+function migrateSettings(settings: AsciiSettings): AsciiSettings {
+  const { colorMapping, ...output } = settings.output as AsciiSettings['output'] & {
+    colorMapping?: CharacterMappingType
+  }
+
+  let characterMapping = output.characterMapping ?? colorMapping ?? 'brightness'
+  // Motion mapping needs frames to diff, so static sources reset it
+  if (characterMapping === 'motion' && !settings.source.data?.includes('data:image/gif')) {
+    characterMapping = 'brightness'
+  }
+
+  return {
+    ...settings,
+    output: {
+      ...DEFAULT_SETTINGS.output,
+      ...output,
+      characterMapping,
+    },
   }
 }
 
@@ -271,7 +296,9 @@ export function AsciiArtGenerator() {
       rows: output.rows,
       frameRate: animation.frameRate,
       characterSet: output.characterSet,
-      colorMapping: output.colorMapping,
+      characterMapping: output.characterMapping,
+      motionThreshold: output.motionThreshold,
+      motionDecay: output.motionDecay,
       textColor: exportSettings.textColor,
       backgroundColor: exportSettings.backgroundColor,
     }
@@ -497,7 +524,9 @@ export function AsciiArtGenerator() {
       prevSource.data !== source.data ||
       prevOutput.columns !== output.columns ||
       prevOutput.rows !== output.rows ||
-      prevOutput.colorMapping !== output.colorMapping ||
+      prevOutput.characterMapping !== output.characterMapping ||
+      prevOutput.motionThreshold !== output.motionThreshold ||
+      prevOutput.motionDecay !== output.motionDecay ||
       prevPreprocessing.whitePoint !== preprocessing.whitePoint ||
       prevPreprocessing.blackPoint !== preprocessing.blackPoint ||
       prevPreprocessing.brightness !== preprocessing.brightness ||
@@ -697,6 +726,11 @@ export function AsciiArtGenerator() {
       },
       output: {
         ...prev.output,
+        // Motion mapping needs frames to diff, so static sources reset it
+        characterMapping:
+          type === 'image' && prev.output.characterMapping === 'motion'
+            ? 'brightness'
+            : prev.output.characterMapping,
         aspectRatio: prev.output.useImageAspectRatio
           ? aspectRatio
           : prev.output.aspectRatio,
@@ -795,7 +829,7 @@ export function AsciiArtGenerator() {
       setProjectName(projectData.name || 'Imported Project')
 
       if (projectData.settings) {
-        setSettings(projectData.settings as AsciiSettings)
+        setSettings(migrateSettings(projectData.settings))
 
         // If the imported project has code, show the code sidebar
         if (projectData.settings.source.code) {
@@ -869,6 +903,7 @@ export function AsciiArtGenerator() {
                 settings={settings.output}
                 updateSettings={(changes) => updateSettings('output', changes)}
                 sourceImageDimensions={settings.source.imageDimensions}
+                isAnimatedSource={settings.source.data?.includes('data:image/gif') ?? false}
               />
               {/* Animation Options (always visible) */}
               <hr />
