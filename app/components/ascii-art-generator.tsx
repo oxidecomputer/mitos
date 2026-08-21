@@ -25,6 +25,7 @@ import { useMcpBridge } from '~/hooks/use-mcp-bridge'
 import type { Program } from '~/lib/animation'
 import { createProgramFromProcessor, generateImageCode } from '~/lib/ascii-program'
 import { clearStaleImageData, processCodeModule } from '~/lib/code-processor'
+import type { GridConfig } from '~/lib/grid-config'
 import {
   DitheringAlgorithm,
   processAnimatedMedia,
@@ -41,6 +42,7 @@ import { DelayedSpinner } from './spinner'
 
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
 export type CharacterMappingType = 'brightness' | 'hue' | 'saturation' | 'motion'
+export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4'
 
 export interface AsciiSettings {
   meta: {
@@ -79,6 +81,9 @@ export interface AsciiSettings {
     backgroundColor: string
     padding: number
     lineHeight: number
+    width: number
+    height: number
+    format: ExportFormat
   }
   animation: {
     animationLength: number
@@ -636,6 +641,41 @@ export function AsciiArtGenerator() {
     [],
   )
 
+  // Merge a pasted grid config (from the ox-dual-grid Figma plugin) into the
+  // current settings. Unlike handleLoadProject this touches only the grid and
+  // export fields, so the source, code and colours on the canvas survive.
+  const applyGridConfig = useCallback(
+    (config: GridConfig) => {
+      updateSettings('output', {
+        columns: config.output.columns,
+        rows: config.output.rows,
+        ...(typeof config.output.aspectRatio === 'number' && {
+          aspectRatio: config.output.aspectRatio,
+        }),
+        useImageAspectRatio: config.output.useImageAspectRatio ?? false,
+      })
+      if (config.export) {
+        updateSettings('export', {
+          ...(typeof config.export.lineHeight === 'number' && {
+            lineHeight: config.export.lineHeight,
+          }),
+          ...(typeof config.export.padding === 'number' && {
+            padding: config.export.padding,
+          }),
+          ...(typeof config.export.width === 'number' && {
+            width: config.export.width,
+          }),
+          ...(typeof config.export.height === 'number' && {
+            height: config.export.height,
+          }),
+        })
+      }
+      setTemplateType('custom')
+      toast(`Grid config applied: ${config.output.columns}×${config.output.rows} cells`)
+    },
+    [updateSettings],
+  )
+
   // Expose the canvas to MCP clients (Claude Code etc.) via the local
   // WebSocket bridge — dev-only, see app/hooks/use-mcp-bridge.tsx
   const { status: mcpStatus, takeOver: mcpTakeOver } = useMcpBridge({
@@ -868,6 +908,7 @@ export function AsciiArtGenerator() {
             showCodeSidebar={showCodeSidebar}
             setShowCodeSidebar={setShowCodeSidebar}
             processFile={processFile}
+            onGridConfig={applyGridConfig}
           />
           <div className="flex grow flex-col justify-between overflow-auto">
             <div className="space-y-6 py-4">
@@ -911,6 +952,7 @@ export function AsciiArtGenerator() {
                 }}
                 disabled={!program}
                 exportSettings={settings.export}
+                updateExportSettings={(changes) => updateSettings('export', changes)}
                 gridType={settings.output.grid}
                 gridColor={settings.output.gridColor}
               />
