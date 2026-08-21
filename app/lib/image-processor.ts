@@ -42,7 +42,22 @@ export type MediaProcessingSettings = {
   ditheringAlgorithm: DitheringAlgorithm
   columns: number
   rows: number
-  colorMapping: string
+  characterMapping: string
+}
+
+// Cross-frame state for motion mapping, at output grid resolution
+export type MotionState = {
+  luminance: Float32Array
+  trail: Float32Array
+  hasPrevious: boolean
+}
+
+function createMotionState(width: number, height: number): MotionState {
+  return {
+    luminance: new Float32Array(width * height),
+    trail: new Float32Array(width * height),
+    hasPrevious: false,
+  }
 }
 
 export type ImageProcessingResult = {
@@ -70,12 +85,31 @@ export async function processAnimatedMedia(
   let firstFrameData: AsciiImageData = {}
   let firstFrameUrl: string | null = null
 
+  const motionState =
+    settings.output.characterMapping === 'motion' && rawFrames.length > 1
+      ? createMotionState(settings.output.columns, settings.output.rows)
+      : undefined
+
+  if (motionState) {
+    // Warm up on the tail of the loop so frame 0 carries the trail from the
+    // loop end instead of starting blank
+    const warmup = Math.min(rawFrames.length, 13)
+    for (let i = rawFrames.length - warmup; i < rawFrames.length; i++) {
+      await processImage(rawFrames[i].dataUrl, settings, false, motionState)
+    }
+  }
+
   for (let i = 0; i < rawFrames.length; i++) {
     if (progressCallback) {
       progressCallback(i)
     }
 
-    const frameResult = await processImage(rawFrames[i].dataUrl, settings)
+    const frameResult = await processImage(
+      rawFrames[i].dataUrl,
+      settings,
+      false,
+      motionState,
+    )
 
     if (i === 0) {
       firstFrameData = frameResult.data
@@ -96,6 +130,7 @@ export async function processImage(
   imageData: string,
   settings: AsciiSettings,
   extractFrames: boolean = false,
+  motionState?: MotionState,
 ): Promise<ImageProcessingResult> {
   return new Promise((resolve) => {
     if (extractFrames && imageData.includes('data:image/gif')) {
@@ -117,7 +152,7 @@ export async function processImage(
 
       ctx.drawImage(img, 0, 0)
 
-      const result = await processImageData(canvas, settings)
+      const result = await processImageData(canvas, settings, motionState)
 
       resolve({
         data: result.data,
@@ -155,6 +190,7 @@ function createFallbackResponse(settings: AsciiSettings): ImageProcessingResult 
 async function processImageData(
   sourceCanvas: HTMLCanvasElement,
   settings: AsciiSettings,
+  motionState?: MotionState,
 ): Promise<{
   data: AsciiImageData
   processedImageUrl?: string
@@ -197,7 +233,7 @@ async function processImageData(
 
   const processedImageUrl = resizeCanvas.toDataURL('image/png')
   const pixelData = resizeCtx.getImageData(0, 0, width, height).data
-  const data = convertPixelsToAscii(pixelData, width, height, settings)
+  const data = convertPixelsToAscii(pixelData, width, height, settings, motionState)
 
   return { data, processedImageUrl }
 }
@@ -264,19 +300,27 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
   return [h * 360, s * 100, l * 100]
 }
 
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1)
+  return t * t * (3 - 2 * t)
+}
+
 function convertPixelsToAscii(
   pixelData: Uint8ClampedArray,
   width: number,
   height: number,
   settings: AsciiSettings,
+  motionState?: MotionState,
 ): AsciiImageData {
-  const colorMapping = settings.output.colorMapping
+  const characterMapping = settings.output.characterMapping
+  const { motionThreshold, motionDecay } = settings.output
 
   const data: AsciiImageData = {}
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const pixelIndex = (y * width + x) * 4
+      const cellIndex = y * width + x
+      const pixelIndex = cellIndex * 4
 
       // Get pixel color values
       const r = pixelData[pixelIndex]
@@ -285,7 +329,7 @@ function convertPixelsToAscii(
 
       let mappingValue = 0
 
-      switch (colorMapping) {
+      switch (characterMapping) {
         case 'hue': {
           const [h, _, __] = rgbToHsl(r, g, b)
           mappingValue = (h / 360) * 255 // Map hue (0-360) to 0-255 range
@@ -294,6 +338,31 @@ function convertPixelsToAscii(
         case 'saturation': {
           const [_, s, __] = rgbToHsl(r, g, b)
           mappingValue = (s / 100) * 255 // Map saturation (0-100) to 0-255 range
+          break
+        }
+        case 'motion': {
+          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+          // Static images have no frame to diff against — fall back to brightness
+          if (!motionState) {
+            mappingValue = luminance * 255
+            break
+          }
+
+          const difference = motionState.hasPrevious
+            ? Math.abs(luminance - motionState.luminance[cellIndex])
+            : 0
+          // Threshold out noise; sqrt lifts subtle motion
+          const motionAmount = Math.sqrt(
+            smoothstep(motionThreshold, motionThreshold * 4, difference),
+          )
+          // Decaying trail so moving areas leave a fading wake
+          const decayed = Math.max(motionState.trail[cellIndex] * motionDecay - 0.025, 0)
+          const motionTrail = Math.max(decayed, motionAmount)
+
+          motionState.luminance[cellIndex] = luminance
+          motionState.trail[cellIndex] = motionTrail
+          mappingValue = motionTrail * 255
           break
         }
         case 'brightness':
@@ -319,6 +388,10 @@ function convertPixelsToAscii(
 
       data[x][y] = normalizedValue
     }
+  }
+
+  if (motionState) {
+    motionState.hasPrevious = true
   }
 
   return data

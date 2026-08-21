@@ -41,7 +41,7 @@ import { ProjectManagement } from './project-management'
 import { DelayedSpinner } from './spinner'
 
 export type GridType = 'none' | 'horizontal' | 'vertical' | 'both'
-export type ColorMappingType = 'brightness' | 'hue' | 'saturation'
+export type CharacterMappingType = 'brightness' | 'hue' | 'saturation' | 'motion'
 export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4'
 
 export interface AsciiSettings {
@@ -72,7 +72,9 @@ export interface AsciiSettings {
     rows: number
     aspectRatio?: number
     useImageAspectRatio: boolean
-    colorMapping: ColorMappingType
+    characterMapping: CharacterMappingType
+    motionThreshold: number
+    motionDecay: number
   }
   export: {
     textColor: string
@@ -278,7 +280,9 @@ export function AsciiArtGenerator() {
       rows: output.rows,
       frameRate: animation.frameRate,
       characterSet: output.characterSet,
-      colorMapping: output.colorMapping,
+      characterMapping: output.characterMapping,
+      motionThreshold: output.motionThreshold,
+      motionDecay: output.motionDecay,
       textColor: exportSettings.textColor,
       backgroundColor: exportSettings.backgroundColor,
     }
@@ -504,7 +508,9 @@ export function AsciiArtGenerator() {
       prevSource.data !== source.data ||
       prevOutput.columns !== output.columns ||
       prevOutput.rows !== output.rows ||
-      prevOutput.colorMapping !== output.colorMapping ||
+      prevOutput.characterMapping !== output.characterMapping ||
+      prevOutput.motionThreshold !== output.motionThreshold ||
+      prevOutput.motionDecay !== output.motionDecay ||
       prevPreprocessing.whitePoint !== preprocessing.whitePoint ||
       prevPreprocessing.blackPoint !== preprocessing.blackPoint ||
       prevPreprocessing.brightness !== preprocessing.brightness ||
@@ -739,6 +745,11 @@ export function AsciiArtGenerator() {
       },
       output: {
         ...prev.output,
+        // Motion mapping needs frames to diff, so static sources reset it
+        characterMapping:
+          type === 'image' && prev.output.characterMapping === 'motion'
+            ? 'brightness'
+            : prev.output.characterMapping,
         aspectRatio: prev.output.useImageAspectRatio
           ? aspectRatio
           : prev.output.aspectRatio,
@@ -912,6 +923,7 @@ export function AsciiArtGenerator() {
                 settings={settings.output}
                 updateSettings={(changes) => updateSettings('output', changes)}
                 sourceImageDimensions={settings.source.imageDimensions}
+                isAnimatedSource={settings.source.data?.includes('data:image/gif') ?? false}
                 lineHeight={settings.export.lineHeight}
               />
               {/* Animation Options (always visible) */}
