@@ -18,8 +18,9 @@ import { getColoredRows, getContent } from '~/lib/buffer-text'
 import { glyphRunToPathData, loadAsciiFont, type Font } from '~/lib/svg-font'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
+import { get2dContext } from '~/lib/utils'
 
-import type { AsciiSettings } from './ascii-art-generator'
+import type { AsciiSettings, GridType } from './ascii-art-generator'
 import { type AnimationController } from './ascii-preview'
 import { Container } from './container'
 import {
@@ -46,6 +47,8 @@ interface AssetExportProps {
   dimensions: { width: number; height: number }
   disabled: boolean
   exportSettings: AsciiSettings['export']
+  gridType: GridType
+  gridColor: string
 }
 
 export function AssetExport({
@@ -57,6 +60,8 @@ export function AssetExport({
   dimensions,
   disabled,
   exportSettings,
+  gridType,
+  gridColor,
 }: AssetExportProps) {
   const [exportFormat, setExportFormat] = useState<ExportFormat>(
     animationLength > 1 ? 'frames' : 'png',
@@ -254,15 +259,11 @@ export function AssetExport({
       let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${paddedSvgWidth}" height="${paddedSvgHeight}" viewBox="0 0 ${paddedSvgWidth} ${paddedSvgHeight}">\n`
       svgContent += '  <style>\n'
       svgContent += `    .ascii-text { font-family: GT America Mono, monospace; font-size: ${fontSize}px; letter-spacing: 0; white-space: pre; }\n`
-      svgContent +=
-        '    .grid-line { stroke: #666666; stroke-width: 0.5; stroke-opacity: 0.5; }\n'
+      svgContent += `    .grid-line { stroke: ${gridColor}; stroke-width: 0.5; }\n`
       svgContent += '  </style>\n'
       if (includeBackground) {
         svgContent += `  <rect width="100%" height="100%" fill="${exportSettings.backgroundColor}"/>\n`
       }
-
-      const gridElement = document.querySelector('.grid-overlay')
-      const gridType = gridElement?.getAttribute('data-grid-type') || 'none'
 
       if (gridType !== 'none') {
         svgContent += '  <!-- Grid overlay -->\n'
@@ -423,7 +424,7 @@ export function AssetExport({
     padding: number = 0,
     includeBackground: boolean = true,
   ) => {
-    const ctx = canvas.getContext('2d')
+    const ctx = get2dContext(canvas)
     if (!ctx) return
 
     // Calculate cell dimensions accounting for padding
@@ -468,6 +469,32 @@ export function AssetExport({
 
       ctx.fillText(buffer[i]?.char || ' ', x, y)
     }
+
+    // Grid lines draw over the text, matching the preview overlay
+    if (gridType !== 'none') {
+      const maxDimension = Math.max(dimensions.width, dimensions.height)
+      ctx.strokeStyle = gridColor
+      ctx.lineWidth = Math.max(1, (contentWidth / 1000) * Math.max(0.5, 50 / maxDimension))
+      ctx.beginPath()
+
+      if (gridType === 'horizontal' || gridType === 'both') {
+        for (let row = 1; row < dimensions.height; row++) {
+          const y = row * lineHeight + padding
+          ctx.moveTo(padding, y)
+          ctx.lineTo(padding + contentWidth, y)
+        }
+      }
+
+      if (gridType === 'vertical' || gridType === 'both') {
+        for (let col = 1; col < dimensions.width; col++) {
+          const x = col * cellWidth + padding
+          ctx.moveTo(x, padding)
+          ctx.lineTo(x, padding + contentHeight)
+        }
+      }
+
+      ctx.stroke()
+    }
   }
 
   const exportAsVideoWithCanvasRecord = async (totalFrames: number) => {
@@ -493,7 +520,7 @@ export function AssetExport({
       exportCanvas.width = finalWidth
       exportCanvas.height = finalHeight
 
-      const ctx = exportCanvas.getContext('2d')
+      const ctx = get2dContext(exportCanvas)
       if (!ctx) {
         toast.error('Could not get canvas context')
         return

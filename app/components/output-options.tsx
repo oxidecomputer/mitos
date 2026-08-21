@@ -20,6 +20,7 @@ interface OutputOptionsProps {
   settings: {
     characterSet: string
     grid: GridType
+    gridColor: string
     showUnderlyingImage: boolean
     columns: number
     rows: number
@@ -33,6 +34,7 @@ interface OutputOptionsProps {
     settings: Partial<{
       characterSet: string
       grid: GridType
+      gridColor: string
       showUnderlyingImage: boolean
       columns: number
       rows: number
@@ -218,6 +220,17 @@ export function OutputOptions({
       >
         Grid Lines
       </InputSelect>
+
+      {settings.grid !== 'none' && (
+        <div className="dedent">
+          <InputText
+            value={settings.gridColor}
+            onChange={(val) => updateSettings({ gridColor: val })}
+          >
+            Grid Color
+          </InputText>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <InputSwitch

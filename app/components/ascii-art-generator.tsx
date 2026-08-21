@@ -64,6 +64,7 @@ export interface AsciiSettings {
   output: {
     characterSet: string
     grid: GridType
+    gridColor: string
     showUnderlyingImage: boolean
     columns: number
     rows: number
@@ -933,6 +934,8 @@ export function AsciiArtGenerator() {
                 }}
                 disabled={!program}
                 exportSettings={settings.export}
+                gridType={settings.output.grid}
+                gridColor={settings.output.gridColor}
               />
               {/* MCP connection */}
               {mcpStatus !== 'disabled' && (
@@ -1013,6 +1016,7 @@ export function AsciiArtGenerator() {
                   height: settings.output.rows,
                 }}
                 gridType={settings.output.grid}
+                gridColor={settings.output.gridColor}
                 showUnderlyingImage={settings.output.showUnderlyingImage}
                 underlyingImageUrl={processedImageUrl || settings.source.data}
                 settings={{ ...settings.animation, ...settings.export }}

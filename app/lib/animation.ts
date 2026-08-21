@@ -8,6 +8,7 @@
  */
 import createRenderer from './core/canvas-renderer'
 import FPS, { type FPSType } from './core/fps'
+import { get2dContext } from './utils'
 
 // Default settings for the program runner.
 // They can be overwritten by the parameters of the runner
@@ -515,7 +516,9 @@ export function calcMetrics(el: HTMLElement): Metrics {
   // else cellWidth is computed 'by hand' (should be the same, in any case)
   if (el.nodeName === 'CANVAS') {
     const canvas = el as HTMLCanvasElement
-    const ctx = canvas.getContext('2d')
+    // Must match the renderer's context options — the first getContext call
+    // on the canvas decides its color space
+    const ctx = get2dContext(canvas)
 
     if (ctx) {
       ctx.font = fontSize + 'px ' + fontFamily
