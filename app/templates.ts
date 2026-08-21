@@ -45,6 +45,9 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
     backgroundColor: '#080f11',
     padding: 2,
     lineHeight: 1.2,
+    width: 1920,
+    height: 1080,
+    format: 'png',
   },
   animation: {
     animationLength: 100,

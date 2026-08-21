@@ -10,6 +10,7 @@ import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
+import { parseGridConfig, type GridConfig } from '~/lib/grid-config'
 import { InputButton } from '~/lib/ui/src'
 
 import { Container } from './container'
@@ -20,6 +21,7 @@ export function SourceSelector({
   setShowCodeSidebar,
   showCodeSidebar,
   processFile,
+  onGridConfig,
 }: {
   setShowCodeSidebar: (val: boolean) => void
   showCodeSidebar: boolean
@@ -29,6 +31,7 @@ export function SourceSelector({
     fileName: string | null
   }
   processFile: (file: File, dataUrl?: string) => boolean // Add this prop type
+  onGridConfig: (config: GridConfig) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -49,31 +52,54 @@ export function SourceSelector({
     processFile(file)
   }
 
-  const handlePaste = useCallback((e: ClipboardEvent) => {
-    const clipboardItems = e.clipboardData?.items
-    if (!clipboardItems) return
+  const handlePaste = useCallback(
+    (e: ClipboardEvent) => {
+      // Pasting into a text field keeps its default behaviour
+      const target = e.target as HTMLElement | null
+      const isEditable =
+        !!target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
 
-    // Check for images in the clipboard
-    for (let i = 0; i < clipboardItems.length; i++) {
-      const item = clipboardItems[i]
-
-      if (item.type.indexOf('image') !== -1) {
-        e.preventDefault() // Prevent default paste behavior
-
-        const file = item.getAsFile()
-        if (!file) continue
-
-        // Create a preview URL for the confirmation dialog
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const previewUrl = e.target?.result as string
-          setPastedImage({ previewUrl, file })
+      // A grid config copied from the ox-dual-grid Figma plugin arrives as
+      // JSON text; it merges into the settings rather than replacing them
+      const text = e.clipboardData?.getData('text/plain')
+      if (!isEditable && text) {
+        const config = parseGridConfig(text)
+        if (config) {
+          e.preventDefault()
+          onGridConfig(config)
+          return
         }
-        reader.readAsDataURL(file)
-        return
       }
-    }
-  }, [])
+
+      const clipboardItems = e.clipboardData?.items
+      if (!clipboardItems) return
+
+      // Check for images in the clipboard
+      for (let i = 0; i < clipboardItems.length; i++) {
+        const item = clipboardItems[i]
+
+        if (item.type.indexOf('image') !== -1) {
+          e.preventDefault() // Prevent default paste behavior
+
+          const file = item.getAsFile()
+          if (!file) continue
+
+          // Create a preview URL for the confirmation dialog
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            const previewUrl = e.target?.result as string
+            setPastedImage({ previewUrl, file })
+          }
+          reader.readAsDataURL(file)
+          return
+        }
+      }
+    },
+    [onGridConfig],
+  )
 
   const confirmPastedImage = useCallback(() => {
     if (!pastedImage) return
