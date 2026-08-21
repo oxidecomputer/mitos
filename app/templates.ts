@@ -33,7 +33,7 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
   output: {
     characterSet: predefinedCharacterSets['standard'],
     grid: 'both',
-    gridColor: 'var(--color-neutral-400)',
+    gridColor: '--color-neutral-400',
     showUnderlyingImage: false,
     columns: 80,
     rows: 40,
