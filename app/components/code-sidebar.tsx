@@ -567,14 +567,14 @@ export function CodeSidebar({
     return (
       <div key={groupName} className="space-y-2">
         {groupName !== 'root' && (
-          <div className="font-mono text-[11px] uppercase text-tertiary">{groupName}</div>
+          <div className="font-mono text-[11px] text-tertiary uppercase">{groupName}</div>
         )}
         <div className={groupName !== 'root' ? 'dedent' : ''}>
           <div className="space-y-2">
             {group.controls.map(renderControl)}
             {Object.entries(group.nested).map(([nestedName, nestedControls]) => (
               <div key={nestedName} className="space-y-2">
-                <div className="font-mono text-[11px] uppercase text-tertiary">
+                <div className="font-mono text-[11px] text-tertiary uppercase">
                   {nestedName}
                 </div>
                 <div className="dedent">
@@ -640,12 +640,12 @@ export function CodeSidebar({
         className="h-full"
       >
         <div
-          className="absolute -left-2 top-0 z-10 h-full w-4 cursor-ew-resize"
+          className="absolute top-0 -left-2 z-10 h-full w-4 cursor-ew-resize"
           onMouseDown={startResize}
         />
 
         <div className="flex h-full flex-col">
-          <div className="flex gap-2 border-b px-4 py-3 border-default">
+          <div className="flex gap-2 border-b border-default px-4 py-3">
             <InputButton onClick={handleCodeRun}>Run</InputButton>
             <InputButton variant="secondary" onClick={handleUndo}>
               Undo
@@ -674,12 +674,12 @@ export function CodeSidebar({
           <div className="border-t border-default">
             <button
               onClick={() => setUtilsOpen(!utilsOpen)}
-              className="flex w-full items-center justify-between px-4 py-1 font-mono text-[11px] uppercase tracking-wider text-default bg-raise hover:bg-hover"
+              className="flex w-full items-center justify-between bg-raise px-4 py-1 font-mono text-[11px] tracking-wider text-default uppercase hover:bg-hover"
             >
               Utils
               <DirectionDownIcon
                 className={cn(
-                  'transition-transform text-quaternary',
+                  'text-quaternary transition-transform',
                   utilsOpen ? '' : '-rotate-90',
                 )}
               />
@@ -695,9 +695,9 @@ export function CodeSidebar({
                         className="rounded border border-default"
                       >
                         <Accordion.Header>
-                          <Accordion.Trigger className="flex w-full items-center justify-between rounded px-2 py-1.5 font-mono text-[11px] uppercase tracking-wider text-default hover:bg-hover data-[state=open]:rounded-b-none [&_svg]:-rotate-90 [&_svg]:data-[state=open]:rotate-0">
+                          <Accordion.Trigger className="flex w-full items-center justify-between rounded px-2 py-1.5 font-mono text-[11px] tracking-wider text-default uppercase hover:bg-hover data-[state=open]:rounded-b-none [&_svg]:-rotate-90 [&_svg]:data-[state=open]:rotate-0">
                             <div className="flex items-center gap-1">
-                              <DirectionDownIcon className="transition-transform text-quaternary" />
+                              <DirectionDownIcon className="text-quaternary transition-transform" />
                               <span>{util.name}</span>
                             </div>
                           </Accordion.Trigger>
@@ -708,18 +708,18 @@ export function CodeSidebar({
                               {util.description}
                             </div>
                             <div className="space-y-1">
-                              <div className="font-mono text-[10px] uppercase tracking-wider text-tertiary">
+                              <div className="font-mono text-[10px] tracking-wider text-tertiary uppercase">
                                 Type
                               </div>
-                              <pre className="overflow-x-auto rounded border px-2 py-1 font-mono text-[10px] text-default bg-raise border-secondary">
+                              <pre className="overflow-x-auto rounded border border-secondary bg-raise px-2 py-1 font-mono text-[10px] text-default">
                                 {util.type}
                               </pre>
                             </div>
                             <div className="space-y-1">
-                              <div className="font-mono text-[10px] uppercase tracking-wider text-tertiary">
+                              <div className="font-mono text-[10px] tracking-wider text-tertiary uppercase">
                                 Example
                               </div>
-                              <pre className="overflow-x-auto rounded border px-2 py-1 font-mono text-[10px] text-default bg-raise border-secondary">
+                              <pre className="overflow-x-auto rounded border border-secondary bg-raise px-2 py-1 font-mono text-[10px] text-default">
                                 {util.example}
                               </pre>
                             </div>
@@ -746,24 +746,24 @@ export function CodeSidebar({
             <div className="border-t border-default">
               <button
                 onClick={() => setControlsOpen(!controlsOpen)}
-                className="flex w-full items-center justify-between space-y-3 px-4 py-1 font-mono text-[11px] uppercase tracking-wider text-default bg-raise hover:bg-hover"
+                className="flex w-full items-center justify-between space-y-3 bg-raise px-4 py-1 font-mono text-[11px] tracking-wider text-default uppercase hover:bg-hover"
               >
                 Controls
                 <DirectionDownIcon
                   className={cn(
-                    'transition-transform text-quaternary',
+                    'text-quaternary transition-transform',
                     controlsOpen ? '' : '-rotate-90',
                   )}
                 />
               </button>
               {controlsOpen && (
                 <>
-                  <div className="max-h-[50vh] space-y-3 overflow-auto border-t px-4 py-3 border-default">
+                  <div className="max-h-[50vh] space-y-3 overflow-auto border-t border-default px-4 py-3">
                     {Object.entries(groupedControls).map(([groupName, group]) =>
                       renderControlGroup(groupName, group),
                     )}
                   </div>
-                  <div className="border-t px-4 py-2 border-default">
+                  <div className="border-t border-default px-4 py-2">
                     <InputSwitch checked={autoRun} onChange={setAutoRun}>
                       Auto Run
                     </InputSwitch>

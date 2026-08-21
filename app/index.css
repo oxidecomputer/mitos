@@ -5,11 +5,19 @@
  *
  * Copyright Oxide Computer Company
  */
+@import 'tailwindcss';
+
+@import '@oxide/design-system/styles/tailwind.css';
+@import '@oxide/design-system/styles/preflight.css' layer(base);
 @import '@oxide/design-system/styles/main.css';
-@import '@oxide/design-system/styles/yellow.css';
+@import '@oxide/design-system/styles/dark.css';
 @import '@oxide/design-system/styles/purple.css';
-@import '@oxide/design-system/styles/green.css';
+@import '@oxide/design-system/styles/yellow.css';
+@import '@oxide/design-system/styles/red.css';
 @import '@oxide/design-system/styles/blue.css';
+@import '@oxide/design-system/styles/green.css';
+
+@source '../../node_modules/@oxide/design-system/dist/components';
 
 @font-face {
   font-family: 'GT America Mono';
@@ -41,28 +49,12 @@
   font-display: swap;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --font-mono: 'GT America Mono', monospace;
-    --font-sans:
-      'SuisseIntl', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --border: 0 0% 89.8%;
-  }
-}
-
 @layer base {
   img {
     @apply inline-block;
   }
   body {
-    @apply text-default bg-default;
+    @apply bg-default text-default;
   }
   pre {
     @apply font-mono;
@@ -74,7 +66,7 @@
   .ui-radio label,
   label,
   .ui-button {
-    @apply uppercase tracking-wider;
+    @apply tracking-wider uppercase;
   }
   .ui-button:after {
     content: '';
@@ -101,7 +93,7 @@
     text-decoration-color: color-mix(in srgb, currentColor 60%, transparent);
   }
   .dedent {
-    @apply mt-2 flex flex-col gap-2 border-l py-1 pl-3 border-default;
+    @apply mt-2 flex flex-col gap-2 border-l border-default py-1 pl-3;
   }
 
   /* Accordion animations */

@@ -70,14 +70,14 @@ const DemoCard = ({
       delay: index * 0.1,
       ease: [0.25, 0.46, 0.45, 0.94],
     }}
-    className="group relative flex w-[20rem] items-center rounded border p-2 text-left transition-colors bg-raise border-secondary elevation-1 hover:bg-[var(--base-neutral-100)]"
+    className="group relative flex w-[20rem] items-center rounded bg-raise p-2 text-left shadow-border-small transition-colors hover:bg-(--color-neutral-100)"
   >
-    <div className="mr-3 inline-flex items-center justify-center rounded p-2 text-accent bg-accent-secondary">
+    <div className="mr-3 inline-flex items-center justify-center rounded bg-accent p-2 text-accent">
       {icon}
     </div>
-    <div className="text-default text-sans-md">{title}</div>
+    <div className="text-sans-md text-default">{title}</div>
     {hasDropdown && (
-      <div className="absolute bottom-0 right-0 top-0 flex w-8 items-center justify-center border-l bg-raise border-secondary hover:bg-[var(--base-neutral-100)]">
+      <div className="absolute top-0 right-0 bottom-0 flex w-8 items-center justify-center border-l border-secondary bg-raise hover:bg-(--color-neutral-100)">
         <select
           className="absolute h-full w-full cursor-pointer appearance-none opacity-0"
           style={{ color: 'transparent' }}
@@ -99,7 +99,7 @@ const DemoCard = ({
       </div>
     )}
     <button
-      className={cn('absolute bottom-0 left-0 top-0', hasDropdown ? 'right-12' : 'right-0')}
+      className={cn('absolute top-0 bottom-0 left-0', hasDropdown ? 'right-12' : 'right-0')}
       onClick={onClick}
     />
   </motion.div>
@@ -276,8 +276,8 @@ export function AsciiPreview({
     <div className="relative flex h-full w-full flex-col">
       {/* Zoom controls */}
       {program && (
-        <div className="absolute right-2 top-2 z-30 flex gap-2">
-          <div className="flex items-center gap-1 rounded-md border p-2 bg-raise border-default">
+        <div className="absolute top-2 right-2 z-30 flex gap-2">
+          <div className="flex items-center gap-1 rounded-md border border-default bg-raise p-2">
             <InputNumber
               showSlider={false}
               value={zoomLevel}
@@ -295,7 +295,7 @@ export function AsciiPreview({
               onClick={handleResetView}
               disabled={zoomLevel === 1 && position.x === 0 && position.y === 0}
             >
-              <AutoRestart12Icon className="rotate-90 -scale-x-100" />
+              <AutoRestart12Icon className="-scale-x-100 rotate-90" />
             </InputButton>
 
             <InputButton
@@ -320,7 +320,7 @@ export function AsciiPreview({
       >
         {isExporting && (
           <div className="absolute inset-0 z-50 flex items-center justify-center">
-            <div className="rounded-md border p-4 text-center bg-default border-default elevation-2">
+            <div className="rounded-md border border-default bg-default p-4 text-center shadow-border-medium">
               <div className="mb-2 text-lg font-semibold text-raise">Exporting Frames</div>
               <div className="text-muted-foreground text-sm">
                 Please wait, this may take a moment...
@@ -329,12 +329,16 @@ export function AsciiPreview({
           </div>
         )}
         <div
-          className="duration-50 relative transform-gpu rounded-[1%] transition-transform ease-out"
+          className="relative transform-gpu rounded-[0.25%] transition-transform duration-50 ease-out"
           style={{
             transform: isExporting
               ? 'none'
               : `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
             transformOrigin: 'center center',
+            // Outline the canvas bounds — the pane behind shares the export
+            // background color, so without this the edges are invisible. Shadow
+            // width divides by zoom since the transform scales it back up.
+            boxShadow: `0 0 0 ${1 / (isExporting ? 1 : zoomLevel)}px var(--stroke-default)`,
           }}
         >
           {/* ASCII animation */}
@@ -436,7 +440,7 @@ function FrameSlider({
   }, [])
 
   return (
-    <div className="absolute bottom-2 left-2 right-2 z-30 flex flex-col gap-2 rounded-md border p-2 bg-raise border-default">
+    <div className="absolute right-2 bottom-2 left-2 z-30 flex flex-col gap-2 rounded-md border border-default bg-raise p-2">
       <div className="flex items-center gap-2">
         <InputButton onClick={togglePlay} inline>
           {playing ? <Pause12 /> : <DirectionRightIcon />}

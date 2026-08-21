@@ -23,11 +23,11 @@ interface ExportOptionsProps {
 
 export const predefinedColorSets = {
   default: [DEFAULT_SETTINGS.export.textColor, DEFAULT_SETTINGS.export.backgroundColor],
-  green: ['#48d597', '#1c372e'],
-  yellow: ['#f5b944', '#3d3019'],
-  red: ['#fb6e88', '#301b1d'],
-  blue: ['#8Ba1FF', '#2d3048'],
-  purple: ['#be95eb', '#382d43'],
+  green: ['--color-green-1000', '--color-neutral-100'],
+  yellow: ['--color-yellow-1000', '--color-neutral-100'],
+  red: ['--color-red-1000', '--color-neutral-100'],
+  blue: ['--color-blue-1000', '--color-neutral-100'],
+  purple: ['--color-purple-1000', '--color-neutral-100'],
 }
 
 const characterSets: ColorSet[] = [
@@ -102,24 +102,22 @@ export function ExportOptions({ settings, updateSettings }: ExportOptionsProps) 
       </InputSelect>
 
       <div className="dedent">
-        <div className="flex gap-2">
-          <InputText
-            value={flipped ? settings.textColor : settings.backgroundColor}
-            onChange={(val) =>
-              handleCustomColorSetChange(flipped ? 'textColor' : 'backgroundColor', val)
-            }
-          >
-            {flipped ? 'Text color' : 'BG color'}
-          </InputText>
-          <InputText
-            value={flipped ? settings.backgroundColor : settings.textColor}
-            onChange={(val) =>
-              handleCustomColorSetChange(flipped ? 'backgroundColor' : 'textColor', val)
-            }
-          >
-            {flipped ? 'BG color' : 'Text color'}
-          </InputText>
-        </div>
+        <InputText
+          value={flipped ? settings.textColor : settings.backgroundColor}
+          onChange={(val) =>
+            handleCustomColorSetChange(flipped ? 'textColor' : 'backgroundColor', val)
+          }
+        >
+          {flipped ? 'Text color' : 'BG color'}
+        </InputText>
+        <InputText
+          value={flipped ? settings.backgroundColor : settings.textColor}
+          onChange={(val) =>
+            handleCustomColorSetChange(flipped ? 'backgroundColor' : 'textColor', val)
+          }
+        >
+          {flipped ? 'BG color' : 'Text color'}
+        </InputText>
         <InputSwitch checked={flipped} onChange={handleFlipColors}>
           Flip Colors
         </InputSwitch>

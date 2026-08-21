@@ -17,7 +17,7 @@
   --mt-text-secondary: var(--content-default);
   --mt-background: var(--surface-default);
   --mt-background-hover: var(--surface-hover);
-  --mt-border: var(--base-neutral-400);
+  --mt-border: var(--color-neutral-400);
   --mt-disabled: #cccccc;
 
   /* Input specific colors */

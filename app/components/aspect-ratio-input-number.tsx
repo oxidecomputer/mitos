@@ -211,7 +211,7 @@ export const AspectRatioInputNumber = ({
       </InputSwitch>
 
       {isLocked && (
-        <div className="mt-2 flex flex-col gap-2 border-l py-1 pl-3 border-default">
+        <div className="mt-2 flex flex-col gap-2 border-l border-default py-1 pl-3">
           <InputNumber
             value={aspectRatio || 1}
             onChange={handleAspectRatioChange}

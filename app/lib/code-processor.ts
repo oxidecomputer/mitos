@@ -12,6 +12,7 @@ import { type EsbuildService } from '~/hooks/use-esbuild'
 
 import type { Program } from './animation'
 import * as localUtils from './localUtils'
+import { resolveColor } from './utils'
 
 // Global type extensions for Mitos data storage
 declare global {
@@ -255,9 +256,12 @@ function createSettingsPlugin(settings?: unknown): Plugin {
         const settingsObj = settings as AsciiSettings
         const characterSet = settingsObj?.output?.characterSet || '@%#*+=-:. '
         // Stock colours, exposed so scripts can `import { textColor } from '@/settings'`
-        // and build palettes off the user's chosen export colours.
-        const textColor = settingsObj?.export?.textColor || '#d7d8d9'
-        const backgroundColor = settingsObj?.export?.backgroundColor || '#080f11'
+        // and build palettes off the user's chosen export colours. CSS variables
+        // are resolved so scripts always see a concrete color value.
+        const textColor = resolveColor(settingsObj?.export?.textColor || '#d7d8d9')
+        const backgroundColor = resolveColor(
+          settingsObj?.export?.backgroundColor || '#080f11',
+        )
 
         // Strip out large source data to reduce compiled code size
         const lightweightSettings = settingsObj

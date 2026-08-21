@@ -403,7 +403,7 @@ server.tool(
 
 server.tool(
   'patch_settings',
-  'Deep-merge a partial settings object into the current Mitos settings. Top-level keys: output (columns, rows, characterSet, grid, gridColor, characterMapping, motionThreshold, motionDecay), animation (animationLength, frameRate), preprocessing (brightness, whitePoint, blackPoint, invert, dithering), export (textColor, backgroundColor, padding, lineHeight).',
+  'Deep-merge a partial settings object into the current Mitos settings. Top-level keys: output (columns, rows, characterSet, grid, gridColor, characterMapping, motionThreshold, motionDecay), animation (animationLength, frameRate), preprocessing (brightness, whitePoint, blackPoint, invert, dithering), export (textColor, backgroundColor, padding, lineHeight). Color values accept any CSS color or an Oxide design-system variable (e.g. "--color-green-800"), resolved to its concrete value at render/export time.',
   {
     settings: z
       .record(z.string(), z.record(z.string(), z.unknown()))

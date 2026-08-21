@@ -126,7 +126,7 @@ export function SourceSelector({
   useHotkeys('meta+o', handleButtonClick, { preventDefault: true }, [])
 
   return (
-    <Container className="border-b py-3 border-default">
+    <Container className="border-b border-default py-3">
       <div className="flex gap-2">
         <input
           key="file-input"
@@ -156,7 +156,7 @@ export function SourceSelector({
         />
       </div>
       {settings.data && (
-        <div className="!mt-2 line-clamp-1 flex items-center gap-0.5 font-mono uppercase text-quaternary [font-size:10px]">
+        <div className="!mt-2 line-clamp-1 flex items-center gap-0.5 font-mono [font-size:10px] text-quaternary uppercase">
           <div className="text-secondary">Source:</div>
           <div className="flex-grow truncate text-ellipsis">{settings.fileName}</div>
           {/*<button className="ml-1 flex items-center justify-center rounded border p-1 text-secondary border-default hover:bg-hover">

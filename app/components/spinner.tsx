@@ -70,9 +70,9 @@ export const DelayedSpinner = ({
   if (!showSpinner) return null
 
   return (
-    <div className="absolute inset-0 z-50 flex h-full flex-col items-center justify-center gap-2 bg-opacity-90 bg-default">
+    <div className="bg-opacity-90 absolute inset-0 z-50 flex h-full flex-col items-center justify-center gap-2 bg-default">
       <Spinner className="text-mono-lg text-secondary" />
-      <div className="text-quaternary text-mono-sm">Initializing…</div>
+      <div className="text-mono-sm text-quaternary">Initializing…</div>
     </div>
   )
 }
