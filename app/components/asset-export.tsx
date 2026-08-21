@@ -20,7 +20,7 @@ import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
 import { get2dContext } from '~/lib/utils'
 
-import type { AsciiSettings, GridType } from './ascii-art-generator'
+import type { AsciiSettings, ExportFormat, GridType } from './ascii-art-generator'
 import { type AnimationController } from './ascii-preview'
 import { Container } from './container'
 import {
@@ -31,13 +31,6 @@ import {
   FONT_SIZE,
 } from './dimension-utils'
 
-export type ExportFormat = 'frames' | 'png' | 'svg' | 'mp4'
-
-interface ExportDimensions {
-  width: number
-  height: number
-}
-
 interface AssetExportProps {
   program: Program | null
   animationController: AnimationController
@@ -47,6 +40,7 @@ interface AssetExportProps {
   dimensions: { width: number; height: number }
   disabled: boolean
   exportSettings: AsciiSettings['export']
+  updateExportSettings: (changes: Partial<AsciiSettings['export']>) => void
   gridType: GridType
   gridColor: string
 }
@@ -60,16 +54,12 @@ export function AssetExport({
   dimensions,
   disabled,
   exportSettings,
+  updateExportSettings,
   gridType,
   gridColor,
 }: AssetExportProps) {
-  const [exportFormat, setExportFormat] = useState<ExportFormat>(
-    animationLength > 1 ? 'frames' : 'png',
-  )
-  const [exportDimensions, setExportDimensions] = useState<ExportDimensions>({
-    width: 1920,
-    height: 1080,
-  })
+  const exportFormat = exportSettings.format
+  const exportDimensions = { width: exportSettings.width, height: exportSettings.height }
 
   const [trimEnabled, setTrimEnabled] = useState(false)
   const [trimX, setTrimX] = useState(0)
@@ -94,7 +84,10 @@ export function AssetExport({
     return paddingPixels * (finalHeight / previewTotalHeight)
   }
 
-  // Set export height based on character dimensions including padding
+  // Set export height based on character dimensions including padding.
+  // Guarded: the effect re-runs on every parent render (dimensions is a fresh
+  // object each time), so an unconditional write would loop now that the
+  // dimensions live in settings.
   useEffect(() => {
     const { totalWidth, totalHeight } = calculateContentDimensions(
       dimensions,
@@ -102,21 +95,20 @@ export function AssetExport({
       exportSettings.lineHeight,
     )
     const aspectRatio = calculateAspectRatio(totalWidth, totalHeight)
-    setExportDimensions((prev) => ({
-      ...prev,
-      height: Math.round(prev.width * aspectRatio),
-    }))
-  }, [dimensions, exportSettings.padding, exportSettings.lineHeight])
-
-  useEffect(() => {
-    const isAnimated = animationLength > 1
-
-    if (isAnimated) {
-      setExportFormat('frames')
-    } else {
-      setExportFormat('png')
+    const height = Math.round(exportSettings.width * aspectRatio)
+    if (height !== exportSettings.height) {
+      updateExportSettings({ height })
     }
-  }, [animationLength])
+  }, [dimensions, exportSettings, updateExportSettings])
+
+  // Keep the format valid for the animation mode, preserving a saved or
+  // pasted choice when it already fits
+  useEffect(() => {
+    const valid: ExportFormat[] = animationLength > 1 ? ['mp4', 'frames'] : ['svg', 'png']
+    if (!valid.includes(exportSettings.format)) {
+      updateExportSettings({ format: animationLength > 1 ? 'frames' : 'png' })
+    }
+  }, [animationLength, exportSettings.format, updateExportSettings])
 
   const exportContent = async () => {
     if (!program) return
@@ -695,7 +687,7 @@ export function AssetExport({
       <InputSelect
         value={exportFormat}
         onChange={(value) => {
-          setExportFormat(value as ExportFormat)
+          updateExportSettings({ format: value as ExportFormat })
         }}
         options={
           animationLength > 1
@@ -734,7 +726,7 @@ export function AssetExport({
                   exportSettings.lineHeight,
                   newWidth,
                 )
-                setExportDimensions(newDimensions)
+                updateExportSettings(newDimensions)
               }}
             >
               Width{' '}
@@ -754,7 +746,7 @@ export function AssetExport({
                   undefined,
                   newHeight,
                 )
-                setExportDimensions(newDimensions)
+                updateExportSettings(newDimensions)
               }}
             >
               Height{' '}
