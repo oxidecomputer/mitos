@@ -33,6 +33,7 @@ interface AsciiPreviewProps {
   program: Program | null
   dimensions: { width: number; height: number }
   gridType: GridType
+  gridColor: string
   showUnderlyingImage: boolean
   underlyingImageUrl: string | null
   settings: AsciiSettings['animation'] & AsciiSettings['export']
@@ -121,6 +122,7 @@ export function AsciiPreview({
   program,
   dimensions,
   gridType,
+  gridColor,
   showUnderlyingImage,
   underlyingImageUrl,
   settings,
@@ -371,6 +373,7 @@ export function AsciiPreview({
             {gridType !== 'none' && program && (
               <GridOverlay
                 grid={gridType}
+                color={gridColor}
                 cols={cols}
                 rows={rows}
                 padding={paddingPixels}
