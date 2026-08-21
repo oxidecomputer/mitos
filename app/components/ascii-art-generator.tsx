@@ -86,29 +86,6 @@ export interface AsciiSettings {
   }
 }
 
-// Upgrade settings from older saved projects (colorMapping was renamed to
-// characterMapping, and new fields get defaults)
-function migrateSettings(settings: AsciiSettings): AsciiSettings {
-  const { colorMapping, ...output } = settings.output as AsciiSettings['output'] & {
-    colorMapping?: CharacterMappingType
-  }
-
-  let characterMapping = output.characterMapping ?? colorMapping ?? 'brightness'
-  // Motion mapping needs frames to diff, so static sources reset it
-  if (characterMapping === 'motion' && !settings.source.data?.includes('data:image/gif')) {
-    characterMapping = 'brightness'
-  }
-
-  return {
-    ...settings,
-    output: {
-      ...DEFAULT_SETTINGS.output,
-      ...output,
-      characterMapping,
-    },
-  }
-}
-
 export function AsciiArtGenerator() {
   const {
     esbuildService,
@@ -831,7 +808,7 @@ export function AsciiArtGenerator() {
       setProjectName(projectData.name || 'Imported Project')
 
       if (projectData.settings) {
-        setSettings(migrateSettings(projectData.settings))
+        setSettings(projectData.settings as AsciiSettings)
 
         // If the imported project has code, show the code sidebar
         if (projectData.settings.source.code) {
