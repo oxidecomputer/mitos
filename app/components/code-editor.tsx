@@ -124,14 +124,18 @@ const theme = EditorView.theme({
     caretColor: oxideDark.cursor,
   },
   '.cm-activeLineGutter': {
-    backgroundColor: 'var(--base-neutral-300)',
+    backgroundColor: 'var(--color-neutral-300)',
   },
   '&': {
     height: '100%',
     fontSize: '12px',
     backgroundColor: oxideDark.background,
     color: oxideDark.foreground,
-    fontFamily: 'GT America Mono, monospace',
+  },
+  // CodeMirror's base theme sets font-family on .cm-scroller, so setting it on
+  // the editor root gets overridden — it has to go here
+  '.cm-scroller': {
+    fontFamily: "'GT America Mono', monospace",
   },
   '.cm-cursor, .cm-dropCursor': {
     borderLeftColor: oxideDark.cursor,
@@ -158,7 +162,7 @@ const theme = EditorView.theme({
   '.cm-gutters': {
     backgroundColor: 'var(--surface-raise)',
     borderColor: 'var(--stroke-default)',
-    color: 'var(--base-neutral-600)',
+    color: 'var(--color-neutral-600)',
   },
   '.cm-matchingBracket, .cm-nonmatchingBracket': {
     backgroundColor: '#1A2E36',

@@ -15,7 +15,8 @@ function App() {
       <AsciiArtGenerator />
       <Toaster
         toastOptions={{
-          className: '!bg-raise !rounded-md !elevation-2 !border-default !text-default',
+          className:
+            '!bg-raise !rounded-md !shadow-border-medium !border-default !text-default',
         }}
         offset={12}
         position="top-center"

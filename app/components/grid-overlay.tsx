@@ -7,6 +7,8 @@
  */
 import { useRef } from 'react'
 
+import { resolveColor } from '~/lib/utils'
+
 import type { GridType } from './ascii-art-generator'
 
 interface GridOverlayProps {
@@ -46,7 +48,14 @@ export function GridOverlay({ grid, color, cols, rows, padding }: GridOverlayPro
     <div
       ref={gridRef}
       className="grid-overlay pointer-events-none absolute z-10"
-      style={{ left: padding, right: padding, bottom: padding, top: padding, color }}
+      style={{
+        left: padding,
+        right: padding,
+        bottom: padding,
+        top: padding,
+        // Resolve so bare custom-property names ('--color-green-800') work too
+        color: resolveColor(color),
+      }}
     >
       <svg
         width="100%"

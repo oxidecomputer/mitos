@@ -26,7 +26,7 @@ const STATES: Record<
     title: 'Another tab holds the MCP connection',
   },
   disconnected: {
-    dot: 'bg-[--content-quaternary]',
+    dot: 'bg-(--content-quaternary)',
     label: 'No client',
     title: 'No MCP server is running',
   },
@@ -54,7 +54,7 @@ export function McpIndicator({
         <div className="ui-select">
           <label className="ui-select__label">MCP</label>
         </div>
-        <div className="flex items-center gap-1.5 font-mono uppercase text-secondary [font-size:11px]">
+        <div className="flex items-center gap-1.5 font-mono [font-size:11px] text-secondary uppercase">
           <span className={cn('h-1.5 w-1.5 rounded-full', state.dot)} />
           {state.label}
         </div>

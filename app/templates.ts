@@ -32,8 +32,8 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
   },
   output: {
     characterSet: predefinedCharacterSets['standard'],
-    grid: 'none',
-    gridColor: 'rgba(255, 255, 255, 0.4)',
+    grid: 'both',
+    gridColor: '--color-neutral-400',
     showUnderlyingImage: false,
     columns: 80,
     rows: 40,
@@ -45,7 +45,7 @@ export const DEFAULT_SETTINGS: AsciiSettings = {
   export: {
     textColor: '#d7d8d9',
     backgroundColor: '#080f11',
-    padding: 2,
+    padding: 0,
     lineHeight: 1.2,
     width: 1920,
     height: 1080,

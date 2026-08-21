@@ -6,7 +6,7 @@
  * Copyright Oxide Computer Company
  */
 import { invariant, type Cell, type Context } from '../animation'
-import { get2dContext } from '../utils'
+import { get2dContext, resolveColor } from '../utils'
 
 // Supersample the backing bitmap above the device pixel ratio so the canvas
 // stays crisp when the preview is zoomed in (zoom goes up to 5x). Text is
@@ -58,9 +58,10 @@ export default function createRenderer() {
     canvas.style.width = canvasWidth + 'px'
     canvas.style.height = canvasHeight + 'px'
 
-    // Get colors from settings
-    const backgroundColor = context.settings.backgroundColor || 'white'
-    const textColor = context.settings.textColor || 'black'
+    // Get colors from settings; CSS variables resolve to concrete values here
+    // because canvas fillStyle can't dereference them
+    const backgroundColor = resolveColor(context.settings.backgroundColor || 'white')
+    const textColor = resolveColor(context.settings.textColor || 'black')
 
     // Fill background
     ctx.fillStyle = backgroundColor
@@ -86,7 +87,7 @@ export default function createRenderer() {
         const x = i * m.cellWidth + padding
         const y = j * m.lineHeight + padding
 
-        const color = cell?.color || textColor
+        const color = cell?.color ? resolveColor(cell.color) : textColor
         if (color !== currentColor) {
           ctx.fillStyle = color
           currentColor = color

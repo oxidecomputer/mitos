@@ -32,7 +32,7 @@ import {
   processImage,
 } from '~/lib/image-processor'
 import type { AsciiImageData } from '~/lib/types'
-import { cn } from '~/lib/utils'
+import { cn, resolveColor } from '~/lib/utils'
 import { DEFAULT_SETTINGS, TEMPLATES, TemplateType } from '~/templates'
 
 import { AnimationOptions } from './animation-options'
@@ -880,7 +880,7 @@ export function AsciiArtGenerator() {
         initial={false}
         animate={{ width: showSidebar ? 256 : 0 }}
         transition={{ type: 'spring', duration: 0.5, bounce: 0 }}
-        className="left-0 top-0 transform overflow-hidden border-r bg-raise border-default"
+        className="top-0 left-0 transform overflow-hidden border-r border-default bg-raise"
         style={{ minWidth: 0 }}
       >
         <motion.div
@@ -892,7 +892,7 @@ export function AsciiArtGenerator() {
             pointerEvents: showSidebar ? 'auto' : 'none',
           }}
         >
-          <div className="flex items-center justify-center rounded px-4 py-3 text-center font-mono text-default [font-size:12px] [&>*]:border-y [&>*]:border-r [&>*]:px-1 [&>*]:py-0.5 [&>*]:border-default">
+          <div className="flex items-center justify-center rounded px-4 py-3 text-center font-mono [font-size:12px] text-default [&>*]:border-y [&>*]:border-r [&>*]:border-default [&>*]:px-1 [&>*]:py-0.5">
             <div className="rounded-l border-l">M</div>
             <div>I</div>
             <div>T</div>
@@ -968,7 +968,7 @@ export function AsciiArtGenerator() {
               <a
                 href="https://oxide.computer"
                 target="_blank"
-                className="flex items-center gap-2 font-mono uppercase text-quaternary [font-size:12px]"
+                className="flex items-center gap-2 font-mono [font-size:12px] text-quaternary uppercase"
               >
                 /*
                 <div className="link-with-underline text-secondary">Made by Oxide</div>
@@ -988,11 +988,11 @@ export function AsciiArtGenerator() {
         </motion.div>
       </motion.div>
 
-      <div className="absolute left-4 top-3 z-30">
+      <div className="absolute top-3 left-4 z-30">
         <button
           className={cn(
-            '-m-2 rounded border p-2 transition-transform bg-raise hover:bg-hover',
-            showSidebar ? 'border-transparent' : 'border-[--mt-border]',
+            '-m-2 rounded border bg-raise p-2 transition-transform hover:bg-hover',
+            showSidebar ? 'border-transparent' : 'border-(--mt-border)',
           )}
           onClick={() => setShowSidebar(!showSidebar)}
         >
@@ -1024,6 +1024,13 @@ export function AsciiArtGenerator() {
                 'relative flex-1 overflow-hidden',
                 dragActive ? 'bg-secondary' : 'bg-default',
               )}
+              // Match the pane to the export background so the preview sits in
+              // context; a border on the canvas keeps its bounds visible
+              style={
+                program && !dragActive
+                  ? { backgroundColor: resolveColor(settings.export.backgroundColor) }
+                  : undefined
+              }
             >
               {dragActive && (
                 <div className="absolute inset-1 rounded border border-dashed border-accent-secondary" />

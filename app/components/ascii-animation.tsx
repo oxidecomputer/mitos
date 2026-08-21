@@ -8,6 +8,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
 import { createAnimation, type Program } from '~/lib/animation'
+import { resolveColor } from '~/lib/utils'
 
 import { AnimationController } from './ascii-preview'
 import { FONT_SIZE } from './dimension-utils'
@@ -128,11 +129,12 @@ export default function AsciiAnimation({
   return (
     <div
       ref={containerRef}
-      className="ascii-animation relative flex items-center justify-center overflow-hidden rounded-[1%] [font-size:0px]"
+      className="ascii-animation relative flex items-center justify-center overflow-hidden rounded-[0.25%] [font-size:0px]"
       aria-hidden
       role="img"
       style={{
-        backgroundColor,
+        // Resolve so bare custom-property names ('--color-neutral-100') work too
+        backgroundColor: resolveColor(backgroundColor),
       }}
     >
       <canvas

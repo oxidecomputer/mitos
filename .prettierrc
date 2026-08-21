@@ -5,6 +5,7 @@
   "singleQuote": true,
   "trailingComma": "all",
   "plugins": ["@ianvs/prettier-plugin-sort-imports", "prettier-plugin-tailwindcss"],
+  "tailwindStylesheet": "./app/index.css",
   "importOrder": ["<THIRD_PARTY_MODULES>", "", "^~/(.*)$", "", "^[./]"],
   "importOrderTypeScriptVersion": "5.2.2"
 }

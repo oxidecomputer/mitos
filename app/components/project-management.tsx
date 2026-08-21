@@ -66,7 +66,7 @@ export function ProjectManagement({
   }
 
   return (
-    <Container className="border-t py-3 border-default">
+    <Container className="border-t border-default py-3">
       <InputSelect<TemplateType>
         value={templateType}
         onChange={handleTemplateChange}

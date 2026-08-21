@@ -62,7 +62,7 @@ function PasteConfirmationDialog({
       placement="right"
       open={open}
       onClose={onCancel}
-      className="dialog ml-3 max-w-60 rounded-md border p-3 bg-default border-default elevation-2"
+      className="dialog ml-3 max-w-60 rounded-md border border-default bg-default p-3 shadow-border-medium"
     >
       <PopoverArrow className="arrow" />
       <div className="mb-2 overflow-hidden rounded-md border border-default">

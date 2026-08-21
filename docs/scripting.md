@@ -18,7 +18,9 @@ function post(context, cursor, buffer, userData) {} // every frame, after main
 Most scripts only need `main`. It must return one of:
 
 - a string — the character to draw (e.g. `'#'`)
-- a cell object — `{ char: '#', color: '#ff6b6b' }` (color is any CSS color)
+- a cell object — `{ char: '#', color: '#ff6b6b' }` (color is any CSS color, or an Oxide
+  design-system variable like `'--color-green-800'` / `'var(--color-green-800)'`, resolved
+  to its concrete value at render time)
 - `undefined`/empty — leaves the cell blank
 
 ### Arguments
@@ -53,7 +55,8 @@ import { checkerboard, getImageValue, stripes, valueToChar } from '@/utils'
 - `imageData` — the loaded image as `number[][]` (0–1 brightness), `null`-ish if no image
 - `frames` — array of `imageData`-like frames for GIFs, `null` for static sources
 - `characterSet` — the user's chosen ramp string (dark → light), e.g. `'@%#*+=-:. '`
-- `textColor` / `backgroundColor` — the export colors, for building palettes
+- `textColor` / `backgroundColor` — the export colors, for building palettes (CSS variables
+  are already resolved to concrete values)
 - `settings` — the full app settings object (source data stripped)
 
 Bare npm imports also work — they are fetched from unpkg at compile time, e.g.

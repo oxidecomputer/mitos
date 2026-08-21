@@ -18,7 +18,7 @@ import { getColoredRows, getContent } from '~/lib/buffer-text'
 import { glyphRunToPathData, loadAsciiFont, type Font } from '~/lib/svg-font'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
-import { get2dContext } from '~/lib/utils'
+import { get2dContext, resolveColor } from '~/lib/utils'
 
 import type { AsciiSettings, ExportFormat, GridType } from './ascii-art-generator'
 import { type AnimationController } from './ascii-preview'
@@ -210,11 +210,10 @@ export function AssetExport({
 
     try {
       const { width, height } = dimensions
-      const coloredRows = getColoredRows(
-        dimensions,
-        animationController,
-        exportSettings.textColor,
-      )
+      // Exports are standalone documents, so CSS variables must be resolved to
+      // concrete colors here
+      const textColor = resolveColor(exportSettings.textColor)
+      const coloredRows = getColoredRows(dimensions, animationController, textColor)
 
       // Outlining is opt-in and needs the parsed font
       let font: Font | null = null
@@ -251,10 +250,10 @@ export function AssetExport({
       let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${paddedSvgWidth}" height="${paddedSvgHeight}" viewBox="0 0 ${paddedSvgWidth} ${paddedSvgHeight}">\n`
       svgContent += '  <style>\n'
       svgContent += `    .ascii-text { font-family: GT America Mono, monospace; font-size: ${fontSize}px; letter-spacing: 0; white-space: pre; }\n`
-      svgContent += `    .grid-line { stroke: ${gridColor}; stroke-width: 0.5; }\n`
+      svgContent += `    .grid-line { stroke: ${resolveColor(gridColor)}; stroke-width: 0.5; }\n`
       svgContent += '  </style>\n'
       if (includeBackground) {
-        svgContent += `  <rect width="100%" height="100%" fill="${exportSettings.backgroundColor}"/>\n`
+        svgContent += `  <rect width="100%" height="100%" fill="${resolveColor(exportSettings.backgroundColor)}"/>\n`
       }
 
       if (gridType !== 'none') {
@@ -299,7 +298,7 @@ export function AssetExport({
               fontSize,
               measuredCellWidth,
             )
-            if (d) svgContent += `    <path d="${d}" fill="${seg.color}"/>\n`
+            if (d) svgContent += `    <path d="${d}" fill="${resolveColor(seg.color)}"/>\n`
           })
         })
 
@@ -310,7 +309,7 @@ export function AssetExport({
         coloredRows.forEach((segments, index) => {
           if (segments.length === 0) {
             // Keep the (blank) line so following rows stay vertically aligned.
-            svgContent += `    <tspan x="${padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${exportSettings.textColor}"> </tspan>\n`
+            svgContent += `    <tspan x="${padding}" dy="${index === 0 ? 0 : cellHeight}" fill="${textColor}"> </tspan>\n`
             return
           }
 
@@ -322,7 +321,7 @@ export function AssetExport({
             const isFirst = segIndex === 0
             const xAttr = isFirst ? ` x="${padding}"` : ''
             const dyAttr = ` dy="${isFirst && index !== 0 ? cellHeight : 0}"`
-            svgContent += `    <tspan${xAttr}${dyAttr} fill="${seg.color}">${escapeXml(processed)}</tspan>\n`
+            svgContent += `    <tspan${xAttr}${dyAttr} fill="${resolveColor(seg.color)}">${escapeXml(processed)}</tspan>\n`
           })
         })
 
@@ -419,6 +418,10 @@ export function AssetExport({
     const ctx = get2dContext(canvas)
     if (!ctx) return
 
+    // Canvas fillStyle can't dereference CSS variables — resolve them first
+    const backgroundColor = resolveColor(settings.backgroundColor)
+    const textColor = resolveColor(settings.textColor)
+
     // Calculate cell dimensions accounting for padding
     const contentWidth = canvas.width - padding * 2
     const contentHeight = canvas.height - padding * 2
@@ -436,16 +439,16 @@ export function AssetExport({
     // transparent first.
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     if (includeBackground) {
-      ctx.fillStyle = settings.backgroundColor
+      ctx.fillStyle = backgroundColor
       ctx.fillRect(0, 0, canvas.width, canvas.height)
     }
-    ctx.fillStyle = settings.textColor
+    ctx.fillStyle = textColor
     ctx.font = `${fontSize}px "GT America Mono", monospace`
     ctx.textBaseline = 'top'
 
     // Only touch fillStyle when a cell's colour differs from the previous one;
     // cells without an explicit colour fall back to the stock text colour.
-    let currentColor = settings.textColor
+    let currentColor = textColor
 
     for (let i = 0; i < buffer.length; i++) {
       const col = i % dimensions.width
@@ -453,7 +456,8 @@ export function AssetExport({
       const x = col * cellWidth + padding
       const y = row * lineHeight + padding
 
-      const color = buffer[i]?.color || settings.textColor
+      const cellColor = buffer[i]?.color
+      const color = cellColor ? resolveColor(cellColor) : textColor
       if (color !== currentColor) {
         ctx.fillStyle = color
         currentColor = color
@@ -465,7 +469,7 @@ export function AssetExport({
     // Grid lines draw over the text, matching the preview overlay
     if (gridType !== 'none') {
       const maxDimension = Math.max(dimensions.width, dimensions.height)
-      ctx.strokeStyle = gridColor
+      ctx.strokeStyle = resolveColor(gridColor)
       ctx.lineWidth = Math.max(1, (contentWidth / 1000) * Math.max(0.5, 50 / maxDimension))
       ctx.beginPath()
 
