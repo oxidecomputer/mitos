@@ -16,7 +16,7 @@ const STATES: Record<
   { dot: string; label: string; title: string }
 > = {
   active: {
-    dot: 'bg-accent',
+    dot: 'bg-accent-inverse',
     label: 'Connected',
     title: 'An MCP client is connected to this tab',
   },

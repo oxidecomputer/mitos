@@ -7,268 +7,260 @@
  */
 import { describe, expect, test } from 'bun:test'
 
-import { PATTERNS } from '~/components/code-sidebar'
+import {
+  formatControlValue,
+  parseControlVariables,
+  type ControlValue,
+} from '~/lib/control-variables'
 
-describe('Control Variable Patterns', () => {
-  test('SIMPLE_VAR pattern should match basic variable declarations', () => {
-    const tests = [
-      ['const speed = 5; //~ number 1-10', ['speed', '5', 'number 1-10']],
-      ['const enabled = true; //~ boolean', ['enabled', 'true', 'boolean']],
-      ['const text = "hello"; //~ text', ['text', '"hello"', 'text']],
-    ]
+/** Apply a control update the same way the sidebar does */
+function applyUpdate(code: string, controlId: string, newValue: ControlValue): string {
+  const control = parseControlVariables(code).find((c) => c.id === controlId)
+  if (!control) throw new Error(`control not found: ${controlId}`)
+  return (
+    code.slice(0, control.from) +
+    formatControlValue(control, newValue) +
+    code.slice(control.to)
+  )
+}
 
-    tests.forEach(([line, expected]) => {
-      const match = (line as string).match(PATTERNS.SIMPLE_VAR)
+describe('parseControlVariables', () => {
+  test('parses simple variable declarations', () => {
+    const code = [
+      'const speed = 5; //~ number 1-10',
+      'const enabled = true; //~ boolean',
+      'const message = "hello"; //~ text',
+    ].join('\n')
 
-      expect(match).not.toBeNull()
-      expect([match![1], match![2], match![3]]).toEqual(expected as string[])
-    })
-  })
-
-  test('SIMPLE_VAR pattern should match TypeScript typed variable declarations', () => {
-    const tests = [
-      ['const speed: number = 5; //~ number 1-10', ['speed', '5', 'number 1-10']],
-      ['const enabled: boolean = true; //~ boolean', ['enabled', 'true', 'boolean']],
-      ['const text: string = "hello"; //~ text', ['text', '"hello"', 'text']],
-      ['const count: number = 42; //~ number 0-100', ['count', '42', 'number 0-100']],
-      ['const name: string = `world`; //~ text', ['name', '`world`', 'text']],
-    ]
-
-    tests.forEach(([line, expected]) => {
-      const match = (line as string).match(PATTERNS.SIMPLE_VAR)
-
-      expect(match).not.toBeNull()
-      expect([match![1], match![2], match![3]]).toEqual(expected as string[])
-    })
-  })
-
-  test('ROOT_OBJECT pattern should match inline object declarations', () => {
-    const line = 'const config = { x: 10, y: 20 }; //~ number 0-100'
-    const match = line.match(PATTERNS.ROOT_OBJECT)
-
-    expect(match).not.toBeNull()
-    expect(match![1]).toBe('config')
-    expect(match![2]).toBe('x: 10, y: 20 ')
-    expect(match![3]).toBe('number 0-100')
-  })
-
-  test('ROOT_OBJECT pattern should match TypeScript typed inline object declarations', () => {
-    const tests = [
-      [
-        'const config: { x: number; y: number } = { x: 10, y: 20 }; //~ number 0-100',
-        ['config', 'x: 10, y: 20 ', 'number 0-100'],
-      ],
-      [
-        'const position: Position = { x: 5, y: 15 }; //~ number 1-50',
-        ['position', 'x: 5, y: 15 ', 'number 1-50'],
-      ],
-      [
-        'const settings: any = { width: 800, height: 600 }; //~ number 100-2000',
-        ['settings', 'width: 800, height: 600 ', 'number 100-2000'],
-      ],
-    ]
-
-    tests.forEach(([line, expected]) => {
-      const match = (line as string).match(PATTERNS.ROOT_OBJECT)
-
-      expect(match).not.toBeNull()
-      expect([match![1], match![2], match![3]]).toEqual(expected as string[])
-    })
-  })
-
-  test('OBJECT_PROP pattern should match object properties', () => {
-    const line = '  width: 800, //~ number 100-2000'
-    const match = line.match(PATTERNS.OBJECT_PROP)
-
-    expect(match).not.toBeNull()
-    expect(match![1]).toBe('width')
-    expect(match![2]).toBe('800')
-    expect(match![3]).toBe('number 100-2000')
-  })
-
-  test('RANGE pattern should extract min-max values', () => {
-    const tests = [
-      ['number 1-10', ['1', '10']],
-      ['number -50-50', ['-50', '50']],
-      ['number 0.5-10.5', ['0.5', '10.5']],
-    ]
-
-    tests.forEach(([config, expected]) => {
-      const match = (config as string).match(PATTERNS.RANGE)
-      expect(match).not.toBeNull()
-      expect([match![1], match![2]]).toEqual(expected as string[])
-    })
-  })
-
-  test('STEP pattern should extract step values', () => {
-    const config = 'number 1-10 step=0.5'
-    const match = config.match(PATTERNS.STEP)
-
-    expect(match).not.toBeNull()
-    expect(match![1]).toBe('0.5')
-  })
-})
-
-describe('Control Variable Parsing Integration', () => {
-  // Simple mock of the parseControlVariables function to test key scenarios
-  function extractControlVariables(code: string) {
-    const lines = code.split('\n')
-    const controls: Array<{
-      name: string
-      type: string
-      value: string | number | boolean
-    }> = []
-
-    lines.forEach((line) => {
-      const simpleMatch = line.match(PATTERNS.SIMPLE_VAR)
-      if (simpleMatch) {
-        const [, name, valueStr, controlConfig] = simpleMatch
-        const type = controlConfig.trim().split(/\s+/)[0]
-
-        let value: string | number | boolean = valueStr.trim()
-        if (type === 'number') value = parseFloat(value)
-        if (type === 'boolean') value = value === 'true'
-        if (type === 'text') value = (value as string).replace(/^['"`]|['"`]$/g, '')
-
-        controls.push({ name, type, value })
-      }
-
-      const rootObjectMatch = line.match(PATTERNS.ROOT_OBJECT)
-      if (rootObjectMatch) {
-        const [, _objName, content, controlConfig] = rootObjectMatch
-        const type = controlConfig.trim().split(/\s+/)[0]
-
-        let match
-        PATTERNS.PROP_VALUE.lastIndex = 0
-        while ((match = PATTERNS.PROP_VALUE.exec(content)) !== null) {
-          const [, propName, valueStr] = match
-          let value: string | number | boolean = valueStr.trim()
-          if (type === 'number') value = parseFloat(value)
-          if (type === 'boolean') value = value === 'true'
-          if (type === 'text') value = (value as string).replace(/^['"`]|['"`]$/g, '')
-
-          controls.push({ name: propName, type, value })
-        }
-      }
-    })
-
-    return controls
-  }
-
-  test('should parse simple variable declarations', () => {
-    const code = `
-const speed = 5; //~ number 1-10
-const enabled = true; //~ boolean
-const message = "hello"; //~ text
-    `
-
-    const result = extractControlVariables(code)
+    const result = parseControlVariables(code)
 
     expect(result).toHaveLength(3)
-    expect(result[0]).toEqual({ name: 'speed', type: 'number', value: 5 })
-    expect(result[1]).toEqual({ name: 'enabled', type: 'boolean', value: true })
-    expect(result[2]).toEqual({ name: 'message', type: 'text', value: 'hello' })
+    expect(result[0]).toMatchObject({
+      id: 'speed',
+      name: 'speed',
+      type: 'number',
+      value: 5,
+      min: 1,
+      max: 10,
+    })
+    expect(result[1]).toMatchObject({ id: 'enabled', type: 'boolean', value: true })
+    expect(result[2]).toMatchObject({ id: 'message', type: 'text', value: 'hello' })
   })
 
-  test('should parse TypeScript typed variable declarations', () => {
-    const code = `
-const speed: number = 5; //~ number 1-10
-const enabled: boolean = true; //~ boolean
-const message: string = "hello"; //~ text
-const count: number = 42; //~ number 0-100
-const active: boolean = false; //~ boolean
-    `
+  test('parses let and var declarations', () => {
+    const code = ['let speed = 5; //~ number 1-10', 'var flag = false; //~ boolean'].join(
+      '\n',
+    )
 
-    const result = extractControlVariables(code)
+    const result = parseControlVariables(code)
 
-    expect(result).toHaveLength(5)
-    expect(result[0]).toEqual({ name: 'speed', type: 'number', value: 5 })
-    expect(result[1]).toEqual({ name: 'enabled', type: 'boolean', value: true })
-    expect(result[2]).toEqual({ name: 'message', type: 'text', value: 'hello' })
-    expect(result[3]).toEqual({ name: 'count', type: 'number', value: 42 })
-    expect(result[4]).toEqual({ name: 'active', type: 'boolean', value: false })
+    expect(result).toHaveLength(2)
+    expect(result[0].name).toBe('speed')
+    expect(result[1]).toMatchObject({ name: 'flag', value: false })
   })
 
-  test('should parse inline object declarations', () => {
-    const code = `const position = { x: 10, y: 20 }; //~ number 0-100`
+  test('parses TypeScript typed declarations', () => {
+    const code = [
+      'const speed: number = 5; //~ number 1-10',
+      'const enabled: boolean = true; //~ boolean',
+      'const name: string = `world`; //~ text',
+    ].join('\n')
 
-    const result = extractControlVariables(code)
-
-    expect(result.length).toBeGreaterThan(0)
-    expect(result.some((r) => r.name === 'x' && r.value === 10)).toBe(true)
-    expect(result.some((r) => r.name === 'y' && r.value === 20)).toBe(true)
-  })
-
-  test('should parse TypeScript typed inline object declarations', () => {
-    const code = `const position: { x: number; y: number } = { x: 10, y: 20 }; //~ number 0-100`
-
-    const result = extractControlVariables(code)
-
-    expect(result.length).toBeGreaterThan(0)
-    expect(result.some((r) => r.name === 'x' && r.value === 10)).toBe(true)
-    expect(result.some((r) => r.name === 'y' && r.value === 20)).toBe(true)
-  })
-
-  test('should handle different quote types in text values', () => {
-    const code = `
-const single = 'hello'; //~ text
-const double = "world"; //~ text
-const backtick = \`test\`; //~ text
-    `
-
-    const result = extractControlVariables(code)
+    const result = parseControlVariables(code)
 
     expect(result).toHaveLength(3)
-    expect(result[0].value).toBe('hello')
-    expect(result[1].value).toBe('world')
-    expect(result[2].value).toBe('test')
+    expect(result[0].value).toBe(5)
+    expect(result[1].value).toBe(true)
+    expect(result[2].value).toBe('world')
   })
 
-  test('should ignore lines without control annotations', () => {
-    const code = `
-const regularVar = 10;
-const speed = 5; //~ number 1-10
-const anotherVar = "test";
-    `
+  test('parses range and step from the config', () => {
+    const [control] = parseControlVariables('const s = 0.4; //~ number 0-10 step=0.25')
+    expect(control).toMatchObject({ min: 0, max: 10, step: 0.25 })
+  })
 
-    const result = extractControlVariables(code)
+  test('parses negative ranges', () => {
+    const [control] = parseControlVariables('const s = 0; //~ number -50-50')
+    expect(control).toMatchObject({ min: -50, max: 50 })
+  })
+
+  test('parses negative number values', () => {
+    const code = 'const z = -2; //~ number'
+    const [control] = parseControlVariables(code)
+    expect(control.value).toBe(-2)
+    expect(code.slice(control.from, control.to)).toBe('-2')
+  })
+
+  test('annotated inline object applies config to every property', () => {
+    const code = 'const position = { x: 10, y: 20 }; //~ number 0-100'
+
+    const result = parseControlVariables(code)
+
+    expect(result).toHaveLength(2)
+    expect(result[0]).toMatchObject({
+      id: 'position.x',
+      name: 'x',
+      value: 10,
+      parent: 'position',
+      min: 0,
+      max: 100,
+    })
+    expect(result[1]).toMatchObject({ id: 'position.y', value: 20 })
+  })
+
+  test('parses properties of multi-line objects (coins-style)', () => {
+    const code = [
+      'const coin1 = {',
+      '  position: { x: 0.7, y: 0.5, z: -2 }, //~ number',
+      '  radius: 0.8, //~ number 0-5 step=0.1',
+      '};',
+    ].join('\n')
+
+    const result = parseControlVariables(code)
+
+    expect(result.map((c) => c.id)).toEqual([
+      'coin1.position.x',
+      'coin1.position.y',
+      'coin1.position.z',
+      'coin1.radius',
+    ])
+    expect(result[2]).toMatchObject({
+      value: -2,
+      parent: 'coin1',
+      nestedParent: 'position',
+    })
+    expect(result[3]).toMatchObject({ value: 0.8, min: 0, max: 5, step: 0.1 })
+  })
+
+  test('identical property names in different objects stay distinct', () => {
+    const code = [
+      'const coin1 = {',
+      '  radius: 0.8, //~ number 0-5',
+      '};',
+      'const coin2 = {',
+      '  radius: 2, //~ number 0-5',
+      '};',
+    ].join('\n')
+
+    const result = parseControlVariables(code)
+
+    expect(result.map((c) => c.id)).toEqual(['coin1.radius', 'coin2.radius'])
+    expect(applyUpdate(code, 'coin2.radius', 3)).toContain('radius: 3')
+    expect(applyUpdate(code, 'coin2.radius', 3)).toContain('radius: 0.8')
+  })
+
+  test('duplicate declarations get distinct ids', () => {
+    const code = ['const speed = 1; //~ number', 'const speed = 2; //~ number'].join('\n')
+
+    const result = parseControlVariables(code)
+
+    expect(result.map((c) => c.id)).toEqual(['speed', 'speed#1'])
+    expect(applyUpdate(code, 'speed#1', 9)).toBe(
+      ['const speed = 1; //~ number', 'const speed = 9; //~ number'].join('\n'),
+    )
+  })
+
+  test('positions point at the value even when it appears earlier in the line', () => {
+    // The old indexOf-based parser found the "10" inside "scale10"
+    const code = 'const scale10 = 10; //~ number 0-100'
+    const [control] = parseControlVariables(code)
+
+    expect(code.slice(control.from, control.to)).toBe('10')
+    expect(applyUpdate(code, 'scale10', 42)).toBe('const scale10 = 42; //~ number 0-100')
+  })
+
+  test('ignores //~ inside string literals', () => {
+    const code = "const s = 'not //~ number an annotation';"
+    expect(parseControlVariables(code)).toHaveLength(0)
+  })
+
+  test('braces and commas inside strings do not break parsing', () => {
+    const code = [
+      'const config = {',
+      "  label: 'a, b } c', //~ text",
+      '  size: 4, //~ number 0-10',
+      '};',
+    ].join('\n')
+
+    const result = parseControlVariables(code)
+
+    expect(result.map((c) => c.id)).toEqual(['config.label', 'config.size'])
+    expect(result[0].value).toBe('a, b } c')
+  })
+
+  test('skips non-literal values instead of offering a bogus control', () => {
+    const code = ['const x = 10 * 2; //~ number', 'const y = foo(); //~ number'].join('\n')
+    expect(parseControlVariables(code)).toHaveLength(0)
+  })
+
+  test('skips controls whose annotated type does not match the literal', () => {
+    const code = "const s = 'hello'; //~ number 0-10"
+    expect(parseControlVariables(code)).toHaveLength(0)
+  })
+
+  test('handles different quote types and preserves them on update', () => {
+    const code = [
+      "const single = 'hello'; //~ text",
+      'const double = "world"; //~ text',
+      'const backtick = `test`; //~ text',
+    ].join('\n')
+
+    const result = parseControlVariables(code)
+    expect(result.map((c) => c.value)).toEqual(['hello', 'world', 'test'])
+
+    const updated = applyUpdate(code, 'double', 'moon')
+    expect(updated).toContain('const double = "moon";')
+  })
+
+  test('escapes quotes when writing text values', () => {
+    const code = "const s = 'hi'; //~ text"
+    expect(applyUpdate(code, 's', "it's")).toBe("const s = 'it\\'s'; //~ text")
+  })
+
+  test('ignores lines without control annotations', () => {
+    const code = [
+      'const regularVar = 10;',
+      'const speed = 5; //~ number 1-10',
+      'const anotherVar = "test";',
+    ].join('\n')
+
+    const result = parseControlVariables(code)
 
     expect(result).toHaveLength(1)
     expect(result[0].name).toBe('speed')
   })
 
-  test('should handle mixed TypeScript typed and untyped variables', () => {
-    const code = `
-const speed = 5; //~ number 1-10
-const position: { x: number; y: number } = { x: 10, y: 20 }; //~ number 0-100
-const enabled: boolean = true; //~ boolean
-const message = "hello"; //~ text
-    `
-
-    const result = extractControlVariables(code)
-
-    expect(result).toHaveLength(5)
-    expect(result[0]).toEqual({ name: 'speed', type: 'number', value: 5 })
-    expect(result.some((r) => r.name === 'x' && r.value === 10)).toBe(true)
-    expect(result.some((r) => r.name === 'y' && r.value === 20)).toBe(true)
-    expect(result.some((r) => r.name === 'enabled' && r.value === true)).toBe(true)
-    expect(result.some((r) => r.name === 'message' && r.value === 'hello')).toBe(true)
+  test('finds declarations inside functions', () => {
+    const code = ['function main() {', '  const speed = 5; //~ number 1-10', '}'].join('\n')
+    expect(parseControlVariables(code)).toHaveLength(1)
   })
 
-  test('should handle complex TypeScript type annotations', () => {
-    const code = `
-const config: Record<string, number> = { width: 800, height: 600 }; //~ number 100-2000
-const settings: any = { x: 5 }; //~ number 1-10
-const point: Point = { x: 15, y: 25 }; //~ number 0-50
-    `
+  test('parse is resilient to incomplete code while typing', () => {
+    const code = ['const speed = 5; //~ number 1-10', 'const broken = {'].join('\n')
+    const result = parseControlVariables(code)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('speed')
+  })
 
-    const result = extractControlVariables(code)
+  test('rounds number updates to the step precision', () => {
+    const code = 'const s = 0.4; //~ number 0-10 step=0.25'
+    expect(applyUpdate(code, 's', 0.30000000000004)).toBe(
+      'const s = 0.3; //~ number 0-10 step=0.25',
+    )
+  })
 
-    expect(result.length).toBeGreaterThan(0)
-    expect(result.some((r) => r.name === 'width' && r.value === 800)).toBe(true)
-    expect(result.some((r) => r.name === 'height' && r.value === 600)).toBe(true)
-    expect(result.some((r) => r.name === 'x' && r.value === 5)).toBe(true)
-    expect(result.some((r) => r.name === 'x' && r.value === 15)).toBe(true)
-    expect(result.some((r) => r.name === 'y' && r.value === 25)).toBe(true)
+  test('round-trips: updated code re-parses to the new value', () => {
+    const code = [
+      'const speed = 0.4; //~ number 0-10 step=0.25',
+      'const coin1 = {',
+      '  position: { x: 0.7, y: 0.5, z: -2 }, //~ number',
+      '};',
+    ].join('\n')
+
+    const updated = applyUpdate(code, 'coin1.position.z', -3.5)
+    const result = parseControlVariables(updated)
+
+    expect(result.find((c) => c.id === 'coin1.position.z')?.value).toBe(-3.5)
+    expect(result.find((c) => c.id === 'speed')?.value).toBe(0.4)
   })
 })
