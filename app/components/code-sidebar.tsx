@@ -18,6 +18,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useHotkeys } from 'react-hotkeys-hook'
 
+import {
+  formatControlValue,
+  parseControlVariables,
+  type ControlValue,
+  type ControlVariable,
+} from '~/lib/control-variables'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { LinkButton } from '~/lib/ui/src/components/InputButton/InputButton'
 import { InputText } from '~/lib/ui/src/components/InputText/InputText'
@@ -36,33 +42,6 @@ interface CodeSidebarProps {
     }>,
   ) => void
 }
-
-interface ControlVariable {
-  name: string
-  value: string | number | boolean
-  type: 'text' | 'number' | 'boolean'
-  min?: number
-  max?: number
-  step?: number
-  line: number
-  startPos: number
-  endPos: number
-  objectPath?: string
-  parent?: string
-  nestedParent?: string
-}
-
-// Regex patterns used throughout parsing
-export const PATTERNS = {
-  ROOT_OBJECT: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*\{\s*([^}]*)\s*\}\s*;?\s*\/\/~\s*(.+)/,
-  MULTI_OBJECT: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*\{/,
-  SIMPLE_VAR: /const\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*(?!\s*\{)(.+?);?\s*\/\/~\s*(.+)/,
-  NESTED_OBJECT: /\s*(\w+):\s*\{\s*([^}]+)\s*\},?\s*\/\/~\s*(.+)/,
-  OBJECT_PROP: /\s*(\w+):\s*(.+?),?\s*\/\/~\s*(.+)/,
-  PROP_VALUE: /(\w+):\s*([^,}]+)/g,
-  RANGE: /(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)/,
-  STEP: /step=(\d+(?:\.\d+)?)/,
-} as const
 
 const UTILS = [
   {
@@ -130,236 +109,6 @@ function main(coord, context, cursor, buffer) {
     importStatement: "import { createNoise2D } from 'simplex-noise'",
   },
 ] as const
-
-function parseControlConfig(
-  name: string,
-  valueStr: string,
-  controlConfig: string,
-  lineIndex: number,
-  line: string,
-  startPos?: number,
-  endPos?: number,
-  parent?: string,
-  propName?: string,
-  nestedParent?: string,
-): ControlVariable | null {
-  const parts = controlConfig.trim().split(/\s+/)
-  if (parts.length === 0) return null
-
-  const type = parts[0] as ControlVariable['type']
-  let value: string | number | boolean
-  let min: number | undefined
-  let max: number | undefined
-  let step: number | undefined
-
-  // Parse value based on type
-  switch (type) {
-    case 'boolean': {
-      value = valueStr.trim() === 'true'
-      break
-    }
-    case 'number': {
-      value = parseFloat(valueStr.trim())
-
-      const rangeMatch = controlConfig.match(PATTERNS.RANGE)
-      if (rangeMatch) {
-        min = parseFloat(rangeMatch[1])
-        max = parseFloat(rangeMatch[2])
-      }
-
-      const stepMatch = controlConfig.match(PATTERNS.STEP)
-      if (stepMatch) {
-        step = parseFloat(stepMatch[1])
-      }
-      break
-    }
-    case 'text': {
-      value = valueStr.trim().replace(/^['"`]|['"`]$/g, '')
-      break
-    }
-    default:
-      return null
-  }
-
-  // Calculate positions if not provided
-  let finalStartPos = startPos
-  let finalEndPos = endPos
-  if (finalStartPos === undefined || finalEndPos === undefined) {
-    const trimmedValue = valueStr.trim()
-    finalStartPos = line.indexOf(trimmedValue)
-    finalEndPos = finalStartPos + trimmedValue.length
-  }
-
-  return {
-    name: propName || name,
-    value,
-    type,
-    step,
-    min,
-    max,
-    line: lineIndex,
-    startPos: finalStartPos,
-    endPos: finalEndPos,
-    objectPath: parent ? name : undefined,
-    parent,
-    nestedParent,
-  }
-}
-
-function parseNestedObjectProperties(
-  objectContent: string,
-  controlConfig: string,
-  parentObject: string | undefined,
-  nestedPropName: string,
-  lineIndex: number,
-  line: string,
-): ControlVariable[] {
-  const controls: ControlVariable[] = []
-  const propMatches = objectContent.match(PATTERNS.PROP_VALUE)
-
-  if (!propMatches) return controls
-
-  propMatches.forEach((propMatch) => {
-    const match = propMatch.match(/(\w+):\s*(.+)/)
-    if (!match) return
-
-    const [, propName] = match
-    const fullName = parentObject
-      ? `${parentObject}.${nestedPropName}.${propName}`
-      : `${nestedPropName}.${propName}`
-
-    // Find exact position in line
-    const propPattern = new RegExp(`\\b${propName}\\s*:\\s*([^,}]+)`)
-    const propSearchMatch = line.match(propPattern)
-
-    if (propSearchMatch) {
-      const actualValue = propSearchMatch[1].trim()
-      const propStartInLine = line.indexOf(propSearchMatch[0])
-      const valueStartInMatch = propSearchMatch[0].indexOf(actualValue)
-      const valueStart = propStartInLine + valueStartInMatch
-      const valueEnd = valueStart + actualValue.length
-
-      const control = parseControlConfig(
-        propName,
-        actualValue,
-        controlConfig,
-        lineIndex,
-        line,
-        valueStart,
-        valueEnd,
-        parentObject,
-        propName,
-        parentObject ? nestedPropName : undefined,
-      )
-
-      if (control) {
-        control.objectPath = fullName
-        if (!parentObject) {
-          control.parent = nestedPropName
-        }
-        controls.push(control)
-      }
-    }
-  })
-
-  return controls
-}
-
-function parseControlVariables(code: string): ControlVariable[] {
-  const lines = code.split('\n')
-  const controls: ControlVariable[] = []
-  let currentObject: string | null = null
-  let braceDepth = 0
-
-  lines.forEach((line, lineIndex) => {
-    // Handle root-level object with control annotation
-    const rootObjectMatch = line.match(PATTERNS.ROOT_OBJECT)
-    if (rootObjectMatch) {
-      const [, name, objectContent, controlConfig] = rootObjectMatch
-      const nestedControls = parseNestedObjectProperties(
-        objectContent,
-        controlConfig,
-        undefined,
-        name,
-        lineIndex,
-        line,
-      )
-      controls.push(...nestedControls)
-      return
-    }
-
-    // Track multi-line objects
-    const objectMatch = line.match(PATTERNS.MULTI_OBJECT)
-    if (objectMatch) {
-      currentObject = objectMatch[1]
-      braceDepth = 1
-      return
-    }
-
-    // Track brace depth when inside an object
-    if (currentObject) {
-      const openBraces = (line.match(/\{/g) || []).length
-      const closeBraces = (line.match(/\}/g) || []).length
-      braceDepth += openBraces - closeBraces
-
-      if (braceDepth <= 0) {
-        currentObject = null
-        braceDepth = 0
-        return
-      }
-    }
-
-    // Handle simple variable declarations
-    const simpleMatch = line.match(PATTERNS.SIMPLE_VAR)
-    if (simpleMatch) {
-      const [, name, valueStr, controlConfig] = simpleMatch
-      const control = parseControlConfig(name, valueStr, controlConfig, lineIndex, line)
-      if (control) controls.push(control)
-      return
-    }
-
-    // Handle nested objects and properties within current object
-    if (currentObject) {
-      const nestedObjectMatch = line.match(PATTERNS.NESTED_OBJECT)
-      if (nestedObjectMatch) {
-        const [, propName, objectContent, controlConfig] = nestedObjectMatch
-        const nestedControls = parseNestedObjectProperties(
-          objectContent,
-          controlConfig,
-          currentObject,
-          propName,
-          lineIndex,
-          line,
-        )
-        controls.push(...nestedControls)
-        return
-      }
-
-      const propMatch = line.match(PATTERNS.OBJECT_PROP)
-      if (propMatch) {
-        const [, propName, valueStr, controlConfig] = propMatch
-        const control = parseControlConfig(
-          propName,
-          valueStr,
-          controlConfig,
-          lineIndex,
-          line,
-          undefined,
-          undefined,
-          currentObject,
-          propName,
-        )
-        if (control) {
-          control.objectPath = `${currentObject}.${propName}`
-          controls.push(control)
-        }
-      }
-    }
-  })
-
-  return controls
-}
-
 export function CodeSidebar({
   isOpen,
   pendingCode,
@@ -453,43 +202,14 @@ export function CodeSidebar({
     return groups
   }, [controlVariables])
 
-  const updateControlVariable = (
-    controlName: string,
-    newValue: string | number | boolean,
-  ) => {
+  const updateControlVariable = (controlId: string, newValue: ControlValue) => {
     if (!editorViewRef.current) return
 
+    // Re-parse the editor's own document so positions are exact for what we edit
     const currentContent = editorViewRef.current.state.doc.toString()
-    const currentControls = parseControlVariables(currentContent)
-    const control = currentControls.find((c) => (c.objectPath || c.name) === controlName)
+    const control = parseControlVariables(currentContent).find((c) => c.id === controlId)
 
     if (!control) return
-
-    const lines = currentContent.split('\n')
-
-    // Format value based on type
-    let formattedValue: string
-    if (control.type === 'boolean') {
-      formattedValue = String(newValue)
-    } else if (control.type === 'number') {
-      let roundedValue = newValue as number
-      if (control.step && control.step < 1) {
-        const decimalPlaces = Math.abs(Math.floor(Math.log10(control.step)))
-        roundedValue =
-          Math.round((newValue as number) * Math.pow(10, decimalPlaces)) /
-          Math.pow(10, decimalPlaces)
-      }
-      formattedValue = String(roundedValue)
-    } else {
-      formattedValue = `'${newValue}'`
-    }
-
-    // Calculate document positions
-    const lineStart = lines
-      .slice(0, control.line)
-      .reduce((acc, line) => acc + line.length + 1, 0)
-    const changeStart = lineStart + control.startPos
-    const changeEnd = lineStart + control.endPos
 
     // Clear pending timeout
     if (updateTimeoutRef.current) {
@@ -499,7 +219,11 @@ export function CodeSidebar({
 
     // Apply change
     const transaction = editorViewRef.current.state.update({
-      changes: { from: changeStart, to: changeEnd, insert: formattedValue },
+      changes: {
+        from: control.from,
+        to: control.to,
+        insert: formatControlValue(control, newValue),
+      },
     })
     editorViewRef.current.dispatch(transaction)
 
@@ -516,7 +240,7 @@ export function CodeSidebar({
   }
 
   const renderControl = (control: ControlVariable) => {
-    const controlKey = control.objectPath || control.name
+    const controlKey = control.id
 
     const controlLabel = control.name
       .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
@@ -524,7 +248,7 @@ export function CodeSidebar({
       .toLowerCase()
 
     const controlProps = {
-      onChange: (val: string | number | boolean) => updateControlVariable(controlKey, val),
+      onChange: (val: ControlValue) => updateControlVariable(controlKey, val),
       children: controlLabel,
     }
 
