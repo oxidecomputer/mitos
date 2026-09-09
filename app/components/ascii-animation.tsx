@@ -5,9 +5,9 @@
  *
  * Copyright Oxide Computer Company
  */
+import { createAnimation, type Program } from '@oxide/ascii-shader'
 import { useEffect, useRef, type ReactNode } from 'react'
 
-import { createAnimation, type Program } from '~/lib/animation'
 import { resolveColor } from '~/lib/utils'
 
 import { AnimationController } from './ascii-preview'
@@ -89,27 +89,31 @@ export default function AsciiAnimation({
     // Use the ref to access the current controller
     const currentController = controllerRef.current
 
-    const wasPlaying = currentController ? currentController.getState().playing : false
-    const currentFrame = currentController ? currentController.getState().frame : 0
+    const wasPlaying = currentController ? currentController.playing : false
+    const currentFrame = currentController ? currentController.frame : 0
 
     // Clean up previous animation controller
     if (currentController) {
-      currentController.cleanup()
+      currentController.dispose()
       setAnimationController(null)
     }
 
     try {
       const animController = createAnimation(program, {
         element: asciiEl.current,
-        onFrameUpdate: onFrameUpdate ? onFrameUpdate : undefined,
-        maxFrames,
-        textColor,
+        frames: maxFrames,
+        color: textColor,
         backgroundColor: canvasBackgroundColor,
         padding,
+        // Driven by the frame slider / MCP bridge, not autoplay
+        autoplay: false,
+        // For when preview is zoomed in (zoom goes up to 5x)
+        supersample: 3,
       })
 
-      animController.togglePlay(wasPlaying)
-      animController.setFrame(currentFrame)
+      if (onFrameUpdate) animController.on('frame', onFrameUpdate)
+      animController.toggle(wasPlaying)
+      animController.seek(currentFrame)
 
       setAnimationController(animController)
     } catch (error) {

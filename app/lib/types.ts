@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import type { Cell } from './animation'
+import type { Cell } from '@oxide/ascii-shader'
 
 export interface Coord {
   x: number

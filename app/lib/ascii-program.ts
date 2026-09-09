@@ -36,7 +36,8 @@
  * // import { valueToChar, getImageValue } from '@/utils'
  * // import { imageData, frames } from '@/imageData'
  */
-import type { Program } from './animation'
+import type { Program } from '@oxide/ascii-shader'
+
 import { ModuleProcessingResult } from './code-processor'
 
 export function generateImageCode(): string {

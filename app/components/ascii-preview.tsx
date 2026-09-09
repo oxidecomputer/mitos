@@ -5,6 +5,10 @@
  *
  * Copyright Oxide Computer Company
  */
+import type {
+  AsciiAnimation as AsciiAnimationController,
+  Program,
+} from '@oxide/ascii-shader'
 import {
   Action16Icon,
   AutoRestart12Icon,
@@ -20,7 +24,6 @@ import { motion } from 'motion/react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
-import type { createAnimation, Program } from '~/lib/animation'
 import { InputButton, InputNumber } from '~/lib/ui/src'
 import { TEMPLATES, type TemplateType } from '~/templates'
 
@@ -45,7 +48,7 @@ interface AsciiPreviewProps {
   onExampleImageClick?: () => void
 }
 
-export type AnimationController = ReturnType<typeof createAnimation> | null
+export type AnimationController = AsciiAnimationController | null
 
 const DemoCard = ({
   icon,
@@ -407,34 +410,28 @@ function FrameSlider({
   animationController: AnimationController
 }) {
   const [playing, setPlaying] = useState(
-    animationController && animationController.getState().playing ? true : false,
+    animationController ? animationController.playing : false,
   )
 
   const togglePlay = () => {
     if (animationController) {
       const newPlayState = !playing
-      animationController.togglePlay(newPlayState)
+      animationController.toggle(newPlayState)
       setPlaying(newPlayState)
     }
   }
 
   useEffect(() => {
     if (animationController) {
-      setPlaying(animationController.getState().playing)
+      setPlaying(animationController.playing)
     }
   }, [animationController])
 
-  // Reset frame when source type changes
+  // Reset frame when source type changes. seek() renders the frame without
+  // touching the play state.
   useEffect(() => {
     if (animationController) {
-      const wasPlaying = animationController.getState().playing
-
-      animationController.setFrame(0)
-
-      // Restore play state
-      if (wasPlaying) {
-        animationController.togglePlay(true)
-      }
+      animationController.seek(0)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -450,7 +447,7 @@ function FrameSlider({
           min={0}
           max={totalFrames - 1}
           step={1}
-          onChange={(value) => animationController && animationController.setFrame(value)}
+          onChange={(value) => animationController && animationController.seek(value)}
           className="grow"
         />
       </div>
