@@ -5,12 +5,12 @@
  *
  * Copyright Oxide Computer Company
  */
+import type { Program } from '@oxide/ascii-shader'
 import { BuildResult, Plugin } from 'esbuild-wasm'
 
 import { AsciiSettings } from '~/components/ascii-art-generator'
 import { type EsbuildService } from '~/hooks/use-esbuild'
 
-import type { Program } from './animation'
 import * as localUtils from './localUtils'
 import { resolveColor } from './utils'
 

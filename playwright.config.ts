@@ -7,7 +7,9 @@
  */
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 3000
+// Override with PORT= when something else (e.g. another dev server) holds 3000 —
+// with reuseExistingServer the tests would silently run against the wrong app.
+const PORT = Number(process.env.PORT || 3000)
 const baseURL = `http://localhost:${PORT}`
 
 /**
@@ -56,7 +58,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'bun run dev',
+    command: `bun run dev -- --port ${PORT} --strictPort`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

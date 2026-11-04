@@ -14,8 +14,6 @@ header:
     - '**/*.{ts,tsx,css,js,sh}'
 
   paths-ignore:
-    - 'app/lib/animation.ts'
-    - 'app/lib/core/**'
     - 'app/lib/modules/**'
 
   comment: on-failure

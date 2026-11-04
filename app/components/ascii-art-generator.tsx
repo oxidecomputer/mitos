@@ -6,6 +6,7 @@
  * Copyright Oxide Computer Company
  */
 
+import type { Program } from '@oxide/ascii-shader'
 import { decompressFrames, ParsedFrame, ParsedGif, parseGIF } from 'gifuct-js'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -22,7 +23,6 @@ import { SourceSelector } from '~/components/source-selector'
 import { exampleImage } from '~/exampleImage'
 import { useEsbuild } from '~/hooks/use-esbuild'
 import { useMcpBridge } from '~/hooks/use-mcp-bridge'
-import type { Program } from '~/lib/animation'
 import { createProgramFromProcessor, generateImageCode } from '~/lib/ascii-program'
 import { clearStaleImageData, processCodeModule } from '~/lib/code-processor'
 import type { GridConfig } from '~/lib/grid-config'

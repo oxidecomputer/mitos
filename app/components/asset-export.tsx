@@ -5,6 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
+import { getColoredRows, getContent, type Cell, type Program } from '@oxide/ascii-shader'
 import { Recorder } from 'canvas-record'
 import { saveAs } from 'file-saver'
 import JSZip from 'jszip'
@@ -13,8 +14,6 @@ import { useEffect, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 
-import type { Cell, Program } from '~/lib/animation'
-import { getColoredRows, getContent } from '~/lib/buffer-text'
 import { glyphRunToPathData, loadAsciiFont, type Font } from '~/lib/svg-font'
 import { InputButton, InputNumber, InputSwitch } from '~/lib/ui/src'
 import { InputSelect } from '~/lib/ui/src/components/InputSelect/InputSelect'
@@ -121,13 +120,12 @@ export function AssetExport({
       // Pause animation during export if animated
       let wasPlaying = false
       if (isAnimated && animationController) {
-        wasPlaying = animationController.getState().playing
-        animationController.togglePlay(false)
+        wasPlaying = animationController.playing
+        animationController.pause()
       }
 
       // Store current frame to restore later
-      const currentFrame =
-        isAnimated && animationController ? animationController.getState().frame : 0
+      const currentFrame = isAnimated && animationController ? animationController.frame : 0
 
       if (totalFrames === 1) {
         await exportSingleFrame()
@@ -213,7 +211,12 @@ export function AssetExport({
       // Exports are standalone documents, so CSS variables must be resolved to
       // concrete colors here
       const textColor = resolveColor(exportSettings.textColor)
-      const coloredRows = getColoredRows(dimensions, animationController, textColor)
+      const coloredRows = getColoredRows(
+        animationController.getBuffer(),
+        dimensions.width,
+        dimensions.height,
+        textColor,
+      )
 
       // Outlining is opt-in and needs the parsed font
       let font: Font | null = null
@@ -376,7 +379,15 @@ export function AssetExport({
 
     try {
       navigator.clipboard
-        .writeText(getContent(dimensions, animationController) || '')
+        .writeText(
+          animationController
+            ? getContent(
+                animationController.getBuffer(),
+                dimensions.width,
+                dimensions.height,
+              )
+            : '',
+        )
         .then(() => {
           toast('ASCII art has been copied to your clipboard')
         })
@@ -529,10 +540,10 @@ export function AssetExport({
         },
       })
 
-      const wasPlaying = animationController.getState().playing
-      const currentFrame = animationController.getState().frame
+      const wasPlaying = animationController.playing
+      const currentFrame = animationController.frame
 
-      animationController.togglePlay(false)
+      animationController.pause()
 
       const metrics = animationController.getMetrics()
       if (!metrics) {
@@ -585,9 +596,9 @@ export function AssetExport({
       // Automatically saves
       recorder.stop()
 
-      animationController.setFrame(currentFrame)
+      animationController.seek(currentFrame)
       if (wasPlaying) {
-        animationController.togglePlay(true)
+        animationController.play()
       }
       toast.success('Video export complete!', { id: 'video-export' })
     } catch (error) {
@@ -665,9 +676,9 @@ export function AssetExport({
       }
     }
 
-    animationController.setFrame(currentFrame)
+    animationController.seek(currentFrame)
     if (wasPlaying) {
-      animationController.togglePlay(true)
+      animationController.play()
     }
 
     const zip = new JSZip()
