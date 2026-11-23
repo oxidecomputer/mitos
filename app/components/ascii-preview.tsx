@@ -8,7 +8,7 @@
 import type {
   AsciiAnimation as AsciiAnimationController,
   Program,
-} from '@oxide/ascii-shader'
+} from '@oxide/design-system/ascii-shader'
 import {
   Action16Icon,
   AutoRestart12Icon,

@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import { createAnimation, type Program } from '@oxide/ascii-shader'
+import { createAnimation, type Program } from '@oxide/design-system/ascii-shader'
 import { useEffect, useRef, type ReactNode } from 'react'
 
 import { resolveColor } from '~/lib/utils'

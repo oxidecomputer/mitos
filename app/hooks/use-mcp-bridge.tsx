@@ -12,7 +12,7 @@
  * read rendered frames back as text. Active in dev builds, or when the page
  * is opened with ?mcp. Reconnects until the server is running.
  */
-import { getContent } from '@oxide/ascii-shader'
+import { getContent } from '@oxide/design-system/ascii-shader'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { AsciiSettings } from '~/components/ascii-art-generator'

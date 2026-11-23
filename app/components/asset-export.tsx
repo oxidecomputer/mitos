@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import { getColoredRows, getContent, type Cell, type Program } from '@oxide/ascii-shader'
+import { getColoredRows, getContent, type Cell, type Program } from '@oxide/design-system/ascii-shader'
 import { Recorder } from 'canvas-record'
 import { saveAs } from 'file-saver'
 import JSZip from 'jszip'
