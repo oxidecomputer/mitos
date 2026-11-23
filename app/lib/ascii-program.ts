@@ -36,7 +36,7 @@
  * // import { valueToChar, getImageValue } from '@/utils'
  * // import { imageData, frames } from '@/imageData'
  */
-import type { Program } from '@oxide/ascii-shader'
+import type { Program } from '@oxide/design-system/ascii-shader'
 
 import { ModuleProcessingResult } from './code-processor'
 

@@ -5,7 +5,7 @@
  *
  * Copyright Oxide Computer Company
  */
-import type { Program } from '@oxide/ascii-shader'
+import type { Program } from '@oxide/design-system/ascii-shader'
 import { BuildResult, Plugin } from 'esbuild-wasm'
 
 import { AsciiSettings } from '~/components/ascii-art-generator'

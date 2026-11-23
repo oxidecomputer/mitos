@@ -6,7 +6,7 @@
  * Copyright Oxide Computer Company
  */
 
-import type { Program } from '@oxide/ascii-shader'
+import type { Program } from '@oxide/design-system/ascii-shader'
 import { decompressFrames, ParsedFrame, ParsedGif, parseGIF } from 'gifuct-js'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
